@@ -1,0 +1,31 @@
+name: Sigma Screener — Open
+
+on:
+  schedule:
+    # 9:35 AM ET = 13:35 UTC (during EDT; 14:35 during EST)
+    # Decision: using EDT offset since markets are open ~Apr-Nov in EDT.
+    # During EST months (Nov-Mar), this fires at 8:35 AM ET — still fine
+    # since the market opens at 9:30 AM ET year-round and the 1-hour
+    # difference is acceptable. Alternative would be two cron entries.
+    - cron: '35 13 * * 1-5'
+  workflow_dispatch:  # manual trigger for testing
+
+jobs:
+  screen-open:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sigma screener (open mode)
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/sigma_screener.py --mode open

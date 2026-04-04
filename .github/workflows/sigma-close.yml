@@ -1,0 +1,42 @@
+name: Sigma Screener — Close
+
+on:
+  schedule:
+    # 4:30 PM ET = 20:30 UTC (during EDT; 21:30 during EST)
+    # Same EDT assumption as the open workflow — see note there.
+    - cron: '30 20 * * 1-5'
+  workflow_dispatch:  # manual trigger for testing
+
+jobs:
+  screen-close:
+    runs-on: ubuntu-latest
+    # Decision: write permission needed to push the updated cache file
+    # back to the repo after the EOD run.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sigma screener (close mode)
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/sigma_screener.py --mode close
+
+      - name: Commit and push updated cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cache/distribution_cache.json
+          # --allow-empty is NOT used — if cache didn't change, no commit is made
+          git diff --cached --quiet || git commit -m "Update distribution cache [skip ci]"
+          git push
