@@ -1,0 +1,14 @@
+# Sector ETFs — SPDR Select Sector & S&P 500 Portfolio
+# Last updated: 2026-04-06
+XLE
+XLB
+XLU
+XLP
+XLI
+XLRE
+XLC
+XLV
+XLK
+XLY
+XLF
+SPYM

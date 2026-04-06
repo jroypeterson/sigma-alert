@@ -1,0 +1,28 @@
+name: Sigma Screener — Midday
+
+on:
+  schedule:
+    # 12:30 PM EST / 1:30 PM EDT = 17:30 UTC
+    # Uses EST-aligned offset so timing is safe year-round.
+    - cron: '30 17 * * 1-5'
+  workflow_dispatch:  # manual trigger for testing
+
+jobs:
+  screen-midday:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sigma screener (midday mode)
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/sigma_screener.py --mode midday

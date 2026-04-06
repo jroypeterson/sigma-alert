@@ -2,12 +2,12 @@ name: Sigma Screener — Open
 
 on:
   schedule:
-    # 9:35 AM ET = 13:35 UTC (during EDT; 14:35 during EST)
-    # Decision: using EDT offset since markets are open ~Apr-Nov in EDT.
-    # During EST months (Nov-Mar), this fires at 8:35 AM ET — still fine
-    # since the market opens at 9:30 AM ET year-round and the 1-hour
-    # difference is acceptable. Alternative would be two cron entries.
-    - cron: '35 13 * * 1-5'
+    # 9:35 AM EST / 10:35 AM EDT = 14:35 UTC
+    # Uses EST-aligned offset so the run always fires after the 9:30 AM ET
+    # market open, regardless of daylight saving time. During EDT months
+    # this runs at 10:35 AM ET — one hour later than ideal but guarantees
+    # today's opening bar is available from Yahoo Finance.
+    - cron: '35 14 * * 1-5'
   workflow_dispatch:  # manual trigger for testing
 
 jobs:

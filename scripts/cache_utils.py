@@ -23,6 +23,9 @@ the main screening workflow.
 import json
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+ET = ZoneInfo("America/New_York")
 
 CACHE_PATH = Path(__file__).resolve().parent.parent / "cache" / "distribution_cache.json"
 
@@ -45,7 +48,7 @@ def cache_age_days() -> int | None:
         return None
     try:
         cache_date = datetime.strptime(cache["date"], "%Y-%m-%d").date()
-        return (datetime.now().date() - cache_date).days
+        return (datetime.now(ET).date() - cache_date).days
     except ValueError:
         return None
 

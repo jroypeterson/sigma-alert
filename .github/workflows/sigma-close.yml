@@ -2,9 +2,10 @@ name: Sigma Screener — Close
 
 on:
   schedule:
-    # 4:30 PM ET = 20:30 UTC (during EDT; 21:30 during EST)
-    # Same EDT assumption as the open workflow — see note there.
-    - cron: '30 20 * * 1-5'
+    # 4:30 PM EST / 5:30 PM EDT = 21:30 UTC
+    # Uses EST-aligned offset so the run always fires after the 4:00 PM ET
+    # market close, regardless of daylight saving time.
+    - cron: '30 21 * * 1-5'
   workflow_dispatch:  # manual trigger for testing
 
 jobs:

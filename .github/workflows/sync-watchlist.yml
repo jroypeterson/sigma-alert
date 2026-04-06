@@ -1,0 +1,38 @@
+name: Sync Watchlist
+
+on:
+  # Re-sync whenever source files change on main
+  push:
+    branches: [master]
+    paths:
+      - 'sources/**'
+  # Weekly sync to catch any drift (Monday 8:00 AM ET = 12:00 UTC)
+  schedule:
+    - cron: '0 12 * * 1'
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run watchlist sync
+        run: python scripts/sync_watchlist.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add watchlist.txt
+          git diff --cached --quiet || git commit -m "Sync watchlist with source files [skip ci]"
+          git push
