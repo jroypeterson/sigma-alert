@@ -44,7 +44,12 @@ ET = ZoneInfo("America/New_York")
 
 LOOKBACK_DAYS = 252          # ~1 trading year
 SIGMA_THRESHOLD = 2.0
+ONE_SIGMA_THRESHOLD = 1.0
 THREE_SIGMA = 3.0
+
+# Sectors that get the lower 1σ alert tier (in-coverage tickers).
+# 2σ+ alerts fire on the entire watchlist regardless of sector.
+ONE_SIGMA_SECTORS = {"Healthcare Services", "MedTech", "PA"}
 
 # Decision: using 400 calendar days for the yfinance download window.
 # 252 trading days ≈ 365 calendar days, but we add buffer for holidays
@@ -295,16 +300,24 @@ def screen_open_cached(tickers: list[str], cache: dict,
         today_return = (today_open - prev_close) / prev_close
 
         z = compute_z_score(today_return, mu, sigma)
-        if abs(z) >= SIGMA_THRESHOLD:
-            meta = (metadata or {}).get(ticker, {})
+        meta = (metadata or {}).get(ticker, {})
+        sector = meta.get("sector", "")
+        abs_z = abs(z)
+        tier = None
+        if abs_z >= SIGMA_THRESHOLD:
+            tier = "2sigma"
+        elif abs_z >= ONE_SIGMA_THRESHOLD and sector in ONE_SIGMA_SECTORS:
+            tier = "1sigma"
+        if tier:
             alerts.append({
                 "ticker": ticker,
                 "name": meta.get("name", ""),
-                "sector": meta.get("sector", ""),
+                "sector": sector,
                 "z_score": z,
                 "return_pct": today_return * 100,
                 "direction": "up" if today_return > 0 else "down",
-                "three_sigma": abs(z) >= THREE_SIGMA,
+                "three_sigma": abs_z >= THREE_SIGMA,
+                "tier": tier,
             })
     return alerts, stats
 
@@ -364,7 +377,14 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     sector = meta.get("sector", "")
 
     alert = None
-    if abs(z) >= SIGMA_THRESHOLD:
+    abs_z = abs(z)
+    tier = None
+    if abs_z >= SIGMA_THRESHOLD:
+        tier = "2sigma"
+    elif abs_z >= ONE_SIGMA_THRESHOLD and sector in ONE_SIGMA_SECTORS:
+        tier = "1sigma"
+
+    if tier:
         alert = {
             "ticker": ticker,
             "name": name,
@@ -372,7 +392,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "z_score": z,
             "return_pct": today_return * 100,
             "direction": "up" if today_return > 0 else "down",
-            "three_sigma": abs(z) >= THREE_SIGMA,
+            "three_sigma": abs_z >= THREE_SIGMA,
+            "tier": tier,
         }
 
     # 52-week high/low check (only when high/low data is provided)
@@ -522,28 +543,65 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         },
     ]
 
-    if alerts:
-        # Sort by absolute z-score descending so biggest moves are first
-        alerts_sorted = sorted(alerts, key=lambda a: abs(a["z_score"]), reverse=True)
+    def _format_alert_line(a):
+        arrow = "\u2B06\uFE0F" if a["direction"] == "up" else "\u2B07\uFE0F"
+        sigma_note = "  *\u26A0\uFE0F 3\u03C3+ move!*" if a["three_sigma"] else ""
+        sign = "+" if a["return_pct"] > 0 else ""
+        name_part = f" {a['name']}" if a.get("name") else ""
+        sector_part = f"  [{a['sector']}]" if a.get("sector") else ""
+        return (
+            f"{arrow}  *{a['ticker']}*{name_part}{sector_part}  "
+            f"|  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{sigma_note}"
+        )
 
-        lines = []
-        for a in alerts_sorted:
-            arrow = "\u2B06\uFE0F" if a["direction"] == "up" else "\u2B07\uFE0F"
-            sigma_note = "  *\u26A0\uFE0F 3\u03C3+ move!*" if a["three_sigma"] else ""
-            sign = "+" if a["return_pct"] > 0 else ""
-            name_part = f" {a['name']}" if a.get("name") else ""
-            sector_part = f"  [{a['sector']}]" if a.get("sector") else ""
-            lines.append(
-                f"{arrow}  *{a['ticker']}*{name_part}{sector_part}  |  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{sigma_note}"
+    def _append_section_chunked(blocks_list, header, lines, max_len=2900):
+        """Append a section block, splitting into multiple blocks if text exceeds Slack's 3000-char limit."""
+        chunk = [header]
+        chunk_len = len(header) + 1
+        for line in lines:
+            line_len = len(line) + 1
+            if chunk_len + line_len > max_len and len(chunk) > 1:
+                blocks_list.append({
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": "\n".join(chunk)},
+                })
+                chunk = [line]
+                chunk_len = line_len
+            else:
+                chunk.append(line)
+                chunk_len += line_len
+        if chunk:
+            blocks_list.append({
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "\n".join(chunk)},
+            })
+
+    two_sig = sorted(
+        [a for a in alerts if a.get("tier") == "2sigma"],
+        key=lambda a: abs(a["z_score"]), reverse=True,
+    )
+    one_sig = sorted(
+        [a for a in alerts if a.get("tier") == "1sigma"],
+        key=lambda a: abs(a["z_score"]), reverse=True,
+    )
+
+    if two_sig or one_sig:
+        if two_sig:
+            header_2 = f":bar_chart: *2\u03C3+ Moves ({len(two_sig)})*"
+            _append_section_chunked(
+                blocks, header_2, [_format_alert_line(a) for a in two_sig]
             )
 
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "\n".join(lines),
-            },
-        })
+        if one_sig:
+            if two_sig:
+                blocks.append({"type": "divider"})
+            header_1 = (
+                f":chart_with_upwards_trend: *1\u03C3 Moves ({len(one_sig)})* "
+                f"— HC Services / MedTech / PA only"
+            )
+            _append_section_chunked(
+                blocks, header_1, [_format_alert_line(a) for a in one_sig]
+            )
     else:
         blocks.append({
             "type": "section",
