@@ -1,6 +1,6 @@
 # sigma-alert
 
-GitHub Actions-based stock screener that flags 2+ standard deviation price moves against each ticker's trailing 52-week daily return distribution. Alerts are posted to Slack.
+GitHub Actions-based stock screener that flags standard-deviation price moves against each ticker's trailing 52-week daily return distribution. Alerts are posted to Slack with company names and sector tags.
 
 ## How it works
 
@@ -10,8 +10,16 @@ GitHub Actions-based stock screener that flags 2+ standard deviation price moves
 
 > Cron schedules use EST-aligned UTC offsets so they always fire after market open/close regardless of daylight saving time. During EDT months runs land ~1 hour later than the nominal time.
 4. For each ticker, a z-score is computed: `z = (today_return - μ) / σ` where μ and σ come from the trailing 251 daily returns
-5. Any ticker with |z| ≥ 2.0 triggers a Slack alert
+5. Alerts are split into two tiers in the Slack message:
+   - **2σ+ Moves** — fires on the entire watchlist when `|z| ≥ 2.0` (3σ+ moves are flagged inline with a warning emoji)
+   - **1σ Moves** — fires only on tickers tagged `Healthcare Services`, `MedTech`, or `PA` in the Coverage Manager CSV when `1.0 ≤ |z| < 2.0`. The narrow filter keeps the lower threshold from being noisy
 6. **Close report only**: flags any ticker that hit a new 52-week high or low during the session
+
+Each alert line includes the ticker, company name, and sector tag, e.g.:
+
+```
+⬆️  *ISRG* Intuitive Surgical Inc  [MedTech]  |  z = +2.45  |  +3.25%
+```
 
 ## Data and timing
 
@@ -48,19 +56,28 @@ The watchlist is built automatically from source files in `sources/`:
 
 ### Syncing
 
-`scripts/sync_watchlist.py` merges all source files into `watchlist.txt`, de-duplicating across sources. It runs automatically via GitHub Actions:
+`scripts/sync_watchlist.py` does two things:
+
+1. Merges all source files in `sources/` into `watchlist.txt`, de-duplicating across sources
+2. Reads the Coverage Manager CSV (`../Coverage Manager/data/coverage_universe_tickers.csv`) and writes `ticker_metadata.json` with each ticker's company name, `Sector (JP)`, and `Subsector (JP)`. The screener loads this file at startup so Slack alerts show the company name and sector tag, and so the 1σ tier filter can target HC Services / MedTech / PA tickers
+
+The sync runs automatically via GitHub Actions:
 
 - **On push** — whenever files in `sources/` change on master
 - **Weekly** — every Monday at 8:00 AM ET as a drift check
 - **Manual** — via `workflow_dispatch`
 
-To update the watchlist, edit the relevant source file in `sources/` and push. The sync workflow will regenerate `watchlist.txt` and commit it.
+To update the watchlist, edit the relevant source file in `sources/` and push. The sync workflow will regenerate `watchlist.txt` and `ticker_metadata.json` and commit them.
 
 You can also run the sync locally:
 
 ```bash
 python scripts/sync_watchlist.py
 ```
+
+### Ticker metadata
+
+`ticker_metadata.json` is a `{TICKER: {"name", "sector", "subsector"}}` lookup that gets loaded by `sigma_screener.py` at startup. If the file is missing, the screener still runs — alerts just won't include company names or sector tags, and the 1σ tier won't fire because no ticker will match the sector filter.
 
 ## Tests
 
