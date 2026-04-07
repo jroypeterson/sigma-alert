@@ -54,20 +54,15 @@ The watchlist is built automatically from source files in `sources/`:
 | S&P 500 | `sources/sp500.txt` | S&P 500 constituents (update quarterly at reconstitution) |
 | Sector ETFs | `sources/sector_etfs.txt` | SPDR Select Sector ETFs + SPYM S&P 500 portfolio ETF |
 
-### Syncing
+### Syncing the watchlist
 
-`scripts/sync_watchlist.py` does two things:
-
-1. Merges all source files in `sources/` into `watchlist.txt`, de-duplicating across sources
-2. Reads the Coverage Manager CSV (`../Coverage Manager/data/coverage_universe_tickers.csv`) and writes `ticker_metadata.json` with each ticker's company name, `Sector (JP)`, and `Subsector (JP)`. The screener loads this file at startup so Slack alerts show the company name and sector tag, and so the 1σ tier filter can target HC Services / MedTech / PA tickers
-
-The sync runs automatically via GitHub Actions:
+`scripts/sync_watchlist.py` merges all source files in `sources/` into `watchlist.txt`, de-duplicating across sources. It runs automatically via GitHub Actions:
 
 - **On push** — whenever files in `sources/` change on master
 - **Weekly** — every Monday at 8:00 AM ET as a drift check
 - **Manual** — via `workflow_dispatch`
 
-To update the watchlist, edit the relevant source file in `sources/` and push. The sync workflow will regenerate `watchlist.txt` and `ticker_metadata.json` and commit them.
+To update the watchlist, edit the relevant source file in `sources/` and push. The sync workflow will regenerate `watchlist.txt` and commit it.
 
 You can also run the sync locally:
 
@@ -77,7 +72,14 @@ python scripts/sync_watchlist.py
 
 ### Ticker metadata
 
-`ticker_metadata.json` is a `{TICKER: {"name", "sector", "subsector"}}` lookup that gets loaded by `sigma_screener.py` at startup. If the file is missing, the screener still runs — alerts just won't include company names or sector tags, and the 1σ tier won't fire because no ticker will match the sector filter.
+`ticker_metadata.json` is a `{TICKER: {"name", "sector", "subsector"}}` lookup that `sigma_screener.py` loads at startup. The screener uses it to:
+
+- Show company names and sector tags in Slack alerts
+- Filter the 1σ tier to Healthcare Services / MedTech / PA tickers only
+
+**This file is owned by Coverage Manager.** Its `weekly-build` pipeline reads `coverage_universe_tickers.csv`, generates the metadata, writes it directly into this repo, and commits/pushes only that file. sigma-alert's CI does **not** regenerate it — the runner has no access to the Coverage Manager CSV, so any attempt to do so would corrupt the file.
+
+If `ticker_metadata.json` is missing, the screener still runs — alerts just won't include company names or sector tags, and the 1σ tier won't fire because no ticker will match the sector filter.
 
 ## Tests
 

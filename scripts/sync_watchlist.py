@@ -1,9 +1,7 @@
 """
 Watchlist sync script for sigma-alert.
 
-Merges all source files in sources/ into a single watchlist.txt and
-generates ticker_metadata.json with company names and sector tags
-from the Coverage Manager CSV.
+Merges all source files in sources/ into a single watchlist.txt.
 
 Source files:
   sources/hc_services.txt — Healthcare Services coverage
@@ -16,20 +14,20 @@ Usage:
 
 The script is designed to run both locally and in GitHub Actions.
 When run in CI, the workflow handles committing the updated watchlist.
+
+Note: ticker_metadata.json (company names + sector tags used by the
+screener) is owned by Coverage Manager. Its weekly-build pipeline writes
+the file directly into this repo and pushes it. Do NOT generate the
+metadata file from this script — CI does not have access to the
+Coverage Manager CSV, so doing so would corrupt the file.
 """
 
-import csv
-import json
 from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCES_DIR = REPO_ROOT / "sources"
 WATCHLIST_PATH = REPO_ROOT / "watchlist.txt"
-METADATA_PATH = REPO_ROOT / "ticker_metadata.json"
-
-# Coverage Manager CSV — used for company name and sector lookup
-COVERAGE_CSV = Path(__file__).resolve().parent.parent.parent / "Coverage Manager" / "data" / "coverage_universe_tickers.csv"
 
 # Ordered list of (section_name, filename) — order determines priority for dedup
 SOURCES = [
@@ -94,59 +92,6 @@ def build_watchlist() -> str:
     return "\n".join(lines)
 
 
-def build_ticker_metadata() -> dict:
-    """Build metadata dict from Coverage Manager CSV.
-
-    Returns {TICKER: {"name": "...", "sector": "..."}} for all tickers
-    found in the coverage universe.
-    """
-    metadata = {}
-    if not COVERAGE_CSV.exists():
-        print(f"[WARN] Coverage CSV not found at {COVERAGE_CSV} — skipping metadata")
-        return metadata
-
-    with open(COVERAGE_CSV, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            ticker = row.get("Ticker", "").strip().upper()
-            if not ticker or ticker == "#N/A":
-                continue
-            # Strip any exchange suffix for matching (e.g. "ROG SW" -> "ROG")
-            plain = ticker.split()[0] if " " in ticker else ticker
-            plain = plain.split(".")[0] if "." in plain else plain
-            name = row.get("Company Name", "").strip()
-            sector = row.get("Sector (JP)", "").strip()
-            subsector = row.get("Subsector (JP)", "").strip()
-            metadata[plain] = {
-                "name": name,
-                "sector": sector,
-                "subsector": subsector,
-            }
-
-    # Add sector ETFs manually (not in coverage CSV)
-    etf_names = {
-        "XLE": ("Energy Select Sector SPDR", "ETF"),
-        "XLB": ("Materials Select Sector SPDR", "ETF"),
-        "XLU": ("Utilities Select Sector SPDR", "ETF"),
-        "XLP": ("Consumer Staples Select Sector SPDR", "ETF"),
-        "XLI": ("Industrial Select Sector SPDR", "ETF"),
-        "XLRE": ("Real Estate Select Sector SPDR", "ETF"),
-        "XLC": ("Communication Services Select Sector SPDR", "ETF"),
-        "XLV": ("Health Care Select Sector SPDR", "ETF"),
-        "XLK": ("Technology Select Sector SPDR", "ETF"),
-        "XLY": ("Consumer Discretionary Select Sector SPDR", "ETF"),
-        "XLF": ("Financial Select Sector SPDR", "ETF"),
-        "XBI": ("SPDR S&P Biotech ETF", "ETF"),
-        "SPYM": ("SPDR Portfolio S&P 500 ETF", "ETF"),
-    }
-    for t, (name, sector) in etf_names.items():
-        if t not in metadata:
-            metadata[t] = {"name": name, "sector": sector, "subsector": ""}
-
-    print(f"[INFO] Ticker metadata: {len(metadata)} entries")
-    return metadata
-
-
 def main():
     content = build_watchlist()
 
@@ -160,15 +105,10 @@ def main():
             )
         if strip_date(existing) == strip_date(content):
             print("[INFO] Watchlist is already up to date — no changes")
-        else:
-            WATCHLIST_PATH.write_text(content)
-            print(f"[OK] Watchlist written to {WATCHLIST_PATH}")
+            return
 
-    # Always rebuild metadata (cheap operation, keeps it fresh)
-    metadata = build_ticker_metadata()
-    if metadata:
-        METADATA_PATH.write_text(json.dumps(metadata, indent=2))
-        print(f"[OK] Metadata written to {METADATA_PATH}")
+    WATCHLIST_PATH.write_text(content)
+    print(f"[OK] Watchlist written to {WATCHLIST_PATH}")
 
 
 if __name__ == "__main__":
