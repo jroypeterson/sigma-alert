@@ -1,0 +1,79 @@
+name: Sigma Watchdog
+
+on:
+  schedule:
+    # Hourly on weekdays, 15:00–23:00 UTC. This covers every screener slot
+    # under both EST and EDT, with at least one watchdog run after each
+    # scheduled fire time so we can detect and recover dropped runs.
+    #
+    # Open    cron: 35 14 UTC -> first watchdog at 15:00 UTC catches misses
+    # Midday  cron: 30 17 UTC -> first watchdog at 18:00 UTC catches misses
+    # Close   cron: 30 21 UTC -> first watchdog at 22:00 UTC catches misses
+    - cron: '0 15-23 * * 1-5'
+  workflow_dispatch:  # manual trigger for testing
+
+permissions:
+  actions: write   # required to trigger sibling workflows via gh workflow run
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for missed scheduled runs and recover
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          set -euo pipefail
+
+          TODAY=$(date -u +%Y-%m-%d)
+          NOW_HHMM=$(date -u +%H%M)
+
+          recovered=()
+
+          check_workflow() {
+            local workflow_name="$1"
+            local scheduled_hhmm="$2"
+
+            # Skip if the scheduled time hasn't passed yet today
+            if [ "$NOW_HHMM" -lt "$scheduled_hhmm" ]; then
+              echo "[$workflow_name] not yet due (scheduled $scheduled_hhmm UTC, now $NOW_HHMM UTC)"
+              return
+            fi
+
+            # Count any runs for this workflow created today (UTC), regardless
+            # of trigger source — schedule, manual, or a previous watchdog recovery.
+            local count
+            count=$(gh run list \
+              --workflow "$workflow_name" \
+              --created "$TODAY" \
+              --limit 50 \
+              --json databaseId \
+              --jq 'length')
+
+            if [ "$count" -gt 0 ]; then
+              echo "[$workflow_name] OK — $count run(s) today"
+              return
+            fi
+
+            echo "[$workflow_name] MISSING — triggering manual run"
+            gh workflow run "$workflow_name"
+            recovered+=("$workflow_name")
+          }
+
+          check_workflow "Sigma Screener — Open"   "1435"
+          check_workflow "Sigma Screener — Midday" "1730"
+          check_workflow "Sigma Screener — Close"  "2130"
+
+          # Post a Slack heartbeat ONLY when we actually had to recover something.
+          # Silent on healthy runs to avoid noise.
+          if [ "${#recovered[@]}" -gt 0 ]; then
+            list=$(printf '• %s\n' "${recovered[@]}")
+            payload=$(jq -n \
+              --arg text "$(printf ':rotating_light: *Sigma Watchdog* recovered missed run(s) on %s:\n%s' "$TODAY" "$list")" \
+              '{text: $text}')
+            curl -sS -X POST -H 'Content-Type: application/json' \
+              --data "$payload" "$SLACK_WEBHOOK" > /dev/null || \
+              echo "[WARN] Failed to post Slack heartbeat"
+          fi

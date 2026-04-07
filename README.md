@@ -9,6 +9,8 @@ GitHub Actions-based stock screener that flags standard-deviation price moves ag
 3. **Close check (~4:30–5:30 PM ET)** — compares today's closing price to the prior close for end-of-day moves
 
 > Cron schedules use EST-aligned UTC offsets so they always fire after market open/close regardless of daylight saving time. During EDT months runs land ~1 hour later than the nominal time.
+>
+> A `Sigma Watchdog` workflow runs hourly during weekday market hours and recovers any of open/midday/close that GitHub Actions silently dropped (cron events on GitHub are best-effort and can be skipped during high load). When the watchdog has to recover a run, it posts a `:rotating_light: Sigma Watchdog` heartbeat to Slack so you know it happened.
 4. For each ticker, a z-score is computed: `z = (today_return - μ) / σ` where μ and σ come from the trailing 251 daily returns
 5. Alerts are split into two tiers in the Slack message:
    - **2σ+ Moves** — fires on the entire watchlist when `|z| ≥ 2.0` (3σ+ moves are flagged inline with a warning emoji)
