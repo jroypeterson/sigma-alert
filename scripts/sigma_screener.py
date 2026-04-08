@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WATCHLIST_PATH = ROOT / "watchlist.txt"
 CACHE_PATH = ROOT / "cache" / "distribution_cache.json"
 METADATA_PATH = ROOT / "ticker_metadata.json"
+MISSING_METADATA_PATH = ROOT / "cache" / "missing_metadata.json"
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -88,6 +89,11 @@ _SUFFIX_PATTERN = re.compile(
     r"[\s,]*\b(?:" + "|".join(_COMPANY_SUFFIXES) + r")\.?$",
     re.IGNORECASE,
 )
+# Catches suffixes glued onto the root word with no space, e.g.
+# "AptarGroup" -> "Aptar", "MicroStrategyHoldings" -> "MicroStrategy".
+_GLUED_SUFFIX_PATTERN = re.compile(
+    r"(?<=[a-z])(?:Group|Holdings|Holding)$"
+)
 
 
 def short_company_name(name: str) -> str:
@@ -111,6 +117,7 @@ def short_company_name(name: str) -> str:
     while s != prev:
         prev = s
         s = _SUFFIX_PATTERN.sub("", s).strip()
+        s = _GLUED_SUFFIX_PATTERN.sub("", s)
     # Trim trailing punctuation left over from "& Co", "Ltd.", etc.
     s = s.rstrip(",.& ")
     return s or name
@@ -154,6 +161,44 @@ def save_cache(cache: dict) -> None:
     CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_PATH, "w") as f:
         json.dump(cache, f, indent=2)
+
+
+def write_missing_metadata_flag(tickers: list[str], metadata: dict) -> dict:
+    """Identify watchlist tickers missing from ticker_metadata.json (or with
+    a blank `name`) and write a flag file for Coverage Manager to pick up.
+
+    Coverage Manager owns ticker_metadata.json and is the only system that can
+    fix gaps. This file is written to `cache/missing_metadata.json` so it gets
+    committed by the EOD CI run alongside the distribution cache, then the
+    sibling Coverage Manager weekly build reads it and surfaces the gaps to
+    the operator.
+
+    Returns the dict that was written (or an empty dict if no gaps).
+    """
+    metadata = metadata or {}
+    gaps = {}
+    for t in tickers:
+        meta = metadata.get(t)
+        if meta is None:
+            gaps[t] = "not_in_metadata"
+        elif not (meta.get("name") or "").strip():
+            gaps[t] = "missing_name"
+
+    MISSING_METADATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not gaps:
+        # Clear any stale flag file so Coverage Manager doesn't keep warning.
+        if MISSING_METADATA_PATH.exists():
+            MISSING_METADATA_PATH.unlink()
+        return {}
+
+    payload = {
+        "updated": now_et().isoformat(),
+        "tickers": gaps,
+    }
+    with open(MISSING_METADATA_PATH, "w") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+    print(f"[WARN] {len(gaps)} ticker(s) missing metadata — flagged for Coverage Manager: {sorted(gaps)}")
+    return payload
 
 
 def is_cache_fresh(cache: dict) -> bool:
@@ -593,13 +638,14 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     ]
 
     def _format_alert_line(a):
-        arrow = "\u2B06\uFE0F" if a["direction"] == "up" else "\u2B07\uFE0F"
+        marker = "\U0001F7E9" if a["direction"] == "up" else "\U0001F7E5"
         sigma_note = "  *\u26A0\uFE0F 3\u03C3+ move!*" if a["three_sigma"] else ""
         sign = "+" if a["return_pct"] > 0 else ""
-        name_part = f" {a['name']}" if a.get("name") else ""
+        short = short_company_name(a.get("name", ""))
+        name_part = f" ({short})" if short else ""
         sector_part = f"  [{a['sector']}]" if a.get("sector") else ""
         return (
-            f"{arrow}  *{a['ticker']}*{name_part}{sector_part}  "
+            f"{marker}  *{a['ticker']}*{name_part}{sector_part}  "
             f"|  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{sigma_note}"
         )
 
@@ -773,6 +819,7 @@ def main():
         alerts, cache_data, stats, hi_lo_hits = screen_full(tickers, "close", track_52w=True, metadata=metadata)
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
+        write_missing_metadata_flag(tickers, metadata)
 
     # Report results
     if alerts:
