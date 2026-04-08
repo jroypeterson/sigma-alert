@@ -17,10 +17,10 @@ GitHub Actions-based stock screener that flags standard-deviation price moves ag
    - **1σ Moves** — fires only on tickers tagged `Healthcare Services`, `MedTech`, or `PA` in the Coverage Manager CSV when `1.0 ≤ |z| < 2.0`. The narrow filter keeps the lower threshold from being noisy
 6. **Close report only**: flags any ticker that hit a new 52-week high or low during the session
 
-Each alert line includes the ticker, company name, and sector tag, e.g.:
+Each alert line includes a direction marker (🟩 up / 🟥 down), the ticker, a short company name, and the sector tag, e.g.:
 
 ```
-⬆️  *ISRG* Intuitive Surgical Inc  [MedTech]  |  z = +2.45  |  +3.25%
+🟩  *ISRG* (Intuitive Surgical)  [MedTech]  |  z = +2.45  |  +3.25%
 ```
 
 ## Data and timing
@@ -82,6 +82,10 @@ python scripts/sync_watchlist.py
 **This file is owned by Coverage Manager.** Its `weekly-build` pipeline reads `coverage_universe_tickers.csv`, generates the metadata, writes it directly into this repo, and commits/pushes only that file. sigma-alert's CI does **not** regenerate it — the runner has no access to the Coverage Manager CSV, so any attempt to do so would corrupt the file.
 
 If `ticker_metadata.json` is missing, the screener still runs — alerts just won't include company names or sector tags, and the 1σ tier won't fire because no ticker will match the sector filter.
+
+#### Reporting metadata gaps back to Coverage Manager
+
+On the EOD close run, the screener checks every watchlist ticker against `ticker_metadata.json`. If any ticker is missing from the file (or has a blank `name`), it writes `cache/missing_metadata.json` listing the gaps; the close workflow commits that file alongside the distribution cache. Coverage Manager's weekly `sigma_export` step reads this flag from the sibling sigma-alert clone, logs a warning, and surfaces the missing tickers in its run summary so the operator can fix the source CSV.
 
 ## Tests
 
