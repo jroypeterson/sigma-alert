@@ -576,13 +576,15 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 "text": {"type": "mrkdwn", "text": "\n".join(chunk)},
             })
 
+    # Sort by signed z-score descending: biggest gainers on top,
+    # biggest losers on the bottom, within each tier.
     two_sig = sorted(
         [a for a in alerts if a.get("tier") == "2sigma"],
-        key=lambda a: abs(a["z_score"]), reverse=True,
+        key=lambda a: a["z_score"], reverse=True,
     )
     one_sig = sorted(
         [a for a in alerts if a.get("tier") == "1sigma"],
-        key=lambda a: abs(a["z_score"]), reverse=True,
+        key=lambda a: a["z_score"], reverse=True,
     )
 
     if two_sig or one_sig:
