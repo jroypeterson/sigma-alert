@@ -17,6 +17,7 @@ Price data:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import random
@@ -65,6 +66,54 @@ def now_et() -> datetime:
 def today_et() -> datetime:
     """Return today's date in ET."""
     return now_et().date()
+
+
+# Common corporate suffixes stripped from company names for compact display
+# in the 52-week high/low list. Order doesn't matter — pattern is rebuilt
+# from the full list with word-boundary anchoring.
+_COMPANY_SUFFIXES = [
+    "Incorporated", "Inc",
+    "Corporation", "Corp",
+    "Limited", "Ltd",
+    "PLC",
+    "Holdings", "Holding",
+    "Group",
+    "Company", "Co",
+    "AG", "SE", "SA", "NV", "BV", "AB", "ASA", "AS", "OYJ",
+    "KGaA", "GmbH",
+    "LLC", "LLP", "LP",
+    "Tbk", "PT", "Bhd", "JSC", "OAO", "OJSC", "PJSC",
+]
+_SUFFIX_PATTERN = re.compile(
+    r"[\s,]*\b(?:" + "|".join(_COMPANY_SUFFIXES) + r")\.?$",
+    re.IGNORECASE,
+)
+
+
+def short_company_name(name: str) -> str:
+    """Strip common corporate suffixes for compact display.
+
+    "Apple Inc." -> "Apple"
+    "UnitedHealth Group Inc" -> "UnitedHealth"
+    "Fresenius Medical Care AG" -> "Fresenius Medical Care"
+    "JPMorgan Chase & Co" -> "JPMorgan Chase"
+
+    Falls back to the original string if stripping would empty it.
+    """
+    if not name:
+        return ""
+    s = str(name).strip()
+    # Remove "(publ)" annotations anywhere
+    s = re.sub(r"\s*\(publ\)\s*", " ", s, flags=re.IGNORECASE).strip()
+    # Strip suffixes iteratively to handle "UnitedHealth Group Inc" -> drop
+    # "Inc" then drop "Group" on the next pass.
+    prev = None
+    while s != prev:
+        prev = s
+        s = _SUFFIX_PATTERN.sub("", s).strip()
+    # Trim trailing punctuation left over from "& Co", "Ltd.", etc.
+    s = s.rstrip(",.& ")
+    return s or name
 
 
 def load_watchlist() -> list[str]:
@@ -621,9 +670,10 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         lows = sorted([h for h in hi_lo_hits if h["type"] == "low"], key=lambda h: h["ticker"])
 
         def _format_hi_lo_ticker(h):
-            name = f" {h['name']}" if h.get("name") else ""
+            short = short_company_name(h.get("name", ""))
+            name_part = f" ({short})" if short else ""
             sector = f" [{h['sector']}]" if h.get("sector") else ""
-            return f"*{h['ticker']}*{name}{sector}"
+            return f"*{h['ticker']}*{name_part}{sector}"
 
         hi_lo_lines = []
         if highs:
