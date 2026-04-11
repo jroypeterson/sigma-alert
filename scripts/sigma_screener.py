@@ -39,9 +39,9 @@ CACHE_PATH = ROOT / "cache" / "distribution_cache.json"
 METADATA_PATH = ROOT / "ticker_metadata.json"
 MISSING_METADATA_PATH = ROOT / "cache" / "missing_metadata.json"
 SP500_PATH = ROOT / "sources" / "sp500.txt"
-# Personal watchlist pushed by Coverage Manager's weekly sigma_export step.
+# Core watchlist pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
-PERSONAL_WATCHLIST_PATH = ROOT / "personal_watchlist.json"
+CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -155,7 +155,7 @@ def load_sp500_set() -> set[str]:
 # A ticker can appear in multiple subcategories (shown once per match).
 # Anything matching none lands in "Other" so no alert is dropped.
 SUBCATEGORIES = [
-    ("Personal Watchlist", lambda a, sp500: a.get("on_watchlist", False)),
+    ("Core Watchlist", lambda a, sp500: a.get("on_watchlist", False)),
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
     ("Other/PA", lambda a, sp500: a.get("sector") == "PA"),
@@ -163,20 +163,20 @@ SUBCATEGORIES = [
 ]
 
 
-def load_personal_watchlist() -> set[str]:
-    """Return the set of tickers on the personal watchlist.
+def load_core_watchlist() -> set[str]:
+    """Return the set of tickers on the core watchlist.
 
     The file is written by Coverage Manager's sigma_export step. Missing file
     is not an error — it just means no watchlist was pushed yet, and the
-    "Personal Watchlist" subcategory will be empty.
+    "Core Watchlist" subcategory will be empty.
     """
-    if not PERSONAL_WATCHLIST_PATH.exists():
+    if not CORE_WATCHLIST_PATH.exists():
         return set()
     try:
-        with open(PERSONAL_WATCHLIST_PATH) as f:
+        with open(CORE_WATCHLIST_PATH) as f:
             data = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
-        print(f"[WARN] Could not read personal_watchlist.json: {e}")
+        print(f"[WARN] Could not read core_watchlist.json: {e}")
         return set()
     if not isinstance(data, dict):
         return set()
@@ -410,7 +410,8 @@ def download_todays_prices(tickers: list[str]) -> dict:
 
 
 def screen_open_cached(tickers: list[str], cache: dict,
-                       metadata: dict | None = None) -> tuple[list[dict], dict]:
+                       metadata: dict | None = None,
+                       core_watchlist: set[str] | None = None) -> tuple[list[dict], dict]:
     """Open-mode screening using cached mu/sigma — only downloads today's prices.
 
     Returns (alerts, run_stats).
@@ -462,6 +463,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
+                "on_watchlist": ticker in (core_watchlist or set()),
             })
     return alerts, stats
 
@@ -490,7 +492,8 @@ def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_seri
 
 def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          high_series: pd.Series | None, low_series: pd.Series | None,
-                         mode: str, metadata: dict | None = None) -> tuple[dict | None, dict | None, dict | None]:
+                         mode: str, metadata: dict | None = None,
+                         core_watchlist: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None]:
     """Process a single ticker in full-screen mode.
 
     Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none).
@@ -539,6 +542,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
+            "on_watchlist": ticker in (core_watchlist or set()),
         }
 
     # 52-week high/low check (only when high/low data is provided)
@@ -558,7 +562,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
 
 
 def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
-                metadata: dict | None = None) -> tuple[list[dict], dict, dict, list[dict]]:
+                metadata: dict | None = None,
+                core_watchlist: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict]]:
     """Full screening: downloads history, computes distributions.
 
     Returns (alerts, cache_data, run_stats, hi_lo_hits).
@@ -605,6 +610,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
                 alert, cache_entry, hi_lo = _process_ticker_full(
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
+                    core_watchlist=core_watchlist,
                 )
 
                 if cache_entry is None:
@@ -650,6 +656,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
             alert, cache_entry, hi_lo = _process_ticker_full(
                 ticker, close, open_prices, high_s, low_s, mode, metadata,
+                core_watchlist=core_watchlist,
             )
 
             if cache_entry is None:
@@ -867,6 +874,10 @@ def main():
     if sp500_set:
         print(f"[INFO] Loaded {len(sp500_set)} S&P 500 tickers")
 
+    core_watchlist = load_core_watchlist()
+    if core_watchlist:
+        print(f"[INFO] Loaded {len(core_watchlist)} core watchlist tickers")
+
     print(f"[INFO] Mode: {args.mode} | Tickers: {len(tickers)} | Time: {now_et().isoformat()}")
 
     hi_lo_hits = []
@@ -876,17 +887,26 @@ def main():
         cache = load_cache()
         if cache and is_cache_fresh(cache):
             print("[INFO] Using cached distributions for open-mode screening")
-            alerts, stats = screen_open_cached(tickers, cache, metadata)
+            alerts, stats = screen_open_cached(
+                tickers, cache, metadata, core_watchlist=core_watchlist,
+            )
         else:
             print("[INFO] Cache stale or missing, running full download for open mode")
-            alerts, _, stats, _ = screen_full(tickers, "open", metadata=metadata)
+            alerts, _, stats, _ = screen_full(
+                tickers, "open", metadata=metadata, core_watchlist=core_watchlist,
+            )
             # Don't save cache on open runs — only EOD updates the cache
     elif args.mode == "midday":
         # Midday mode: same price comparison as close but don't update cache
-        alerts, _, stats, _ = screen_full(tickers, "close", metadata=metadata)
+        alerts, _, stats, _ = screen_full(
+            tickers, "close", metadata=metadata, core_watchlist=core_watchlist,
+        )
     else:
         # Close mode: full download, update cache, and check 52-week highs/lows
-        alerts, cache_data, stats, hi_lo_hits = screen_full(tickers, "close", track_52w=True, metadata=metadata)
+        alerts, cache_data, stats, hi_lo_hits = screen_full(
+            tickers, "close", track_52w=True, metadata=metadata,
+            core_watchlist=core_watchlist,
+        )
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
         write_missing_metadata_flag(tickers, metadata)

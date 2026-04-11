@@ -79,9 +79,13 @@ python scripts/sync_watchlist.py
 - Show company names and sector tags in Slack alerts
 - Filter the 1σ tier to Healthcare Services / MedTech / PA tickers only
 
-**This file is owned by Coverage Manager.** Its `weekly-build` pipeline reads `coverage_universe_tickers.csv`, generates the metadata, writes it directly into this repo, and commits/pushes only that file. sigma-alert's CI does **not** regenerate it — the runner has no access to the Coverage Manager CSV, so any attempt to do so would corrupt the file.
+**This file is owned by Coverage Manager.** Its `weekly-build` pipeline reads `coverage_universe_tickers.csv`, generates the metadata, writes it directly into this repo, and commits/pushes it (alongside `core_watchlist.json`) in a single commit. sigma-alert's CI does **not** regenerate it — the runner has no access to the Coverage Manager CSV, so any attempt to do so would corrupt the file.
 
 If `ticker_metadata.json` is missing, the screener still runs — alerts just won't include company names or sector tags, and the 1σ tier won't fire because no ticker will match the sector filter.
+
+### Core watchlist
+
+`core_watchlist.json` is a `{TICKER: {buy_price, target_price, date_added, notes, name, sector, subsector}}` file also owned by Coverage Manager, pushed in the same commit as `ticker_metadata.json`. At startup the screener loads the key set; any alert whose ticker is on the list is tagged `on_watchlist=True` and renders under a "Core Watchlist" subcategory at the top of its sigma tier in the Slack digest. The file is optional — if missing, the Core Watchlist subcategory simply doesn't appear.
 
 #### Reporting metadata gaps back to Coverage Manager
 

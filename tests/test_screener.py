@@ -13,12 +13,14 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
+import sigma_screener
 from sigma_screener import (
     check_52w_high_low,
     compute_distribution,
     compute_z_score,
     format_slack_message,
     is_cache_fresh,
+    load_core_watchlist,
     validate_bar_date,
 )
 
@@ -294,6 +296,35 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "$512.34" in text
 
+    def test_core_watchlist_subcategory_renders_first(self):
+        """A watchlist hit should render in the Core Watchlist subcategory
+        at the top of its tier, and also in its sector subcategory below."""
+        alerts = [
+            self._make_alert("UNH", "Healthcare Services"),
+            self._make_alert("INSM", "Biopharma"),
+        ]
+        alerts[1]["on_watchlist"] = True  # only INSM is on the watchlist
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+
+        assert "Core Watchlist (1)" in text
+        # INSM appears once under Core Watchlist; UNH appears under HC Services.
+        i_pw = text.index("Core Watchlist (1)")
+        i_hc = text.index("Healthcare Services (1)")
+        assert i_pw < i_hc, "Core Watchlist must render before sector subcategories"
+        # INSM should be reachable from the Core Watchlist bucket (it wouldn't
+        # otherwise appear at all because Biopharma is not in the subcategory list)
+        assert "*INSM*" in text
+
+    def test_alert_without_on_watchlist_key_defaults_false(self):
+        """Legacy alert dicts without the on_watchlist key must not crash
+        and must not appear under Core Watchlist."""
+        alerts = [self._make_alert("UNH", "Healthcare Services")]
+        # Deliberately don't set on_watchlist
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "Core Watchlist" not in text
+
     def test_tier_separation(self):
         alerts = [
             self._make_alert("A", "Healthcare Services", tier="2sigma", z=2.5),
@@ -303,3 +334,35 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "2σ+ Moves (1)" in text
         assert "1σ Moves (1)" in text
+
+
+# ---------------------------------------------------------------------------
+# Core watchlist loader
+# ---------------------------------------------------------------------------
+
+class TestCoreWatchlistLoader:
+    def test_missing_file_returns_empty_set(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", tmp_path / "nope.json")
+        assert load_core_watchlist() == set()
+
+    def test_valid_file_returns_ticker_set(self, tmp_path, monkeypatch):
+        path = tmp_path / "core_watchlist.json"
+        path.write_text(json.dumps({
+            "INSM": {"buy_price": 30, "target_price": 75, "sector": "Biopharma"},
+            "ISRG": {"buy_price": 300, "target_price": 500, "sector": "MedTech"},
+        }))
+        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
+        assert load_core_watchlist() == {"INSM", "ISRG"}
+
+    def test_malformed_file_returns_empty_set(self, tmp_path, monkeypatch):
+        path = tmp_path / "core_watchlist.json"
+        path.write_text("{not valid json")
+        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
+        assert load_core_watchlist() == set()
+
+    def test_list_instead_of_dict_returns_empty_set(self, tmp_path, monkeypatch):
+        """Payload must be a {ticker: {...}} dict; a list is rejected cleanly."""
+        path = tmp_path / "core_watchlist.json"
+        path.write_text(json.dumps(["INSM", "ISRG"]))
+        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
+        assert load_core_watchlist() == set()
