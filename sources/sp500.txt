@@ -1,6 +1,8 @@
 # S&P 500 Constituents
-# Last updated: 2026-04-04
+# Last updated: 2026-04-11
 # Check for reconstitution updates quarterly (March, June, September, December)
+# Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
+A
 AAPL
 ABBV
 ABNB
@@ -73,9 +75,11 @@ BRO
 BSX
 BX
 BXP
+C
 CAG
 CAH
 CARR
+CASY
 CAT
 CB
 CBOE
@@ -127,6 +131,7 @@ CTVA
 CVNA
 CVS
 CVX
+D
 DAL
 DASH
 DD
@@ -179,6 +184,7 @@ EXE
 EXPD
 EXPE
 EXR
+F
 FANG
 FAST
 FCX
@@ -224,7 +230,6 @@ HD
 HIG
 HII
 HLT
-HOLX
 HON
 HOOD
 HPE
@@ -248,13 +253,13 @@ INTU
 INVH
 IP
 IQV
-IQVIA
 IR
 IRM
 ISRG
 IT
 ITW
 IVZ
+J
 JBHT
 JBL
 JCI
@@ -273,6 +278,7 @@ KMI
 KO
 KR
 KVUE
+L
 LDOS
 LEN
 LH
@@ -341,6 +347,7 @@ NVR
 NWS
 NWSA
 NXPI
+O
 ODFL
 OKE
 OMC
@@ -379,6 +386,7 @@ PSX
 PTC
 PWR
 PYPL
+Q
 QCOM
 RCL
 REG
@@ -421,6 +429,7 @@ SWKS
 SYF
 SYK
 SYY
+T
 TAP
 TDG
 TDY
@@ -458,6 +467,7 @@ UNP
 UPS
 URI
 USB
+V
 VICI
 VLO
 VLTO
