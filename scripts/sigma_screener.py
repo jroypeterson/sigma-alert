@@ -38,6 +38,10 @@ WATCHLIST_PATH = ROOT / "watchlist.txt"
 CACHE_PATH = ROOT / "cache" / "distribution_cache.json"
 METADATA_PATH = ROOT / "ticker_metadata.json"
 MISSING_METADATA_PATH = ROOT / "cache" / "missing_metadata.json"
+SP500_PATH = ROOT / "sources" / "sp500.txt"
+# Personal watchlist pushed by Coverage Manager's weekly sigma_export step.
+# Owned by Coverage Manager — do NOT edit by hand in this repo.
+PERSONAL_WATCHLIST_PATH = ROOT / "personal_watchlist.json"
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -132,6 +136,51 @@ def load_watchlist() -> list[str]:
             if t and not t.startswith("#"):
                 tickers.append(t)
     return tickers
+
+
+def load_sp500_set() -> set[str]:
+    """Load S&P 500 tickers from sources/sp500.txt into a set for membership checks."""
+    if not SP500_PATH.exists():
+        return set()
+    out = set()
+    with open(SP500_PATH) as f:
+        for line in f:
+            t = line.strip().upper()
+            if t and not t.startswith("#"):
+                out.add(t)
+    return out
+
+
+# Subcategory layout within each sigma tier. Order = render order.
+# A ticker can appear in multiple subcategories (shown once per match).
+# Anything matching none lands in "Other" so no alert is dropped.
+SUBCATEGORIES = [
+    ("Personal Watchlist", lambda a, sp500: a.get("on_watchlist", False)),
+    ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
+    ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
+    ("Other/PA", lambda a, sp500: a.get("sector") == "PA"),
+    ("S&P 500", lambda a, sp500: a["ticker"] in sp500),
+]
+
+
+def load_personal_watchlist() -> set[str]:
+    """Return the set of tickers on the personal watchlist.
+
+    The file is written by Coverage Manager's sigma_export step. Missing file
+    is not an error — it just means no watchlist was pushed yet, and the
+    "Personal Watchlist" subcategory will be empty.
+    """
+    if not PERSONAL_WATCHLIST_PATH.exists():
+        return set()
+    try:
+        with open(PERSONAL_WATCHLIST_PATH) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read personal_watchlist.json: {e}")
+        return set()
+    if not isinstance(data, dict):
+        return set()
+    return {t.upper() for t in data.keys()}
 
 
 def load_metadata() -> dict:
@@ -409,6 +458,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "sector": sector,
                 "z_score": z,
                 "return_pct": today_return * 100,
+                "price": today_open,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
@@ -485,6 +535,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "sector": sector,
             "z_score": z,
             "return_pct": today_return * 100,
+            "price": today_price,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
@@ -620,7 +671,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
 
 def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
-                         stats: dict, hi_lo_hits: list[dict] | None = None) -> dict:
+                         stats: dict, hi_lo_hits: list[dict] | None = None,
+                         sp500_set: set[str] | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
     date_str = current.strftime("%Y-%m-%d")
@@ -643,10 +695,11 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         sign = "+" if a["return_pct"] > 0 else ""
         short = short_company_name(a.get("name", ""))
         name_part = f" ({short})" if short else ""
-        sector_part = f"  [{a['sector']}]" if a.get("sector") else ""
+        price = a.get("price")
+        price_part = f"  |  ${price:.2f}" if price is not None else ""
         return (
-            f"{marker}  *{a['ticker']}*{name_part}{sector_part}  "
-            f"|  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{sigma_note}"
+            f"{marker}  *{a['ticker']}*{name_part}  "
+            f"|  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{price_part}{sigma_note}"
         )
 
     def _append_section_chunked(blocks_list, header, lines, max_len=2900):
@@ -673,6 +726,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
 
     # Sort by signed z-score descending: biggest gainers on top,
     # biggest losers on the bottom, within each tier.
+    sp500 = sp500_set or set()
     two_sig = sorted(
         [a for a in alerts if a.get("tier") == "2sigma"],
         key=lambda a: a["z_score"], reverse=True,
@@ -682,12 +736,26 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         key=lambda a: a["z_score"], reverse=True,
     )
 
+    def _render_tier(tier_alerts, tier_header):
+        """Render a tier as a header plus one subsection per SUBCATEGORIES match.
+        An alert is duplicated across every category it matches. Alerts that
+        match none are dropped — 1σ can't hit this path (already sector-filtered);
+        2σ alerts outside HC Services/MedTech/PA/S&P 500 are intentionally hidden.
+        """
+        _append_section_chunked(blocks, tier_header, [])
+        for label, predicate in SUBCATEGORIES:
+            members = [a for a in tier_alerts if predicate(a, sp500)]
+            if not members:
+                continue
+            sub_header = f"    _{label} ({len(members)})_"
+            _append_section_chunked(
+                blocks, sub_header, [_format_alert_line(a) for a in members]
+            )
+
     if two_sig or one_sig:
         if two_sig:
             header_2 = f":bar_chart: *2\u03C3+ Moves ({len(two_sig)})*"
-            _append_section_chunked(
-                blocks, header_2, [_format_alert_line(a) for a in two_sig]
-            )
+            _render_tier(two_sig, header_2)
 
         if one_sig:
             if two_sig:
@@ -696,9 +764,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f":chart_with_upwards_trend: *1\u03C3 Moves ({len(one_sig)})* "
                 f"— HC Services / MedTech / PA only"
             )
-            _append_section_chunked(
-                blocks, header_1, [_format_alert_line(a) for a in one_sig]
-            )
+            _render_tier(one_sig, header_1)
     else:
         blocks.append({
             "type": "section",
@@ -797,6 +863,10 @@ def main():
     if metadata:
         print(f"[INFO] Loaded metadata for {len(metadata)} tickers")
 
+    sp500_set = load_sp500_set()
+    if sp500_set:
+        print(f"[INFO] Loaded {len(sp500_set)} S&P 500 tickers")
+
     print(f"[INFO] Mode: {args.mode} | Tickers: {len(tickers)} | Time: {now_et().isoformat()}")
 
     hi_lo_hits = []
@@ -835,7 +905,7 @@ def main():
         print(f"[INFO] 52-week highs: {len(highs)}, lows: {len(lows)}")
 
     # Send to Slack
-    payload = format_slack_message(alerts, args.mode, len(tickers), stats, hi_lo_hits)
+    payload = format_slack_message(alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set)
     send_slack(payload)
 
 

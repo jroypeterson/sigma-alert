@@ -17,6 +17,7 @@ from sigma_screener import (
     check_52w_high_low,
     compute_distribution,
     compute_z_score,
+    format_slack_message,
     is_cache_fresh,
     validate_bar_date,
 )
@@ -227,3 +228,78 @@ class TestCheck52wHighLow:
         lows = self._make_series([90])
         close = self._make_series([95])
         assert check_52w_high_low(highs, lows, close) is None
+
+
+# ---------------------------------------------------------------------------
+# Slack subcategory rendering
+# ---------------------------------------------------------------------------
+
+class TestSlackSubcategories:
+    def _make_alert(self, ticker, sector, tier="2sigma", z=2.5, ret=5.0, price=100.0):
+        return {
+            "ticker": ticker,
+            "name": f"{ticker} Corp",
+            "sector": sector,
+            "z_score": z,
+            "return_pct": ret,
+            "price": price,
+            "direction": "up" if ret > 0 else "down",
+            "three_sigma": abs(z) >= 3.0,
+            "tier": tier,
+        }
+
+    def _all_text(self, payload):
+        parts = []
+        for b in payload["blocks"]:
+            if b.get("type") == "section":
+                parts.append(b["text"]["text"])
+        return "\n".join(parts)
+
+    def test_ticker_in_multiple_categories_shown_twice(self):
+        alerts = [self._make_alert("UNH", "Healthcare Services")]
+        sp500 = {"UNH"}
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
+        text = self._all_text(payload)
+        assert text.count("*UNH*") == 2
+        assert "Healthcare Services (1)" in text
+        assert "S&P 500 (1)" in text
+
+    def test_subcategory_order_and_labels(self):
+        alerts = [
+            self._make_alert("AAPL", "Tech", z=2.1),
+            self._make_alert("ISRG", "MedTech", z=2.2),
+            self._make_alert("HCA", "Healthcare Services", z=2.3),
+            self._make_alert("NVO", "PA", z=2.4),
+        ]
+        sp500 = {"AAPL"}
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
+        text = self._all_text(payload)
+        # Subcategories render in the declared order
+        i_hc = text.index("Healthcare Services (1)")
+        i_mt = text.index("MedTech (1)")
+        i_pa = text.index("Other/PA (1)")
+        i_sp = text.index("S&P 500 (1)")
+        assert i_hc < i_mt < i_pa < i_sp
+        # A 2σ ticker matching none of the 4 categories should be dropped,
+        # not rendered under an "Other" bucket.
+        alerts.append(self._make_alert("ADBE", "SaaS", z=2.0))
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
+        text = self._all_text(payload)
+        assert "_Other (" not in text
+        assert "*ADBE*" not in text
+
+    def test_price_rendered_in_line(self):
+        alerts = [self._make_alert("UNH", "Healthcare Services", price=512.34)]
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "$512.34" in text
+
+    def test_tier_separation(self):
+        alerts = [
+            self._make_alert("A", "Healthcare Services", tier="2sigma", z=2.5),
+            self._make_alert("B", "MedTech", tier="1sigma", z=1.5),
+        ]
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "2σ+ Moves (1)" in text
+        assert "1σ Moves (1)" in text
