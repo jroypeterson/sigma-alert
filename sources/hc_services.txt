@@ -1,5 +1,6 @@
 # Healthcare Services — Coverage Manager
-# Last updated: 2026-04-04
+# Last updated: 2026-04-13
+ACCD
 ACH
 ACHC
 ADUS
@@ -13,6 +14,8 @@ AUNA
 AVAH
 BTSG
 CAH
+CCRN
+CERT
 CHE
 CI
 CLOV
@@ -26,6 +29,7 @@ CYH
 DCGO
 DGX
 DH
+DOCS
 DVA
 EHAB
 EHC
@@ -52,8 +56,10 @@ LMRI
 MCK
 MD
 MDLN
+MEDP
 MODV
 MOH
+OMDA
 OPCH
 OSCR
 PACS
