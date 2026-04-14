@@ -36,9 +36,12 @@ import yfinance as yf
 ROOT = Path(__file__).resolve().parent.parent
 WATCHLIST_PATH = ROOT / "watchlist.txt"
 CACHE_PATH = ROOT / "cache" / "distribution_cache.json"
+SKIP_LOG_PATH = ROOT / "cache" / "skip_log.json"
 METADATA_PATH = ROOT / "ticker_metadata.json"
 MISSING_METADATA_PATH = ROOT / "cache" / "missing_metadata.json"
 SP500_PATH = ROOT / "sources" / "sp500.txt"
+SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
+SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 # Core watchlist pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
 CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"
@@ -52,6 +55,11 @@ LOOKBACK_DAYS = 252          # ~1 trading year
 SIGMA_THRESHOLD = 2.0
 ONE_SIGMA_THRESHOLD = 1.0
 THREE_SIGMA = 3.0
+
+# Trailing window kept in cache/skip_log.json. Coverage Manager's weekly
+# report reads trailing 7 days; keep 30 days so there's headroom for a
+# longer-window view without growing the file unbounded.
+SKIP_LOG_RETENTION_DAYS = 30
 
 # Sectors that get the lower 1σ alert tier (in-coverage tickers).
 # 2σ+ alerts fire on the entire watchlist regardless of sector.
@@ -144,6 +152,38 @@ def load_sp500_set() -> set[str]:
         return set()
     out = set()
     with open(SP500_PATH) as f:
+        for line in f:
+            t = line.strip().upper()
+            if t and not t.startswith("#"):
+                out.add(t)
+    return out
+
+
+def load_sp500_names() -> dict:
+    """Load `{TICKER: short company name}` fallback for S&P 500 tickers not in
+    ticker_metadata.json. Coverage Manager only maintains metadata for the
+    healthcare/MedTech/PA universe, so most S&P 500 names come from this file
+    (populated from Wikipedia by refresh_sp500.py). Missing file is not fatal.
+    """
+    if not SP500_NAMES_PATH.exists():
+        return {}
+    try:
+        with open(SP500_NAMES_PATH) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read sp500_names.json: {e}")
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {t.upper(): str(n) for t, n in data.items() if n}
+
+
+def load_sector_etfs() -> set[str]:
+    """Load sector ETF tickers from sources/sector_etfs.txt for the sector returns section."""
+    if not SECTOR_ETFS_PATH.exists():
+        return set()
+    out = set()
+    with open(SECTOR_ETFS_PATH) as f:
         for line in f:
             t = line.strip().upper()
             if t and not t.startswith("#"):
@@ -247,6 +287,57 @@ def write_missing_metadata_flag(tickers: list[str], metadata: dict) -> dict:
     with open(MISSING_METADATA_PATH, "w") as f:
         json.dump(payload, f, indent=2, sort_keys=True)
     print(f"[WARN] {len(gaps)} ticker(s) missing metadata — flagged for Coverage Manager: {sorted(gaps)}")
+    return payload
+
+
+def update_skip_log(skip_events: list[dict], mode: str) -> dict:
+    """Append today's skip events to cache/skip_log.json and trim to the
+    retention window. Consumed by Coverage Manager's weekly report.
+
+    Schema:
+        {
+          "runs": [
+            {"date": "YYYY-MM-DD", "mode": "close",
+             "skipped": [{"ticker": "ABC", "reason": "insufficient_history"}, ...]}
+          ]
+        }
+
+    Only the close run calls this — it's the canonical daily snapshot and
+    the only mode whose cache directory gets committed by CI.
+
+    Returns the trimmed payload that was written.
+    """
+    today_str = today_et().strftime("%Y-%m-%d")
+    payload = {"runs": []}
+    if SKIP_LOG_PATH.exists():
+        try:
+            with open(SKIP_LOG_PATH) as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict) and isinstance(loaded.get("runs"), list):
+                payload = loaded
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[WARN] Could not read skip_log.json, starting fresh: {e}")
+
+    # Drop any prior entry for today+mode so re-runs overwrite cleanly.
+    payload["runs"] = [
+        r for r in payload["runs"]
+        if not (r.get("date") == today_str and r.get("mode") == mode)
+    ]
+    payload["runs"].append({
+        "date": today_str,
+        "mode": mode,
+        "skipped": sorted(skip_events, key=lambda e: e.get("ticker", "")),
+    })
+
+    # Trim to retention window.
+    cutoff = (today_et() - timedelta(days=SKIP_LOG_RETENTION_DAYS)).strftime("%Y-%m-%d")
+    payload["runs"] = [r for r in payload["runs"] if r.get("date", "") >= cutoff]
+    payload["runs"].sort(key=lambda r: (r.get("date", ""), r.get("mode", "")))
+
+    SKIP_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(SKIP_LOG_PATH, "w") as f:
+        json.dump(payload, f, indent=2)
+    print(f"[INFO] Skip log updated: {len(skip_events)} skip(s) recorded for {today_str} {mode}")
     return payload
 
 
@@ -411,12 +502,15 @@ def download_todays_prices(tickers: list[str]) -> dict:
 
 def screen_open_cached(tickers: list[str], cache: dict,
                        metadata: dict | None = None,
-                       core_watchlist: set[str] | None = None) -> tuple[list[dict], dict]:
+                       core_watchlist: set[str] | None = None,
+                       sector_etf_set: set[str] | None = None) -> tuple[list[dict], dict, list[dict]]:
     """Open-mode screening using cached mu/sigma — only downloads today's prices.
 
-    Returns (alerts, run_stats).
+    Returns (alerts, run_stats, sector_returns).
     """
     alerts = []
+    sector_returns = []
+    _sector_etfs = sector_etf_set or set()
     stats = {"screened": 0, "skipped": 0, "stale": 0}
     prices = download_todays_prices(tickers)
     ticker_cache = cache.get("tickers", {})
@@ -424,7 +518,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
     if not prices:
         # validate_bar_date already logged the warning
         stats["stale"] = len(tickers)
-        return alerts, stats
+        return alerts, stats, sector_returns
 
     for ticker in tickers:
         if ticker not in ticker_cache:
@@ -439,6 +533,10 @@ def screen_open_cached(tickers: list[str], cache: dict,
         stats["screened"] += 1
         mu = ticker_cache[ticker]["mu"]
         sigma = ticker_cache[ticker]["sigma"]
+        # 52w high/low cached from prior EOD run — may be missing on first
+        # post-upgrade run until cache is refreshed.
+        high_52w = ticker_cache[ticker].get("high_52w")
+        low_52w = ticker_cache[ticker].get("low_52w")
         prev_close = prices[ticker]["prev_close"]
         today_open = prices[ticker]["today_open"]
         today_return = (today_open - prev_close) / prev_close
@@ -447,6 +545,19 @@ def screen_open_cached(tickers: list[str], cache: dict,
         meta = (metadata or {}).get(ticker, {})
         sector = meta.get("sector", "")
         abs_z = abs(z)
+
+        # Collect sector ETF stats regardless of threshold
+        if ticker in _sector_etfs:
+            sector_returns.append({
+                "ticker": ticker,
+                "name": meta.get("name", ""),
+                "z_score": z,
+                "return_pct": today_return * 100,
+                "price": today_open,
+                "high_52w": high_52w,
+                "low_52w": low_52w,
+            })
+
         tier = None
         if abs_z >= SIGMA_THRESHOLD:
             tier = "2sigma"
@@ -460,12 +571,14 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "z_score": z,
                 "return_pct": today_return * 100,
                 "price": today_open,
+                "high_52w": high_52w,
+                "low_52w": low_52w,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
                 "on_watchlist": ticker in (core_watchlist or set()),
             })
-    return alerts, stats
+    return alerts, stats, sector_returns
 
 
 def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series) -> str | None:
@@ -493,21 +606,43 @@ def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_seri
 def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          high_series: pd.Series | None, low_series: pd.Series | None,
                          mode: str, metadata: dict | None = None,
-                         core_watchlist: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None]:
+                         core_watchlist: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
 
-    Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none).
+    Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none, ticker_stats_or_none, skip_reason_or_none).
+    ticker_stats is always populated when computation succeeds (used for sector ETF returns).
+    skip_reason is set (and other values None) when the ticker cannot be screened.
     """
     if len(close) < 32:
         print(f"[WARN] {ticker}: insufficient data ({len(close)} days), skipping")
-        return None, None, None
+        return None, None, None, None, "insufficient_history"
 
     mu, sigma, sample_size = compute_distribution(close)
     if np.isnan(mu):
         print(f"[WARN] {ticker}: could not compute distribution, skipping")
-        return None, None, None
+        return None, None, None, None, "distribution_nan"
+
+    # Compute 52-week high/low from the downloaded history (always, when available).
+    # Trailing 252 sessions is ~1 year. If we have less, use what we've got.
+    # `high_series`/`low_series` are preferred (capture intraday extremes);
+    # falls back to close-only if those columns weren't downloaded. Use up to
+    # the last 253 bars so today's intraday extreme can itself be the 52w edge.
+    high_52w = None
+    low_52w = None
+    if high_series is not None and len(high_series) >= 2:
+        high_52w = float(high_series.iloc[-min(len(high_series), 253):].max())
+    elif len(close) >= 2:
+        high_52w = float(close.iloc[-min(len(close), 253):].max())
+    if low_series is not None and len(low_series) >= 2:
+        low_52w = float(low_series.iloc[-min(len(low_series), 253):].min())
+    elif len(close) >= 2:
+        low_52w = float(close.iloc[-min(len(close), 253):].min())
 
     cache_entry = {"mu": mu, "sigma": sigma, "sample_size": sample_size}
+    if high_52w is not None:
+        cache_entry["high_52w"] = high_52w
+    if low_52w is not None:
+        cache_entry["low_52w"] = low_52w
 
     # Compute today's return based on mode
     prev_close = float(close.iloc[-2])
@@ -522,6 +657,17 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     meta = (metadata or {}).get(ticker, {})
     name = meta.get("name", "")
     sector = meta.get("sector", "")
+
+    # Always-populated stats for sector ETF returns section
+    ticker_stats = {
+        "ticker": ticker,
+        "name": name,
+        "z_score": z,
+        "return_pct": today_return * 100,
+        "price": today_price,
+        "high_52w": high_52w,
+        "low_52w": low_52w,
+    }
 
     alert = None
     abs_z = abs(z)
@@ -539,6 +685,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "z_score": z,
             "return_pct": today_return * 100,
             "price": today_price,
+            "high_52w": high_52w,
+            "low_52w": low_52w,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
@@ -558,15 +706,21 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                 "price": float(close.iloc[-1]),
             }
 
-    return alert, cache_entry, hi_lo
+    return alert, cache_entry, hi_lo, ticker_stats, None
 
 
 def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 metadata: dict | None = None,
-                core_watchlist: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict]]:
+                core_watchlist: set[str] | None = None,
+                sector_etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
-    Returns (alerts, cache_data, run_stats, hi_lo_hits).
+    Returns (alerts, cache_data, run_stats, hi_lo_hits, sector_returns, skip_events).
+
+    skip_events is a list of {ticker, reason} dicts for Coverage Manager's
+    weekly report. Reasons: insufficient_history, distribution_nan,
+    fallback_insufficient, fallback_exception. (Stale events are tracked
+    separately in stats["stale"].)
 
     Note on end date: yf.download(end=...) is exclusive — to include today's
     bar we must pass tomorrow's date as the end boundary.
@@ -579,6 +733,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
     alerts = []
     hi_lo_hits = []
+    sector_returns = []
+    skip_events: list[dict] = []
+    _sector_etfs = sector_etf_set or set()
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
 
@@ -591,7 +748,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         if not validate_bar_date(data.index, mode):
             stats["stale"] = len(tickers)
             print(f"[ERROR] Batch data is stale — latest bar is not from {today}. Aborting screen.")
-            return alerts, cache_data, stats, hi_lo_hits
+            return alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events
 
         stats["ref_date"] = str(data.index[-1].date())
 
@@ -600,29 +757,32 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 if len(tickers) == 1:
                     close = data["Close"].dropna()
                     open_prices = data["Open"].dropna()
-                    high_s = data["High"].dropna() if track_52w else None
-                    low_s = data["Low"].dropna() if track_52w else None
+                    high_s = data["High"].dropna()
+                    low_s = data["Low"].dropna()
                 else:
                     close = data["Close"][ticker].dropna()
                     open_prices = data["Open"][ticker].dropna()
-                    high_s = data["High"][ticker].dropna() if track_52w else None
-                    low_s = data["Low"][ticker].dropna() if track_52w else None
+                    high_s = data["High"][ticker].dropna()
+                    low_s = data["Low"][ticker].dropna()
 
-                alert, cache_entry, hi_lo = _process_ticker_full(
+                alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
                     core_watchlist=core_watchlist,
                 )
 
                 if cache_entry is None:
                     stats["skipped"] += 1
+                    skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
                     continue
 
                 cache_data["tickers"][ticker] = cache_entry
                 stats["screened"] += 1
                 if alert:
                     alerts.append(alert)
-                if hi_lo:
+                if hi_lo and track_52w:
                     hi_lo_hits.append(hi_lo)
+                if ticker_stats and ticker in _sector_etfs:
+                    sector_returns.append(ticker_stats)
 
             except (KeyError, IndexError) as e:
                 print(f"[WARN] {ticker} failed in batch data: {e}")
@@ -638,6 +798,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         if single_data is None or len(single_data) < 32:
             print(f"[WARN] {ticker}: insufficient data in fallback, skipping")
             stats["skipped"] += 1
+            skip_events.append({"ticker": ticker, "reason": "fallback_insufficient"})
             continue
 
         if not validate_bar_date(single_data.index, mode):
@@ -651,35 +812,40 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         try:
             close = single_data["Close"].dropna()
             open_prices = single_data["Open"].dropna()
-            high_s = single_data["High"].dropna() if track_52w else None
-            low_s = single_data["Low"].dropna() if track_52w else None
+            high_s = single_data["High"].dropna()
+            low_s = single_data["Low"].dropna()
 
-            alert, cache_entry, hi_lo = _process_ticker_full(
+            alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                 ticker, close, open_prices, high_s, low_s, mode, metadata,
                 core_watchlist=core_watchlist,
             )
 
             if cache_entry is None:
                 stats["skipped"] += 1
+                skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
                 continue
 
             cache_data["tickers"][ticker] = cache_entry
             stats["screened"] += 1
             if alert:
                 alerts.append(alert)
-            if hi_lo:
+            if hi_lo and track_52w:
                 hi_lo_hits.append(hi_lo)
+            if ticker_stats and ticker in _sector_etfs:
+                sector_returns.append(ticker_stats)
 
         except Exception as e:
             print(f"[WARN] {ticker} fallback processing failed: {e}")
             stats["skipped"] += 1
+            skip_events.append({"ticker": ticker, "reason": "fallback_exception"})
 
-    return alerts, cache_data, stats, hi_lo_hits
+    return alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events
 
 
 def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          stats: dict, hi_lo_hits: list[dict] | None = None,
-                         sp500_set: set[str] | None = None) -> dict:
+                         sp500_set: set[str] | None = None,
+                         sector_returns: list[dict] | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
     date_str = current.strftime("%Y-%m-%d")
@@ -704,9 +870,11 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         name_part = f" ({short})" if short else ""
         price = a.get("price")
         price_part = f"  |  ${price:.2f}" if price is not None else ""
+        lo, hi = a.get("low_52w"), a.get("high_52w")
+        range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
         return (
             f"{marker}  *{a['ticker']}*{name_part}  "
-            f"|  z = {a['z_score']:+.2f}  |  {sign}{a['return_pct']:.2f}%{price_part}{sigma_note}"
+            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{range_part}{sigma_note}"
         )
 
     def _append_section_chunked(blocks_list, header, lines, max_len=2900):
@@ -810,6 +978,28 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             },
         })
 
+    # Sector ETF returns section
+    if sector_returns:
+        blocks.append({"type": "divider"})
+        sorted_sectors = sorted(sector_returns, key=lambda s: s["z_score"], reverse=True)
+        sector_lines = []
+        for s in sorted_sectors:
+            marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
+            sign = "+" if s["return_pct"] > 0 else ""
+            short = short_company_name(s.get("name", ""))
+            name_part = f" ({short})" if short else ""
+            price = s.get("price")
+            price_part = f"  |  ${price:.2f}" if price is not None else ""
+            lo, hi = s.get("low_52w"), s.get("high_52w")
+            range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
+            sector_lines.append(
+                f"{marker}  *{s['ticker']}*{name_part}  "
+                f"|  {sign}{s['return_pct']:.2f}%  |  z = {s['z_score']:+.2f}{price_part}{range_part}"
+            )
+        _append_section_chunked(
+            blocks, ":chart_with_upwards_trend: *Sector Index Returns*", sector_lines
+        )
+
     blocks.append({"type": "divider"})
 
     # Audit context line
@@ -866,50 +1056,82 @@ def main():
         print("[ERROR] No tickers in watchlist")
         sys.exit(1)
 
-    metadata = load_metadata()
-    if metadata:
-        print(f"[INFO] Loaded metadata for {len(metadata)} tickers")
+    metadata_raw = load_metadata()
+    if metadata_raw:
+        print(f"[INFO] Loaded metadata for {len(metadata_raw)} tickers")
 
     sp500_set = load_sp500_set()
     if sp500_set:
         print(f"[INFO] Loaded {len(sp500_set)} S&P 500 tickers")
 
+    # Fill in names for S&P 500 tickers that Coverage Manager doesn't maintain.
+    # Coverage Manager owns ticker_metadata.json but only populates the
+    # healthcare/MedTech/PA universe, so most S&P 500 names come from this
+    # Wikipedia-sourced fallback file. Keep `metadata_raw` unmerged so
+    # write_missing_metadata_flag still reports true CM gaps.
+    metadata = {k: dict(v) for k, v in metadata_raw.items()}
+    sp500_names = load_sp500_names()
+    if sp500_names:
+        filled = 0
+        for ticker, name in sp500_names.items():
+            entry = metadata.get(ticker)
+            if entry is None:
+                metadata[ticker] = {"name": name, "sector": "", "subsector": ""}
+                filled += 1
+            elif not (entry.get("name") or "").strip():
+                entry["name"] = name
+                filled += 1
+        if filled:
+            print(f"[INFO] Filled {filled} S&P 500 names from sp500_names.json")
+
     core_watchlist = load_core_watchlist()
     if core_watchlist:
         print(f"[INFO] Loaded {len(core_watchlist)} core watchlist tickers")
 
+    sector_etf_set = load_sector_etfs()
+    if sector_etf_set:
+        print(f"[INFO] Loaded {len(sector_etf_set)} sector ETFs for index returns")
+
     print(f"[INFO] Mode: {args.mode} | Tickers: {len(tickers)} | Time: {now_et().isoformat()}")
 
     hi_lo_hits = []
+    sector_returns = []
 
     if args.mode == "open":
         # Try cached path first — avoids full history download
         cache = load_cache()
         if cache and is_cache_fresh(cache):
             print("[INFO] Using cached distributions for open-mode screening")
-            alerts, stats = screen_open_cached(
+            alerts, stats, sector_returns = screen_open_cached(
                 tickers, cache, metadata, core_watchlist=core_watchlist,
+                sector_etf_set=sector_etf_set,
             )
         else:
             print("[INFO] Cache stale or missing, running full download for open mode")
-            alerts, _, stats, _ = screen_full(
+            alerts, _, stats, _, sector_returns, _ = screen_full(
                 tickers, "open", metadata=metadata, core_watchlist=core_watchlist,
+                sector_etf_set=sector_etf_set,
             )
             # Don't save cache on open runs — only EOD updates the cache
     elif args.mode == "midday":
         # Midday mode: same price comparison as close but don't update cache
-        alerts, _, stats, _ = screen_full(
+        alerts, _, stats, _, sector_returns, _ = screen_full(
             tickers, "close", metadata=metadata, core_watchlist=core_watchlist,
+            sector_etf_set=sector_etf_set,
         )
     else:
         # Close mode: full download, update cache, and check 52-week highs/lows
-        alerts, cache_data, stats, hi_lo_hits = screen_full(
+        alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
-            core_watchlist=core_watchlist,
+            core_watchlist=core_watchlist, sector_etf_set=sector_etf_set,
         )
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
-        write_missing_metadata_flag(tickers, metadata)
+        # Use the pre-fallback metadata so Coverage Manager still sees true gaps.
+        write_missing_metadata_flag(tickers, metadata_raw)
+        # Persist today's skip events so Coverage Manager's weekly report can
+        # surface chronic skips, reason breakdowns, and unresolved tickers.
+        update_skip_log(skip_events, mode="close")
 
     # Report results
     if alerts:
@@ -924,8 +1146,14 @@ def main():
         lows = [h for h in hi_lo_hits if h["type"] == "low"]
         print(f"[INFO] 52-week highs: {len(highs)}, lows: {len(lows)}")
 
+    if sector_returns:
+        print(f"[INFO] Sector ETF returns: {len(sector_returns)} ETFs")
+
     # Send to Slack
-    payload = format_slack_message(alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set)
+    payload = format_slack_message(
+        alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
+        sector_returns=sector_returns,
+    )
     send_slack(payload)
 
 

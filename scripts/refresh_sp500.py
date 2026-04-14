@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import date
 from io import StringIO
@@ -32,6 +33,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parent.parent
 SP500_PATH = ROOT / "sources" / "sp500.txt"
+SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 WIKIPEDIA_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 USER_AGENT = "sigma-alert-sp500-refresh/1.0 (https://github.com/jroypeterson/sigma-alert)"
 
@@ -43,35 +45,48 @@ def fetch_wikipedia_html(url: str = WIKIPEDIA_URL) -> str:
     return resp.text
 
 
-def parse_sp500_tickers(html: str) -> list[str]:
-    """Extract the Symbol column from Wikipedia's first constituents table.
+def _normalize_symbol(raw: str) -> str | None:
+    """Normalize a Wikipedia symbol string to yfinance ticker format."""
+    s = raw.strip().upper()
+    if not s or s == "NAN":
+        return None
+    # Wikipedia footnote markers occasionally leak in (e.g. "GOOGL[3]")
+    if "[" in s:
+        s = s.split("[", 1)[0].strip()
+    return s.replace(".", "-") or None
+
+
+def parse_sp500_constituents(html: str) -> list[tuple[str, str]]:
+    """Extract (symbol, security_name) pairs from Wikipedia's constituents table.
 
     Normalizes Wikipedia's dot-format (BRK.B) to yfinance dash-format
-    (BRK-B) so the result matches sigma-alert's expected ticker strings.
-    Returns a sorted list with duplicates removed.
+    (BRK-B). Returns a list sorted by symbol with duplicates removed.
     """
     tables = pd.read_html(StringIO(html))
     if not tables:
         raise ValueError("No tables found in Wikipedia page")
-    # The constituents table is the first one and always has a "Symbol" column.
     for t in tables:
-        if "Symbol" in t.columns:
+        if "Symbol" in t.columns and "Security" in t.columns:
             constituents = t
             break
     else:
-        raise ValueError("No table with a 'Symbol' column found")
+        raise ValueError("No table with Symbol and Security columns found")
 
-    tickers: set[str] = set()
-    for raw in constituents["Symbol"].astype(str):
-        s = raw.strip().upper()
-        if not s or s == "NAN":
+    pairs: dict[str, str] = {}
+    for sym, name in zip(
+        constituents["Symbol"].astype(str),
+        constituents["Security"].astype(str),
+    ):
+        s = _normalize_symbol(sym)
+        if s is None:
             continue
-        # Wikipedia footnote markers occasionally leak in (e.g. "GOOGL[3]")
-        if "[" in s:
-            s = s.split("[", 1)[0].strip()
-        s = s.replace(".", "-")
-        tickers.add(s)
-    return sorted(tickers)
+        pairs[s] = name.strip()
+    return sorted(pairs.items())
+
+
+def parse_sp500_tickers(html: str) -> list[str]:
+    """Backwards-compatible wrapper returning just the symbol list."""
+    return [sym for sym, _ in parse_sp500_constituents(html)]
 
 
 def load_existing(path: Path = SP500_PATH) -> list[str]:
@@ -105,6 +120,18 @@ def write_sp500(tickers: list[str], path: Path = SP500_PATH, today: str | None =
     ]
     body = sorted(set(tickers))
     path.write_text("\n".join(header + body) + "\n")
+
+
+def write_sp500_names(pairs: list[tuple[str, str]], path: Path = SP500_NAMES_PATH) -> None:
+    """Overwrite sp500_names.json with {ticker: security_name} mapping.
+
+    Used by sigma_screener.py as a name fallback — ticker_metadata.json is
+    owned by Coverage Manager and only covers the healthcare/MedTech/PA
+    universe, so most S&P 500 alerts would render without short names
+    otherwise.
+    """
+    mapping = {sym: name for sym, name in pairs if name}
+    path.write_text(json.dumps(dict(sorted(mapping.items())), indent=2) + "\n")
 
 
 def print_report(added: list[str], removed: list[str], new_total: int) -> None:
@@ -141,10 +168,12 @@ def main() -> int:
         return 1
 
     try:
-        new_tickers = parse_sp500_tickers(html)
+        new_pairs = parse_sp500_constituents(html)
     except Exception as e:
         print(f"ERROR: parse failed: {e}", file=sys.stderr)
         return 1
+
+    new_tickers = [sym for sym, _ in new_pairs]
 
     if len(new_tickers) < 400 or len(new_tickers) > 600:
         print(
@@ -162,8 +191,13 @@ def main() -> int:
         print("\n[dry-run] no file written")
         return 0
 
+    # Always refresh the names file — even if the ticker set is unchanged,
+    # company renames (e.g. Facebook -> Meta Platforms) should propagate.
+    write_sp500_names(new_pairs)
+    print(f"Wrote {len(new_pairs)} name mappings to {SP500_NAMES_PATH}")
+
     if not added and not removed:
-        print("\nNo changes — leaving file untouched.")
+        print("\nNo ticker changes — leaving sp500.txt untouched.")
         return 0
 
     write_sp500(new_tickers)

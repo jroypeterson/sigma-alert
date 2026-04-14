@@ -1,0 +1,40 @@
+name: Sigma Weekly Skip Report
+
+# Posts a weekly summary of skipped tickers to the #status-reports Slack
+# channel. Runs Friday evening, after the Friday EOD close workflow has
+# landed its commit to cache/skip_log.json.
+#
+# Close fires at 21:30 UTC (4:30 PM EST / 5:30 PM EDT). This report runs
+# one hour later at 22:30 UTC to give the close job time to finish its
+# download, screen, commit, and push steps before we read the file.
+
+on:
+  schedule:
+    - cron: '30 22 * * 5'
+  workflow_dispatch:  # manual trigger for testing
+
+jobs:
+  weekly-skip-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        # The report script only needs `requests` + stdlib, but pinning to the
+        # project requirements keeps us aligned with how the rest of CI runs.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate and post weekly skip report
+        env:
+          SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
+        run: python scripts/weekly_skip_report.py

@@ -41,6 +41,9 @@ jobs:
           # missing_metadata.json may or may not exist depending on whether
           # the screener found any gaps; -A picks up additions and deletions.
           git add -A cache/missing_metadata.json
+          # skip_log.json is rewritten every close run (trimmed to 30-day window).
+          # Consumed by Coverage Manager's weekly report for skip-stats analysis.
+          git add -A cache/skip_log.json
           # --allow-empty is NOT used — if nothing changed, no commit is made
           git diff --cached --quiet || git commit -m "Update distribution cache [skip ci]"
           git push
