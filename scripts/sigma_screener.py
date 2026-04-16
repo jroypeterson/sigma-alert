@@ -286,7 +286,8 @@ def save_cache(cache: dict) -> None:
         json.dump(cache, f, indent=2)
 
 
-def write_missing_metadata_flag(tickers: list[str], metadata: dict) -> dict:
+def write_missing_metadata_flag(tickers: list[str], metadata: dict,
+                                exempt: set[str] | None = None) -> dict:
     """Identify watchlist tickers missing from ticker_metadata.json (or with
     a blank `name`) and write a flag file for Coverage Manager to pick up.
 
@@ -296,11 +297,17 @@ def write_missing_metadata_flag(tickers: list[str], metadata: dict) -> dict:
     sibling Coverage Manager weekly build reads it and surfaces the gaps to
     the operator.
 
+    `exempt` lists tickers whose names are owned locally (e.g. ETFs sourced
+    from `etf_names.json`) and should not be reported as CM gaps.
+
     Returns the dict that was written (or an empty dict if no gaps).
     """
     metadata = metadata or {}
+    exempt = exempt or set()
     gaps = {}
     for t in tickers:
+        if t in exempt:
+            continue
         meta = metadata.get(t)
         if meta is None:
             gaps[t] = "not_in_metadata"
@@ -1220,7 +1227,9 @@ def main():
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
         # Use the pre-fallback metadata so Coverage Manager still sees true gaps.
-        write_missing_metadata_flag(tickers, metadata_raw)
+        # ETFs are exempt — their display names live in this repo
+        # (sources/etf_names.json), not in CM's universe.
+        write_missing_metadata_flag(tickers, metadata_raw, exempt=etf_set)
         # Persist today's skip events so Coverage Manager's weekly report can
         # surface chronic skips, reason breakdowns, and unresolved tickers.
         update_skip_log(skip_events, mode="close")

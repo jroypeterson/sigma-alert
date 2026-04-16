@@ -22,6 +22,7 @@ from sigma_screener import (
     is_cache_fresh,
     load_core_watchlist,
     validate_bar_date,
+    write_missing_metadata_flag,
 )
 
 
@@ -366,3 +367,32 @@ class TestCoreWatchlistLoader:
         path.write_text(json.dumps(["INSM", "ISRG"]))
         monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
         assert load_core_watchlist() == set()
+
+
+# ---------------------------------------------------------------------------
+# Missing-metadata flag
+# ---------------------------------------------------------------------------
+
+class TestMissingMetadataFlag:
+    def test_exempt_set_skips_etfs(self, tmp_path, monkeypatch):
+        """ETFs whose names live in sources/etf_names.json must not be
+        reported as CM gaps even though they're absent from ticker_metadata."""
+        flag_path = tmp_path / "missing_metadata.json"
+        monkeypatch.setattr(sigma_screener, "MISSING_METADATA_PATH", flag_path)
+        tickers = ["AAPL", "SPYM", "DIA", "QQQ", "WIDGET"]
+        metadata = {"AAPL": {"name": "Apple Inc"}}  # SPYM/DIA/QQQ/WIDGET missing
+        result = write_missing_metadata_flag(
+            tickers, metadata, exempt={"SPYM", "DIA", "QQQ"}
+        )
+        # Only WIDGET should be flagged; ETFs are exempt; AAPL has a name.
+        assert set(result["tickers"].keys()) == {"WIDGET"}
+
+    def test_no_gaps_clears_flag_file(self, tmp_path, monkeypatch):
+        flag_path = tmp_path / "missing_metadata.json"
+        flag_path.write_text("{}")  # stale file from a prior run
+        monkeypatch.setattr(sigma_screener, "MISSING_METADATA_PATH", flag_path)
+        result = write_missing_metadata_flag(
+            ["SPYM"], {}, exempt={"SPYM"}
+        )
+        assert result == {}
+        assert not flag_path.exists()
