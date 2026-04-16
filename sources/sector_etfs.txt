@@ -1,5 +1,7 @@
-# Sector ETFs — SPDR Select Sector & S&P 500 Portfolio
-# Last updated: 2026-04-06
+# Sector ETFs — SPDR Select Sector funds (one per GICS sector)
+# Index ETFs (SPYM, DIA, QQQ) live in sources/index_etfs.txt and render
+# above this group in the Slack "Index & Sector Returns" section.
+# Last updated: 2026-04-16
 XLE
 XLB
 XLU
@@ -11,4 +13,3 @@ XLV
 XLK
 XLY
 XLF
-SPYM

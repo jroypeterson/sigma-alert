@@ -1,0 +1,16 @@
+{
+  "SPYM": "S&P 500",
+  "DIA": "Dow Jones",
+  "QQQ": "Nasdaq 100",
+  "XLE": "Energy",
+  "XLB": "Materials",
+  "XLU": "Utilities",
+  "XLP": "Consumer Staples",
+  "XLI": "Industrials",
+  "XLRE": "Real Estate",
+  "XLC": "Communications",
+  "XLV": "Health Care",
+  "XLK": "Technology",
+  "XLY": "Consumer Discretionary",
+  "XLF": "Financials"
+}

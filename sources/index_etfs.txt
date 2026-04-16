@@ -1,0 +1,7 @@
+# Index ETFs — broad-market benchmarks shown above sector ETFs
+# SPYM = SPDR Portfolio S&P 500 ETF
+# DIA  = SPDR Dow Jones Industrial Average ETF
+# QQQ  = Invesco QQQ (Nasdaq 100)
+SPYM
+DIA
+QQQ

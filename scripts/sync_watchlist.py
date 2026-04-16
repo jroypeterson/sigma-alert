@@ -7,7 +7,8 @@ Source files:
   sources/hc_services.txt — Healthcare Services coverage
   sources/medtech.txt     — MedTech coverage
   sources/sp500.txt       — S&P 500 constituents
-  sources/sector_etfs.txt — SPDR sector ETFs + S&P 500 portfolio ETF
+  sources/index_etfs.txt  — Broad-market index ETFs (SPYM, DIA, QQQ)
+  sources/sector_etfs.txt — SPDR Select Sector ETFs (XLE, XLF, ...)
 
 Usage:
   python scripts/sync_watchlist.py
@@ -34,6 +35,7 @@ SOURCES = [
     ("Healthcare Services", "hc_services.txt"),
     ("MedTech", "medtech.txt"),
     ("S&P 500", "sp500.txt"),
+    ("Index ETFs", "index_etfs.txt"),
     ("Sector ETFs", "sector_etfs.txt"),
 ]
 
@@ -79,7 +81,7 @@ def build_watchlist() -> str:
 
     lines = [
         "# Sigma-Alert Watchlist",
-        "# Synced from Coverage Manager (HC Services, MedTech, S&P 500, Sector ETFs)",
+        "# Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector ETFs",
         f"# Last synced: {date_str}",
         "",
     ]

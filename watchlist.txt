@@ -1,6 +1,6 @@
 # Sigma-Alert Watchlist
-# Synced from Coverage Manager (HC Services, MedTech, S&P 500)
-# Last synced: 2026-04-15
+# Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector ETFs
+# Last synced: 2026-04-16
 
 # --- Healthcare Services (86 tickers) ---
 ACCD
@@ -689,3 +689,21 @@ XYL
 XYZ
 YUM
 ZBRA
+
+# --- Index ETFs (3 tickers) ---
+SPYM
+DIA
+QQQ
+
+# --- Sector ETFs (11 tickers) ---
+XLE
+XLB
+XLU
+XLP
+XLI
+XLRE
+XLC
+XLV
+XLK
+XLY
+XLF

@@ -42,6 +42,8 @@ MISSING_METADATA_PATH = ROOT / "cache" / "missing_metadata.json"
 SP500_PATH = ROOT / "sources" / "sp500.txt"
 SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
+INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
+ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 # Core watchlist pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
 CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"
@@ -178,17 +180,49 @@ def load_sp500_names() -> dict:
     return {t.upper(): str(n) for t, n in data.items() if n}
 
 
-def load_sector_etfs() -> set[str]:
-    """Load sector ETF tickers from sources/sector_etfs.txt for the sector returns section."""
-    if not SECTOR_ETFS_PATH.exists():
+def _load_ticker_set(path: Path) -> set[str]:
+    if not path.exists():
         return set()
     out = set()
-    with open(SECTOR_ETFS_PATH) as f:
+    with open(path) as f:
         for line in f:
             t = line.strip().upper()
             if t and not t.startswith("#"):
                 out.add(t)
     return out
+
+
+def load_sector_etfs() -> set[str]:
+    """Load sector ETF tickers (XLE/XLF/etc) from sources/sector_etfs.txt."""
+    return _load_ticker_set(SECTOR_ETFS_PATH)
+
+
+def load_index_etfs() -> set[str]:
+    """Load broad-market index ETFs (SPYM/DIA/QQQ) from sources/index_etfs.txt.
+
+    These render above sector ETFs in the Slack "Index & Sector Returns" block.
+    """
+    return _load_ticker_set(INDEX_ETFS_PATH)
+
+
+def load_etf_names() -> dict:
+    """Load `{TICKER: friendly name}` for index + sector ETFs.
+
+    Coverage Manager doesn't maintain metadata for ETFs, so we keep the
+    display names in this repo. Merged into the metadata dict at startup
+    so the standard rendering path picks them up.
+    """
+    if not ETF_NAMES_PATH.exists():
+        return {}
+    try:
+        with open(ETF_NAMES_PATH) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read etf_names.json: {e}")
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {t.upper(): str(n) for t, n in data.items() if n}
 
 
 # Subcategory layout within each sigma tier. Order = render order.
@@ -503,14 +537,18 @@ def download_todays_prices(tickers: list[str]) -> dict:
 def screen_open_cached(tickers: list[str], cache: dict,
                        metadata: dict | None = None,
                        core_watchlist: set[str] | None = None,
-                       sector_etf_set: set[str] | None = None) -> tuple[list[dict], dict, list[dict]]:
+                       etf_set: set[str] | None = None) -> tuple[list[dict], dict, list[dict]]:
     """Open-mode screening using cached mu/sigma — only downloads today's prices.
 
-    Returns (alerts, run_stats, sector_returns).
+    `etf_set` is the union of index + sector ETFs whose returns should be
+    captured for the "Index & Sector Returns" Slack section regardless of
+    whether they cross an alert threshold.
+
+    Returns (alerts, run_stats, etf_returns).
     """
     alerts = []
-    sector_returns = []
-    _sector_etfs = sector_etf_set or set()
+    etf_returns = []
+    _etfs = etf_set or set()
     stats = {"screened": 0, "skipped": 0, "stale": 0}
     prices = download_todays_prices(tickers)
     ticker_cache = cache.get("tickers", {})
@@ -518,7 +556,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
     if not prices:
         # validate_bar_date already logged the warning
         stats["stale"] = len(tickers)
-        return alerts, stats, sector_returns
+        return alerts, stats, etf_returns
 
     for ticker in tickers:
         if ticker not in ticker_cache:
@@ -546,9 +584,10 @@ def screen_open_cached(tickers: list[str], cache: dict,
         sector = meta.get("sector", "")
         abs_z = abs(z)
 
-        # Collect sector ETF stats regardless of threshold
-        if ticker in _sector_etfs:
-            sector_returns.append({
+        # Collect ETF stats regardless of threshold (drives Index & Sector
+        # Returns section). Indices vs. sectors are partitioned downstream.
+        if ticker in _etfs:
+            etf_returns.append({
                 "ticker": ticker,
                 "name": meta.get("name", ""),
                 "z_score": z,
@@ -578,7 +617,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "tier": tier,
                 "on_watchlist": ticker in (core_watchlist or set()),
             })
-    return alerts, stats, sector_returns
+    return alerts, stats, etf_returns
 
 
 def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series) -> str | None:
@@ -712,10 +751,14 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
 def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 metadata: dict | None = None,
                 core_watchlist: set[str] | None = None,
-                sector_etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
+                etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
-    Returns (alerts, cache_data, run_stats, hi_lo_hits, sector_returns, skip_events).
+    `etf_set` is the union of index + sector ETFs whose per-ticker stats
+    should be captured for the "Index & Sector Returns" Slack block. They
+    still go through the alert-tier logic — a 2σ ETF move is noteworthy.
+
+    Returns (alerts, cache_data, run_stats, hi_lo_hits, etf_returns, skip_events).
 
     skip_events is a list of {ticker, reason} dicts for Coverage Manager's
     weekly report. Reasons: insufficient_history, distribution_nan,
@@ -733,9 +776,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
     alerts = []
     hi_lo_hits = []
-    sector_returns = []
+    etf_returns = []
     skip_events: list[dict] = []
-    _sector_etfs = sector_etf_set or set()
+    _etfs = etf_set or set()
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
 
@@ -748,7 +791,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         if not validate_bar_date(data.index, mode):
             stats["stale"] = len(tickers)
             print(f"[ERROR] Batch data is stale — latest bar is not from {today}. Aborting screen.")
-            return alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events
+            return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
         stats["ref_date"] = str(data.index[-1].date())
 
@@ -781,8 +824,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     alerts.append(alert)
                 if hi_lo and track_52w:
                     hi_lo_hits.append(hi_lo)
-                if ticker_stats and ticker in _sector_etfs:
-                    sector_returns.append(ticker_stats)
+                if ticker_stats and ticker in _etfs:
+                    etf_returns.append(ticker_stats)
 
             except (KeyError, IndexError) as e:
                 print(f"[WARN] {ticker} failed in batch data: {e}")
@@ -839,13 +882,14 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             stats["skipped"] += 1
             skip_events.append({"ticker": ticker, "reason": "fallback_exception"})
 
-    return alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events
+    return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
 
 def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          stats: dict, hi_lo_hits: list[dict] | None = None,
                          sp500_set: set[str] | None = None,
-                         sector_returns: list[dict] | None = None) -> dict:
+                         etf_returns: list[dict] | None = None,
+                         index_etf_set: set[str] | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
     date_str = current.strftime("%Y-%m-%d")
@@ -978,12 +1022,21 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             },
         })
 
-    # Sector ETF returns section
-    if sector_returns:
-        blocks.append({"type": "divider"})
-        sorted_sectors = sorted(sector_returns, key=lambda s: s["z_score"], reverse=True)
-        sector_lines = []
-        for s in sorted_sectors:
+    # Index & sector ETF returns section. Indices (SPYM/DIA/QQQ) render
+    # at the top, then sector ETFs underneath. Both groups sorted by
+    # z-score descending so the strongest move within each group leads.
+    if etf_returns:
+        idx_set = index_etf_set or set()
+        index_rows = sorted(
+            [s for s in etf_returns if s["ticker"] in idx_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
+        sector_rows = sorted(
+            [s for s in etf_returns if s["ticker"] not in idx_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
+
+        def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
             sign = "+" if s["return_pct"] > 0 else ""
             short = short_company_name(s.get("name", ""))
@@ -992,13 +1045,24 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             price_part = f"  |  ${price:.2f}" if price is not None else ""
             lo, hi = s.get("low_52w"), s.get("high_52w")
             range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
-            sector_lines.append(
+            return (
                 f"{marker}  *{s['ticker']}*{name_part}  "
                 f"|  {sign}{s['return_pct']:.2f}%  |  z = {s['z_score']:+.2f}{price_part}{range_part}"
             )
-        _append_section_chunked(
-            blocks, ":chart_with_upwards_trend: *Sector Index Returns*", sector_lines
-        )
+
+        if index_rows or sector_rows:
+            blocks.append({"type": "divider"})
+            header = ":chart_with_upwards_trend: *Index & Sector Returns*"
+            lines = []
+            if index_rows:
+                lines.append("_Indices_")
+                lines.extend(_format_etf_line(s) for s in index_rows)
+            if sector_rows:
+                if index_rows:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Sectors_")
+                lines.extend(_format_etf_line(s) for s in sector_rows)
+            _append_section_chunked(blocks, header, lines)
 
     blocks.append({"type": "divider"})
 
@@ -1088,42 +1152,70 @@ def main():
     if core_watchlist:
         print(f"[INFO] Loaded {len(core_watchlist)} core watchlist tickers")
 
+    index_etf_set = load_index_etfs()
     sector_etf_set = load_sector_etfs()
-    if sector_etf_set:
-        print(f"[INFO] Loaded {len(sector_etf_set)} sector ETFs for index returns")
+    etf_set = index_etf_set | sector_etf_set
+    if etf_set:
+        print(
+            f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
+            f"{len(sector_etf_set)} sector ETFs for returns block"
+        )
+
+    # Merge ETF display names into metadata (CM doesn't track ETFs).
+    etf_names = load_etf_names()
+    if etf_names:
+        filled = 0
+        for ticker, name in etf_names.items():
+            entry = metadata.get(ticker)
+            if entry is None:
+                metadata[ticker] = {"name": name, "sector": "", "subsector": ""}
+                filled += 1
+            elif not (entry.get("name") or "").strip():
+                entry["name"] = name
+                filled += 1
+        if filled:
+            print(f"[INFO] Filled {filled} ETF names from etf_names.json")
+
+    # Make sure ETFs are always screened even if a watchlist sync (e.g. from
+    # Coverage Manager) drops them. Preserves watchlist order; appends any
+    # ETF not already present.
+    missing_etfs = [t for t in sorted(etf_set) if t not in tickers]
+    if missing_etfs:
+        print(f"[INFO] Adding {len(missing_etfs)} ETF(s) absent from watchlist: {missing_etfs}")
+        tickers = tickers + missing_etfs
 
     print(f"[INFO] Mode: {args.mode} | Tickers: {len(tickers)} | Time: {now_et().isoformat()}")
 
     hi_lo_hits = []
-    sector_returns = []
+    etf_returns = []
 
     if args.mode == "open":
         # Try cached path first — avoids full history download
         cache = load_cache()
         if cache and is_cache_fresh(cache):
             print("[INFO] Using cached distributions for open-mode screening")
-            alerts, stats, sector_returns = screen_open_cached(
+            alerts, stats, etf_returns = screen_open_cached(
                 tickers, cache, metadata, core_watchlist=core_watchlist,
-                sector_etf_set=sector_etf_set,
+                etf_set=etf_set,
             )
         else:
             print("[INFO] Cache stale or missing, running full download for open mode")
-            alerts, _, stats, _, sector_returns, _ = screen_full(
+            alerts, _, stats, _, etf_returns, _ = screen_full(
                 tickers, "open", metadata=metadata, core_watchlist=core_watchlist,
-                sector_etf_set=sector_etf_set,
+                etf_set=etf_set,
             )
             # Don't save cache on open runs — only EOD updates the cache
     elif args.mode == "midday":
         # Midday mode: same price comparison as close but don't update cache
-        alerts, _, stats, _, sector_returns, _ = screen_full(
+        alerts, _, stats, _, etf_returns, _ = screen_full(
             tickers, "close", metadata=metadata, core_watchlist=core_watchlist,
-            sector_etf_set=sector_etf_set,
+            etf_set=etf_set,
         )
     else:
         # Close mode: full download, update cache, and check 52-week highs/lows
-        alerts, cache_data, stats, hi_lo_hits, sector_returns, skip_events = screen_full(
+        alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
-            core_watchlist=core_watchlist, sector_etf_set=sector_etf_set,
+            core_watchlist=core_watchlist, etf_set=etf_set,
         )
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
@@ -1146,13 +1238,13 @@ def main():
         lows = [h for h in hi_lo_hits if h["type"] == "low"]
         print(f"[INFO] 52-week highs: {len(highs)}, lows: {len(lows)}")
 
-    if sector_returns:
-        print(f"[INFO] Sector ETF returns: {len(sector_returns)} ETFs")
+    if etf_returns:
+        print(f"[INFO] Index/sector ETF returns captured: {len(etf_returns)} tickers")
 
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
-        sector_returns=sector_returns,
+        etf_returns=etf_returns, index_etf_set=index_etf_set,
     )
     send_slack(payload)
 
