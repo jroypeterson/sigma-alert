@@ -1169,19 +1169,17 @@ def main():
         )
 
     # Merge ETF display names into metadata (CM doesn't track ETFs).
+    # ETF tickers are authoritative here: `etf_names.json` overrides any
+    # existing CM entry (name AND sector/subsector). Needed because ETF
+    # tickers can collide with foreign equities — e.g. `DIA` is both the
+    # SPDR DJIA ETF and DiaSorin S.p.A. on Borsa Italiana; letting CM's
+    # "DiaSorin / MedTech" classification through would both mislabel the
+    # Index & Sector Returns row and risk firing DIA as a 1σ MedTech alert.
     etf_names = load_etf_names()
     if etf_names:
-        filled = 0
         for ticker, name in etf_names.items():
-            entry = metadata.get(ticker)
-            if entry is None:
-                metadata[ticker] = {"name": name, "sector": "", "subsector": ""}
-                filled += 1
-            elif not (entry.get("name") or "").strip():
-                entry["name"] = name
-                filled += 1
-        if filled:
-            print(f"[INFO] Filled {filled} ETF names from etf_names.json")
+            metadata[ticker] = {"name": name, "sector": "", "subsector": ""}
+        print(f"[INFO] Applied {len(etf_names)} ETF names from etf_names.json")
 
     # Make sure ETFs are always screened even if a watchlist sync (e.g. from
     # Coverage Manager) drops them. Preserves watchlist order; appends any
