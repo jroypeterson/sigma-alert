@@ -323,10 +323,6 @@
           "reason": "insufficient_history"
         },
         {
-          "ticker": "AVGO",
-          "reason": "insufficient_history"
-        },
-        {
           "ticker": "BIM",
           "reason": "insufficient_history"
         },
