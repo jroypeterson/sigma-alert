@@ -272,7 +272,7 @@ class TestSlackSubcategories:
             self._make_alert("AAPL", "Tech", z=2.1),
             self._make_alert("ISRG", "MedTech", z=2.2),
             self._make_alert("HCA", "Healthcare Services", z=2.3),
-            self._make_alert("NVO", "PA", z=2.4),
+            self._make_alert("NVO", "Other", z=2.4),
         ]
         sp500 = {"AAPL"}
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)

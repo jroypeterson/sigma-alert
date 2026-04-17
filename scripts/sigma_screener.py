@@ -65,7 +65,12 @@ SKIP_LOG_RETENTION_DAYS = 30
 
 # Sectors that get the lower 1σ alert tier (in-coverage tickers).
 # 2σ+ alerts fire on the entire watchlist regardless of sector.
-ONE_SIGMA_SECTORS = {"Healthcare Services", "MedTech", "PA"}
+# Coverage Manager retired "PA" on 2026-04-17 — former-PA tickers (AAPL,
+# MSFT, JPM, V, MA, NVDA, WMT, etc.) now live under the "Other" sector.
+# Healthcare Real Estate was also collapsed into "Healthcare Services" the
+# same day (subsector="Healthcare Real Estate"), so HC Services rows now
+# include the REIT subset.
+ONE_SIGMA_SECTORS = {"Healthcare Services", "MedTech", "Other"}
 
 # Decision: using 400 calendar days for the yfinance download window.
 # 252 trading days ≈ 365 calendar days, but we add buffer for holidays
@@ -232,7 +237,10 @@ SUBCATEGORIES = [
     ("Core Watchlist", lambda a, sp500: a.get("on_watchlist", False)),
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
-    ("Other/PA", lambda a, sp500: a.get("sector") == "PA"),
+    # Coverage Manager retired "PA" on 2026-04-17 (collapsed into "Other").
+    # Bucket label kept as "Other/PA" so the Slack block is consistent with
+    # prior weeks' history; predicate updated to match the new "Other" sector.
+    ("Other/PA", lambda a, sp500: a.get("sector") == "Other"),
     ("S&P 500", lambda a, sp500: a["ticker"] in sp500),
 ]
 
