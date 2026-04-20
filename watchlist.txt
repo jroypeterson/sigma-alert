@@ -1,24 +1,28 @@
 # Sigma-Alert Watchlist
-# Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector ETFs
-# Last synced: 2026-04-16
+# Synced from Coverage Manager (HC Services, MedTech, S&P 500)
+# Last synced: 2026-04-20
 
-# --- Healthcare Services (86 tickers) ---
+# --- Healthcare Services (107 tickers) ---
 ACCD
 ACH
 ACHC
 ADUS
 AGL
 AHCO
+AHR
 ALHC
 AMN
 AMWL
 ARDT
+ARE
 AUNA
 AVAH
+BKD
 BTSG
 CAH
 CCRN
 CERT
+CHCT
 CHE
 CI
 CLOV
@@ -26,12 +30,15 @@ CNC
 CON
 COR
 CRL
+CTRE
 CVS
 CVSG
 CYH
 DCGO
 DGX
 DH
+DHC
+DOC
 DOCS
 DVA
 EHAB
@@ -43,25 +50,34 @@ FMS
 FRE
 FTRE
 GDRX
+GMRE
 HAPV3.SA
 HCA
 HCAT
 HCSG
 HIMS
 HNGE
+HR
 HUM
 ICLR
 IDXX
 IQV
+JAN
+KRC
 LFST
 LH
 LMRI
+LTC
 MCK
 MD
 MDLN
 MEDP
 MODV
 MOH
+MPW
+NHI
+NHP
+OHI
 OMDA
 OPCH
 OSCR
@@ -74,10 +90,13 @@ PNTG
 PRVA
 RDNT
 RDOR3
+SBRA
 SCI
 SDGR
 SEM
 SGRY
+SILA
+STRW
 Secare.SS
 TALK
 TDOC
@@ -87,10 +106,12 @@ UNH
 USPH
 VEEV
 VMD
+VTR
 WAY
+WELL
 ZTS
 
-# --- MedTech (138 tickers) ---
+# --- MedTech (139 tickers) ---
 1SXP.DE
 4543.T
 6869.T
@@ -103,6 +124,7 @@ ADPT
 AFX.DE
 ALC
 ALGN
+ALMR
 AMP.IM
 AORT
 ASX
@@ -230,7 +252,7 @@ XRAY
 YPSN
 ZBH
 
-# --- S&P 500 (458 tickers) ---
+# --- S&P 500 (454 tickers) ---
 AAPL
 ABBV
 ABNB
@@ -269,7 +291,6 @@ APH
 APO
 APP
 APTV
-ARE
 ARES
 ATO
 AVB
@@ -360,7 +381,6 @@ DHI
 DIS
 DLR
 DLTR
-DOC
 DOV
 DOW
 DPZ
@@ -665,7 +685,6 @@ VRSN
 VRT
 VRTX
 VST
-VTR
 VTRS
 VZ
 WAB
@@ -673,7 +692,6 @@ WBD
 WDAY
 WDC
 WEC
-WELL
 WFC
 WM
 WMB
@@ -689,21 +707,3 @@ XYL
 XYZ
 YUM
 ZBRA
-
-# --- Index ETFs (3 tickers) ---
-SPYM
-DIA
-QQQ
-
-# --- Sector ETFs (11 tickers) ---
-XLE
-XLB
-XLU
-XLP
-XLI
-XLRE
-XLC
-XLV
-XLK
-XLY
-XLF
