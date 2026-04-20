@@ -23,6 +23,7 @@
     "ALB": "not_in_metadata",
     "ALL": "not_in_metadata",
     "ALLE": "not_in_metadata",
+    "ALMR": "not_in_metadata",
     "AMAT": "not_in_metadata",
     "AMBUSH.DC": "not_in_metadata",
     "AMCR": "not_in_metadata",
@@ -236,6 +237,7 @@
     "KMI": "not_in_metadata",
     "KO": "not_in_metadata",
     "KR": "not_in_metadata",
+    "KRC": "not_in_metadata",
     "KVUE": "not_in_metadata",
     "L": "not_in_metadata",
     "LDOS": "not_in_metadata",
@@ -280,6 +282,7 @@
     "NDSN": "not_in_metadata",
     "NEE": "not_in_metadata",
     "NEM": "not_in_metadata",
+    "NHP": "not_in_metadata",
     "NI": "not_in_metadata",
     "NKE": "not_in_metadata",
     "NOC": "not_in_metadata",
@@ -423,5 +426,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-04-17T18:05:15.484042-04:00"
+  "updated": "2026-04-20T17:39:16.826866-04:00"
 }
