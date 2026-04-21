@@ -1,6 +1,6 @@
 # Sigma-Alert Watchlist
 # Synced from Coverage Manager (HC Services, MedTech, S&P 500)
-# Last synced: 2026-04-20
+# Last synced: 2026-04-21
 
 # --- Healthcare Services (107 tickers) ---
 ACCD
