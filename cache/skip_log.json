@@ -639,6 +639,120 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-04-22",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ACCD",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ALMR",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "AMBUSH.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "AMP.IM",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "BIM",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "COH.AU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "COLOB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CPH",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CTEC.LN",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CVSG",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "DAE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ERF.FP",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FRE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GETIB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GN.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GXI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "JAN",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "LONN.CH",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MPW",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "NHP",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "PINC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "RDOR3",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECARE.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SFZS.SW",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SHL.GY",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SOON",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "YPSN",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
