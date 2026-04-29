@@ -1,0 +1,372 @@
+{
+  "AAPL": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Apple Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "ADI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Analog Devices Inc",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "ADSK": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Autodesk Inc",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "AFRM": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Affirm Holdings Inc",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "ALMR": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-17",
+    "notes": "",
+    "name": "Alamar Biosciences, Inc.",
+    "sector": "MedTech",
+    "subsector": "Tools",
+    "sub_subsector": ""
+  },
+  "AMZN": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Amazon.com, Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "BE": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Bloom Energy Corporation",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "BRO": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Brown & Brown Inc.",
+    "sector": "Fintech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Cigna Group",
+    "sector": "Healthcare Services",
+    "subsector": "Mgd Care",
+    "sub_subsector": ""
+  },
+  "CPRT": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Copart Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CRWD": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "CrowdStrike Holdings, Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "DOCS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Doximity, Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
+    "sub_subsector": ""
+  },
+  "EHC": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Encompass Health Corp",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": ""
+  },
+  "ENSG": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Ensign Group Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": ""
+  },
+  "FI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Fiserv Inc.",
+    "sector": "Fintech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "FIVE": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Five Below Inc",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "FMS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Fresenius Medical Care AG",
+    "sector": "Healthcare Services",
+    "subsector": "Dialysis",
+    "sub_subsector": ""
+  },
+  "IDXX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "IDEXX Laboratories Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Animal Health",
+    "sub_subsector": ""
+  },
+  "KLRA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-17",
+    "notes": "",
+    "name": "Kailera Therapeutics, Inc.",
+    "sector": "Biopharma",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "KRC": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Kilroy Realty Corporation",
+    "sector": "Healthcare Services",
+    "subsector": "Healthcare Real Estate",
+    "sub_subsector": ""
+  },
+  "LLY": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Eli Lilly And Co",
+    "sector": "Biopharma",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "LULU": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Lululemon Athletica Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "MAIR": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-17",
+    "notes": "",
+    "name": "Madison Air Solutions Corporation",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "MMED": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-17",
+    "notes": "",
+    "name": "MiniMed Group Inc",
+    "sector": "MedTech",
+    "subsector": "Diabetes Technology",
+    "sub_subsector": ""
+  },
+  "OPCH": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Option Care Health Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": ""
+  },
+  "PACS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "PACS Group Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": ""
+  },
+  "PNTG": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Pennant Group Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": ""
+  },
+  "Q": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Qnity Electronics Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "RPD": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Rapid7, Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "SPOT": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Spotify Technology SA",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "TSLA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Tesla, Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "U": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Unity Software Inc",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "ULS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "UL Solutions Inc.",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "V": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Visa Inc",
+    "sector": "Other",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "WAY": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Waystar Holding Corp",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
+    "sub_subsector": ""
+  },
+  "WELL": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Welltower Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Healthcare Real Estate",
+    "sub_subsector": ""
+  },
+  "WST": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "West Pharmaceutical Services Inc",
+    "sector": "MedTech",
+    "subsector": "Packaging",
+    "sub_subsector": ""
+  }
+}
