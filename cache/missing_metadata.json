@@ -23,7 +23,6 @@
     "ALB": "not_in_metadata",
     "ALL": "not_in_metadata",
     "ALLE": "not_in_metadata",
-    "ALMR": "not_in_metadata",
     "AMAT": "not_in_metadata",
     "AMBUSH.DC": "not_in_metadata",
     "AMCR": "not_in_metadata",
@@ -62,7 +61,6 @@
     "BLK": "not_in_metadata",
     "BR": "not_in_metadata",
     "BRK-B": "not_in_metadata",
-    "BRO": "not_in_metadata",
     "BX": "not_in_metadata",
     "BXP": "not_in_metadata",
     "C": "not_in_metadata",
@@ -100,7 +98,6 @@
     "COST": "not_in_metadata",
     "CPAY": "not_in_metadata",
     "CPB": "not_in_metadata",
-    "CPRT": "not_in_metadata",
     "CPT": "not_in_metadata",
     "CRH": "not_in_metadata",
     "CSCO": "not_in_metadata",
@@ -237,7 +234,6 @@
     "KMI": "not_in_metadata",
     "KO": "not_in_metadata",
     "KR": "not_in_metadata",
-    "KRC": "not_in_metadata",
     "KVUE": "not_in_metadata",
     "L": "not_in_metadata",
     "LDOS": "not_in_metadata",
@@ -250,7 +246,6 @@
     "LONN.CH": "not_in_metadata",
     "LOW": "not_in_metadata",
     "LRCX": "not_in_metadata",
-    "LULU": "not_in_metadata",
     "LUV": "not_in_metadata",
     "LVS": "not_in_metadata",
     "LYB": "not_in_metadata",
@@ -282,7 +277,6 @@
     "NDSN": "not_in_metadata",
     "NEE": "not_in_metadata",
     "NEM": "not_in_metadata",
-    "NHP": "not_in_metadata",
     "NI": "not_in_metadata",
     "NKE": "not_in_metadata",
     "NOC": "not_in_metadata",
@@ -329,7 +323,6 @@
     "PSX": "not_in_metadata",
     "PWR": "not_in_metadata",
     "PYPL": "not_in_metadata",
-    "Q": "not_in_metadata",
     "QCOM": "not_in_metadata",
     "RCL": "not_in_metadata",
     "REG": "not_in_metadata",
@@ -426,5 +419,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-04-28T18:29:27.964807-04:00"
+  "updated": "2026-04-29T17:53:29.524709-04:00"
 }
