@@ -44,9 +44,20 @@ SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
-# Core watchlist pushed by Coverage Manager's weekly sigma_export step.
+# Personal trading state pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
-CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"
+#
+# Two files since 2026-05-03 (Coverage Manager Phase B):
+#   portfolio.json    — names the user owns (Position == "Portfolio")
+#   researching.json  — names the user is building a thesis on (Position == "Researching")
+#
+# Legacy core_watchlist.json is the union of the two and is still pushed for
+# back-compat during the migration cycle. Once this screener is fully
+# migrated to portfolio.json + researching.json, Coverage Manager will stop
+# pushing core_watchlist.json.
+CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"  # DEPRECATED — see below
+PORTFOLIO_PATH = ROOT / "portfolio.json"
+RESEARCHING_PATH = ROOT / "researching.json"
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -233,8 +244,13 @@ def load_etf_names() -> dict:
 # Subcategory layout within each sigma tier. Order = render order.
 # A ticker can appear in multiple subcategories (shown once per match).
 # Anything matching none lands in "Other" so no alert is dropped.
+#
+# Portfolio and Researching replaced the prior single "Core Watchlist"
+# subcategory on 2026-05-03 (Coverage Manager Phase C). Held names render
+# under "Portfolio"; thesis-building names render under "Researching".
 SUBCATEGORIES = [
-    ("Core Watchlist", lambda a, sp500: a.get("on_watchlist", False)),
+    ("Portfolio", lambda a, sp500: a.get("in_portfolio", False)),
+    ("Researching", lambda a, sp500: a.get("in_researching", False)),
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
     # Coverage Manager retired "PA" on 2026-04-17 (collapsed into "Other").
@@ -245,13 +261,49 @@ SUBCATEGORIES = [
 ]
 
 
-def load_core_watchlist() -> set[str]:
-    """Return the set of tickers on the core watchlist.
+def _load_position_set(path: Path, label: str) -> set[str]:
+    """Generic loader for portfolio.json / researching.json.
 
-    The file is written by Coverage Manager's sigma_export step. Missing file
-    is not an error — it just means no watchlist was pushed yet, and the
-    "Core Watchlist" subcategory will be empty.
+    Both files are pushed by Coverage Manager's sigma_export step. Missing
+    file is not an error — the corresponding Slack subcategory just renders
+    empty.
     """
+    if not path.exists():
+        return set()
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read {label}: {e}")
+        return set()
+    if not isinstance(data, dict):
+        return set()
+    return {t.upper() for t in data.keys()}
+
+
+def load_portfolio() -> set[str]:
+    """Return the set of tickers with Position == 'Portfolio' (held names)."""
+    return _load_position_set(PORTFOLIO_PATH, "portfolio.json")
+
+
+def load_researching() -> set[str]:
+    """Return the set of tickers with Position == 'Researching' (thesis-building)."""
+    return _load_position_set(RESEARCHING_PATH, "researching.json")
+
+
+def load_core_watchlist() -> set[str]:
+    """DEPRECATED — back-compat wrapper. Returns the union of portfolio +
+    researching from the new files. Falls back to legacy core_watchlist.json
+    if neither new file exists yet (e.g. fresh sigma-alert clone before
+    Coverage Manager's first push of the new files).
+
+    Will be removed once Coverage Manager stops pushing core_watchlist.json.
+    """
+    portfolio = load_portfolio()
+    researching = load_researching()
+    if portfolio or researching:
+        return portfolio | researching
+    # Fallback to legacy file if the new ones haven't been pushed yet.
     if not CORE_WATCHLIST_PATH.exists():
         return set()
     try:
@@ -551,7 +603,8 @@ def download_todays_prices(tickers: list[str]) -> dict:
 
 def screen_open_cached(tickers: list[str], cache: dict,
                        metadata: dict | None = None,
-                       core_watchlist: set[str] | None = None,
+                       portfolio_set: set[str] | None = None,
+                       researching_set: set[str] | None = None,
                        etf_set: set[str] | None = None) -> tuple[list[dict], dict, list[dict]]:
     """Open-mode screening using cached mu/sigma — only downloads today's prices.
 
@@ -630,7 +683,8 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
-                "on_watchlist": ticker in (core_watchlist or set()),
+                "in_portfolio": ticker in (portfolio_set or set()),
+                "in_researching": ticker in (researching_set or set()),
             })
     return alerts, stats, etf_returns
 
@@ -660,7 +714,8 @@ def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_seri
 def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          high_series: pd.Series | None, low_series: pd.Series | None,
                          mode: str, metadata: dict | None = None,
-                         core_watchlist: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
+                         portfolio_set: set[str] | None = None,
+                         researching_set: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
 
     Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none, ticker_stats_or_none, skip_reason_or_none).
@@ -744,7 +799,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
-            "on_watchlist": ticker in (core_watchlist or set()),
+            "in_portfolio": ticker in (portfolio_set or set()),
+            "in_researching": ticker in (researching_set or set()),
         }
 
     # 52-week high/low check (only when high/low data is provided)
@@ -765,7 +821,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
 
 def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 metadata: dict | None = None,
-                core_watchlist: set[str] | None = None,
+                portfolio_set: set[str] | None = None,
+                researching_set: set[str] | None = None,
                 etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
@@ -825,7 +882,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
                 alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
-                    core_watchlist=core_watchlist,
+                    portfolio_set=portfolio_set,
+                    researching_set=researching_set,
                 )
 
                 if cache_entry is None:
@@ -875,7 +933,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
             alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                 ticker, close, open_prices, high_s, low_s, mode, metadata,
-                core_watchlist=core_watchlist,
+                portfolio_set=portfolio_set,
+                researching_set=researching_set,
             )
 
             if cache_entry is None:
@@ -1163,9 +1222,20 @@ def main():
         if filled:
             print(f"[INFO] Filled {filled} S&P 500 names from sp500_names.json")
 
-    core_watchlist = load_core_watchlist()
-    if core_watchlist:
-        print(f"[INFO] Loaded {len(core_watchlist)} core watchlist tickers")
+    portfolio_set = load_portfolio()
+    researching_set = load_researching()
+    if portfolio_set:
+        print(f"[INFO] Loaded {len(portfolio_set)} Portfolio tickers")
+    if researching_set:
+        print(f"[INFO] Loaded {len(researching_set)} Researching tickers")
+    if not portfolio_set and not researching_set:
+        # Fall back to legacy core_watchlist.json if neither new file is present
+        # (e.g. fresh sigma-alert clone before Coverage Manager's first push of
+        # the new files).
+        legacy = load_core_watchlist()
+        if legacy:
+            print(f"[INFO] Loaded {len(legacy)} legacy core_watchlist tickers (no Portfolio/Researching split available yet — they all render under Portfolio)")
+            portfolio_set = legacy
 
     index_etf_set = load_index_etfs()
     sector_etf_set = load_sector_etfs()
@@ -1208,27 +1278,31 @@ def main():
         if cache and is_cache_fresh(cache):
             print("[INFO] Using cached distributions for open-mode screening")
             alerts, stats, etf_returns = screen_open_cached(
-                tickers, cache, metadata, core_watchlist=core_watchlist,
+                tickers, cache, metadata,
+                portfolio_set=portfolio_set, researching_set=researching_set,
                 etf_set=etf_set,
             )
         else:
             print("[INFO] Cache stale or missing, running full download for open mode")
             alerts, _, stats, _, etf_returns, _ = screen_full(
-                tickers, "open", metadata=metadata, core_watchlist=core_watchlist,
+                tickers, "open", metadata=metadata,
+                portfolio_set=portfolio_set, researching_set=researching_set,
                 etf_set=etf_set,
             )
             # Don't save cache on open runs — only EOD updates the cache
     elif args.mode == "midday":
         # Midday mode: same price comparison as close but don't update cache
         alerts, _, stats, _, etf_returns, _ = screen_full(
-            tickers, "close", metadata=metadata, core_watchlist=core_watchlist,
+            tickers, "close", metadata=metadata,
+            portfolio_set=portfolio_set, researching_set=researching_set,
             etf_set=etf_set,
         )
     else:
         # Close mode: full download, update cache, and check 52-week highs/lows
         alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
-            core_watchlist=core_watchlist, etf_set=etf_set,
+            portfolio_set=portfolio_set, researching_set=researching_set,
+            etf_set=etf_set,
         )
         save_cache(cache_data)
         print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")

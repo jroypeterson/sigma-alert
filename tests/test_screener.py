@@ -21,6 +21,8 @@ from sigma_screener import (
     format_slack_message,
     is_cache_fresh,
     load_core_watchlist,
+    load_portfolio,
+    load_researching,
     validate_bar_date,
     write_missing_metadata_flag,
 )
@@ -297,34 +299,49 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "$512.34" in text
 
-    def test_core_watchlist_subcategory_renders_first(self):
-        """A watchlist hit should render in the Core Watchlist subcategory
+    def test_portfolio_subcategory_renders_first(self):
+        """A Portfolio hit should render in the Portfolio subcategory
         at the top of its tier, and also in its sector subcategory below."""
         alerts = [
             self._make_alert("UNH", "Healthcare Services"),
             self._make_alert("INSM", "Biopharma"),
         ]
-        alerts[1]["on_watchlist"] = True  # only INSM is on the watchlist
+        alerts[1]["in_portfolio"] = True  # only INSM is in the portfolio
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
         text = self._all_text(payload)
 
-        assert "Core Watchlist (1)" in text
-        # INSM appears once under Core Watchlist; UNH appears under HC Services.
-        i_pw = text.index("Core Watchlist (1)")
+        assert "Portfolio (1)" in text
+        # INSM appears under Portfolio; UNH appears under HC Services.
+        i_pw = text.index("Portfolio (1)")
         i_hc = text.index("Healthcare Services (1)")
-        assert i_pw < i_hc, "Core Watchlist must render before sector subcategories"
-        # INSM should be reachable from the Core Watchlist bucket (it wouldn't
-        # otherwise appear at all because Biopharma is not in the subcategory list)
+        assert i_pw < i_hc, "Portfolio must render before sector subcategories"
+        # INSM should be reachable from the Portfolio bucket (it wouldn't
+        # otherwise appear because Biopharma is not in the subcategory list).
         assert "*INSM*" in text
 
-    def test_alert_without_on_watchlist_key_defaults_false(self):
-        """Legacy alert dicts without the on_watchlist key must not crash
-        and must not appear under Core Watchlist."""
-        alerts = [self._make_alert("UNH", "Healthcare Services")]
-        # Deliberately don't set on_watchlist
+    def test_researching_subcategory_renders_after_portfolio(self):
+        """A Researching hit renders in its own subcategory between Portfolio and the sector blocks."""
+        alerts = [
+            self._make_alert("AAPL", "Other"),
+            self._make_alert("ISRG", "MedTech"),
+        ]
+        alerts[1]["in_researching"] = True  # only ISRG is being researched
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
         text = self._all_text(payload)
-        assert "Core Watchlist" not in text
+        assert "Researching (1)" in text
+        i_re = text.index("Researching (1)")
+        i_mt = text.index("MedTech (1)")
+        assert i_re < i_mt, "Researching must render before sector subcategories"
+
+    def test_alert_without_position_keys_defaults_false(self):
+        """Legacy alert dicts without in_portfolio/in_researching keys must not crash
+        and must not appear under Portfolio or Researching subcategories."""
+        alerts = [self._make_alert("UNH", "Healthcare Services")]
+        # Deliberately don't set in_portfolio or in_researching
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "Portfolio (" not in text
+        assert "Researching (" not in text
 
     def test_tier_separation(self):
         alerts = [
@@ -338,35 +355,69 @@ class TestSlackSubcategories:
 
 
 # ---------------------------------------------------------------------------
-# Core watchlist loader
+# Portfolio / Researching / legacy core_watchlist loaders
 # ---------------------------------------------------------------------------
 
-class TestCoreWatchlistLoader:
-    def test_missing_file_returns_empty_set(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", tmp_path / "nope.json")
-        assert load_core_watchlist() == set()
+class TestPortfolioAndResearchingLoaders:
+    def _stub_paths(self, tmp_path, monkeypatch, portfolio=None, researching=None, core=None):
+        monkeypatch.setattr(sigma_screener, "PORTFOLIO_PATH", tmp_path / "portfolio.json")
+        monkeypatch.setattr(sigma_screener, "RESEARCHING_PATH", tmp_path / "researching.json")
+        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", tmp_path / "core_watchlist.json")
+        if portfolio is not None:
+            (tmp_path / "portfolio.json").write_text(json.dumps(portfolio))
+        if researching is not None:
+            (tmp_path / "researching.json").write_text(json.dumps(researching))
+        if core is not None:
+            (tmp_path / "core_watchlist.json").write_text(json.dumps(core))
 
-    def test_valid_file_returns_ticker_set(self, tmp_path, monkeypatch):
-        path = tmp_path / "core_watchlist.json"
-        path.write_text(json.dumps({
-            "INSM": {"buy_price": 30, "target_price": 75, "sector": "Biopharma"},
-            "ISRG": {"buy_price": 300, "target_price": 500, "sector": "MedTech"},
-        }))
-        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
+    def test_load_portfolio_missing_returns_empty(self, tmp_path, monkeypatch):
+        self._stub_paths(tmp_path, monkeypatch)
+        assert load_portfolio() == set()
+
+    def test_load_portfolio_returns_ticker_set(self, tmp_path, monkeypatch):
+        self._stub_paths(tmp_path, monkeypatch, portfolio={
+            "AAPL": {"position": "Portfolio"},
+            "MSFT": {"position": "Portfolio"},
+        })
+        assert load_portfolio() == {"AAPL", "MSFT"}
+
+    def test_load_researching_returns_ticker_set(self, tmp_path, monkeypatch):
+        self._stub_paths(tmp_path, monkeypatch, researching={
+            "INSM": {"position": "Researching"},
+        })
+        assert load_researching() == {"INSM"}
+
+    def test_load_core_watchlist_unions_new_files(self, tmp_path, monkeypatch):
+        """Back-compat wrapper: when new files exist, return their union."""
+        self._stub_paths(
+            tmp_path, monkeypatch,
+            portfolio={"AAPL": {}}, researching={"INSM": {}},
+        )
+        assert load_core_watchlist() == {"AAPL", "INSM"}
+
+    def test_load_core_watchlist_falls_back_to_legacy(self, tmp_path, monkeypatch):
+        """When neither new file exists, fall back to legacy core_watchlist.json."""
+        self._stub_paths(
+            tmp_path, monkeypatch,
+            core={"INSM": {}, "ISRG": {}},
+        )
         assert load_core_watchlist() == {"INSM", "ISRG"}
 
-    def test_malformed_file_returns_empty_set(self, tmp_path, monkeypatch):
-        path = tmp_path / "core_watchlist.json"
-        path.write_text("{not valid json")
-        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
+    def test_load_core_watchlist_all_missing_returns_empty(self, tmp_path, monkeypatch):
+        self._stub_paths(tmp_path, monkeypatch)
         assert load_core_watchlist() == set()
 
-    def test_list_instead_of_dict_returns_empty_set(self, tmp_path, monkeypatch):
-        """Payload must be a {ticker: {...}} dict; a list is rejected cleanly."""
-        path = tmp_path / "core_watchlist.json"
+    def test_malformed_portfolio_returns_empty(self, tmp_path, monkeypatch):
+        path = tmp_path / "portfolio.json"
+        path.write_text("{not valid json")
+        monkeypatch.setattr(sigma_screener, "PORTFOLIO_PATH", path)
+        assert load_portfolio() == set()
+
+    def test_list_instead_of_dict_returns_empty(self, tmp_path, monkeypatch):
+        path = tmp_path / "portfolio.json"
         path.write_text(json.dumps(["INSM", "ISRG"]))
-        monkeypatch.setattr(sigma_screener, "CORE_WATCHLIST_PATH", path)
-        assert load_core_watchlist() == set()
+        monkeypatch.setattr(sigma_screener, "PORTFOLIO_PATH", path)
+        assert load_portfolio() == set()
 
 
 # ---------------------------------------------------------------------------
