@@ -1,11 +1,31 @@
 {
+  "2715.HK": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Estun Automation Co Ltd",
+    "sector": "Tech",
+    "subsector": "Industrial Robotics / Automation",
+    "sub_subsector": ""
+  },
   "AAPL": {
     "buy_price": null,
     "target_price": null,
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Apple Inc.",
-    "sector": "Other",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "ACVA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "ACV Auctions Inc",
+    "sector": "Consumer",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -15,7 +35,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Analog Devices Inc",
-    "sector": "Other",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -35,7 +55,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Affirm Holdings Inc",
-    "sector": "Other",
+    "sector": "Financials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -46,7 +66,7 @@
     "notes": "",
     "name": "Alamar Biosciences, Inc.",
     "sector": "MedTech",
-    "subsector": "Tools",
+    "subsector": "Life Science Tools",
     "sub_subsector": ""
   },
   "AMZN": {
@@ -55,8 +75,18 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Amazon.com, Inc.",
-    "sector": "Other",
+    "sector": "Tech",
     "subsector": "",
+    "sub_subsector": ""
+  },
+  "ARXS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Arxis, Inc.",
+    "sector": "Industrials",
+    "subsector": "Aerospace & Defense Components",
     "sub_subsector": ""
   },
   "BE": {
@@ -65,7 +95,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Bloom Energy Corporation",
-    "sector": "Other",
+    "sector": "Energy",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -75,7 +105,17 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Brown & Brown Inc.",
-    "sector": "Fintech",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CAT": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Caterpillar Inc",
+    "sector": "Industrials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -89,13 +129,63 @@
     "subsector": "Mgd Care",
     "sub_subsector": ""
   },
+  "CIGI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Colliers International Group Inc",
+    "sector": "Real Estate",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CNI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Canadian National Railway Co",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "COIN": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Coinbase Global Inc",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CP": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Canadian Pacific Kansas City Ltd",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "CPRT": {
     "buy_price": null,
     "target_price": null,
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Copart Inc.",
-    "sector": "Other",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CROX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Crocs Inc",
+    "sector": "Consumer",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -105,7 +195,37 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "CrowdStrike Holdings, Inc.",
-    "sector": "Other",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CSU": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Constellation Software Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "CVNA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Carvana Co",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "DBX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Dropbox, Inc.",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -139,13 +259,43 @@
     "subsector": "Post-Acute",
     "sub_subsector": ""
   },
+  "FDX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "FedEx Corp",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "FER": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Ferrovial SE",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "FI": {
     "buy_price": null,
     "target_price": null,
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Fiserv Inc.",
-    "sector": "Fintech",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "FICO": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Fair Isaac Corp",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -155,7 +305,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Five Below Inc",
-    "sector": "Other",
+    "sector": "Consumer",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -169,6 +319,16 @@
     "subsector": "Dialysis",
     "sub_subsector": ""
   },
+  "HOOD": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Robinhood Markets Inc",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "IDXX": {
     "buy_price": null,
     "target_price": null,
@@ -179,6 +339,26 @@
     "subsector": "Animal Health",
     "sub_subsector": ""
   },
+  "JPM": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "JPMorgan Chase & Co",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "KKR": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "KKR & Co Inc",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "KLRA": {
     "buy_price": null,
     "target_price": null,
@@ -186,7 +366,7 @@
     "notes": "",
     "name": "Kailera Therapeutics, Inc.",
     "sector": "Biopharma",
-    "subsector": "",
+    "subsector": "Biotech",
     "sub_subsector": ""
   },
   "KRC": {
@@ -199,6 +379,16 @@
     "subsector": "Healthcare Real Estate",
     "sub_subsector": ""
   },
+  "LIN": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Linde plc",
+    "sector": "Materials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "LLY": {
     "buy_price": null,
     "target_price": null,
@@ -206,7 +396,7 @@
     "notes": "",
     "name": "Eli Lilly And Co",
     "sector": "Biopharma",
-    "subsector": "",
+    "subsector": "Large Pharma",
     "sub_subsector": ""
   },
   "LULU": {
@@ -215,7 +405,17 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Lululemon Athletica Inc.",
-    "sector": "Other",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "MA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Mastercard Inc",
+    "sector": "Financials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -229,6 +429,26 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "MCO": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Moody's Corp",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "MDA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "MDA Space Ltd",
+    "sector": "Industrials",
+    "subsector": "Space Tech / Instrumentation",
+    "sub_subsector": ""
+  },
   "MMED": {
     "buy_price": null,
     "target_price": null,
@@ -236,7 +456,37 @@
     "notes": "",
     "name": "MiniMed Group Inc",
     "sector": "MedTech",
-    "subsector": "Diabetes Technology",
+    "subsector": "Diabetes",
+    "sub_subsector": ""
+  },
+  "MSFT": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Microsoft Corporation",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "NFLX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Netflix Inc",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "NVDA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "NVIDIA Corporation",
+    "sector": "Tech",
+    "subsector": "",
     "sub_subsector": ""
   },
   "OPCH": {
@@ -285,7 +535,17 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Rapid7, Inc.",
-    "sector": "Other",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "SPGI": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "S&P Global Inc",
+    "sector": "Financials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -295,7 +555,17 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Spotify Technology SA",
-    "sector": "Other",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "TPL": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Texas Pacific Land Corp",
+    "sector": "Energy",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -305,7 +575,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Tesla, Inc.",
-    "sector": "Other",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -315,7 +585,7 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Unity Software Inc",
-    "sector": "Other",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -325,7 +595,17 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "UL Solutions Inc.",
-    "sector": "Other",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "UPS": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "United Parcel Service Inc",
+    "sector": "Industrials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -335,12 +615,22 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Visa Inc",
-    "sector": "Other",
+    "sector": "Financials",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "VLTO": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Veralto Corp",
+    "sector": "Industrials",
     "subsector": "",
     "sub_subsector": ""
   },
   "WAY": {
-    "buy_price": null,
+    "buy_price": 15.0,
     "target_price": null,
     "date_added": "2026-04-11",
     "notes": "",
@@ -359,6 +649,16 @@
     "subsector": "Healthcare Real Estate",
     "sub_subsector": ""
   },
+  "WMT": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "Walmart Inc",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "WST": {
     "buy_price": null,
     "target_price": null,
@@ -367,6 +667,16 @@
     "name": "West Pharmaceutical Services Inc",
     "sector": "MedTech",
     "subsector": "Packaging",
+    "sub_subsector": ""
+  },
+  "XE": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-05-03",
+    "notes": "",
+    "name": "X-Energy, Inc.",
+    "sector": "Energy",
+    "subsector": "Clean Energy / Nuclear SMR",
     "sub_subsector": ""
   }
 }
