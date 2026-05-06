@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import sigma_screener
 from sigma_screener import (
+    _is_one_sigma_eligible,
     check_52w_high_low,
     compute_distribution,
     compute_z_score,
@@ -236,15 +237,55 @@ class TestCheck52wHighLow:
 
 
 # ---------------------------------------------------------------------------
+# 1σ tier eligibility (replaces the old sector-based ONE_SIGMA_SECTORS gate)
+# ---------------------------------------------------------------------------
+
+class TestOneSigmaEligibility:
+    """1σ tier fires only on names you care about analytically:
+    Coverage Manager Core flag, Portfolio, or Researching."""
+
+    def test_core_y_is_eligible(self):
+        meta = {"sector": "Tech", "core": "Y"}
+        assert _is_one_sigma_eligible(meta, "AAPL", set(), set()) is True
+
+    def test_core_blank_with_no_position_is_not_eligible(self):
+        # Even if the sector used to fire 1σ under the old rule, a non-Core,
+        # non-position name no longer qualifies.
+        meta = {"sector": "MedTech", "core": ""}
+        assert _is_one_sigma_eligible(meta, "ABT", set(), set()) is False
+
+    def test_portfolio_membership_is_eligible(self):
+        meta = {"sector": "Biopharma", "core": ""}
+        assert _is_one_sigma_eligible(meta, "INSM", {"INSM"}, set()) is True
+
+    def test_researching_membership_is_eligible(self):
+        meta = {"sector": "Biopharma", "core": ""}
+        assert _is_one_sigma_eligible(meta, "MRNA", set(), {"MRNA"}) is True
+
+    def test_missing_metadata_falls_back_to_false(self):
+        # Schema v3 hadn't shipped yet — a stale metadata file with no `core`
+        # field is treated as "not Core". 1σ still fires for Portfolio/Researching.
+        meta_no_core = {"sector": "Tech"}
+        assert _is_one_sigma_eligible(meta_no_core, "AAPL", set(), set()) is False
+        assert _is_one_sigma_eligible(meta_no_core, "AAPL", {"AAPL"}, set()) is True
+
+    def test_none_meta_safe(self):
+        assert _is_one_sigma_eligible(None, "AAPL", set(), set()) is False
+        assert _is_one_sigma_eligible(None, "AAPL", {"AAPL"}, set()) is True
+
+
+# ---------------------------------------------------------------------------
 # Slack subcategory rendering
 # ---------------------------------------------------------------------------
 
 class TestSlackSubcategories:
-    def _make_alert(self, ticker, sector, tier="2sigma", z=2.5, ret=5.0, price=100.0):
+    def _make_alert(self, ticker, sector, tier="2sigma", z=2.5, ret=5.0,
+                    price=100.0, subsector=""):
         return {
             "ticker": ticker,
             "name": f"{ticker} Corp",
             "sector": sector,
+            "subsector": subsector,
             "z_score": z,
             "return_pct": ret,
             "price": price,
@@ -274,7 +315,8 @@ class TestSlackSubcategories:
             self._make_alert("AAPL", "Tech", z=2.1),
             self._make_alert("ISRG", "MedTech", z=2.2),
             self._make_alert("HCA", "Healthcare Services", z=2.3),
-            self._make_alert("NVO", "Other", z=2.4),
+            self._make_alert("LLY", "Biopharma", subsector="Large Pharma", z=2.4),
+            self._make_alert("JPM", "Financials", z=2.5),
         ]
         sp500 = {"AAPL"}
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
@@ -282,16 +324,17 @@ class TestSlackSubcategories:
         # Subcategories render in the declared order
         i_hc = text.index("Healthcare Services (1)")
         i_mt = text.index("MedTech (1)")
-        i_pa = text.index("Other/PA (1)")
+        i_lp = text.index("Large Pharma (1)")
+        # The "Other" bucket label is long; match by its prefix.
+        i_other = text.index("Other (Tech, SaaS, Fin")
         i_sp = text.index("S&P 500 (1)")
-        assert i_hc < i_mt < i_pa < i_sp
-        # A 2σ ticker matching none of the 4 categories should be dropped,
-        # not rendered under an "Other" bucket.
-        alerts.append(self._make_alert("ADBE", "SaaS", z=2.0))
+        assert i_hc < i_mt < i_lp < i_other < i_sp
+        # A 2σ ticker that matches NO bucket should be dropped (mid-cap biotech
+        # not in Portfolio/Researching, not in S&P 500).
+        alerts.append(self._make_alert("MRNA", "Biopharma", subsector="Biotech", z=2.0))
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
         text = self._all_text(payload)
-        assert "_Other (" not in text
-        assert "*ADBE*" not in text
+        assert "*MRNA*" not in text
 
     def test_price_rendered_in_line(self):
         alerts = [self._make_alert("UNH", "Healthcare Services", price=512.34)]

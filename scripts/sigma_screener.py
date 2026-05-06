@@ -74,14 +74,39 @@ THREE_SIGMA = 3.0
 # longer-window view without growing the file unbounded.
 SKIP_LOG_RETENTION_DAYS = 30
 
-# Sectors that get the lower 1σ alert tier (in-coverage tickers).
+# 1σ tier eligibility — see `_is_one_sigma_eligible` below.
 # 2σ+ alerts fire on the entire watchlist regardless of sector.
-# Coverage Manager retired "PA" on 2026-04-17 — former-PA tickers (AAPL,
-# MSFT, JPM, V, MA, NVDA, WMT, etc.) now live under the "Other" sector.
-# Healthcare Real Estate was also collapsed into "Healthcare Services" the
-# same day (subsector="Healthcare Real Estate"), so HC Services rows now
-# include the REIT subset.
-ONE_SIGMA_SECTORS = {"Healthcare Services", "MedTech", "Other"}
+# 1σ used to be sector-based (Healthcare Services / MedTech / Other), but
+# Coverage Manager's 2026-05-03 taxonomy expansion split "Other" into seven
+# explicit sectors (Tech / Financials / Industrials / etc.), making the old
+# gate brittle. The replacement gates 1σ on attention-based criteria from
+# Coverage Manager: Core column == "Y" (per ticker_metadata.json schema v3),
+# or membership in Portfolio / Researching.
+SECTORS_GROUPED_AS_OTHER = frozenset({
+    "Tech", "SaaS", "Financials", "Industrials",
+    "Consumer", "Energy", "Materials", "Real Estate",
+})
+
+
+def _is_one_sigma_eligible(meta: dict, ticker: str,
+                           portfolio_set, researching_set) -> bool:
+    """Return True if `ticker` is eligible for the 1σ alert tier.
+
+    Triggers on:
+      - Coverage Manager `Core` flag == "Y" (read from ticker_metadata.json
+        schema v3+; falls back to False on older snapshots that lack the
+        field), OR
+      - ticker is in Portfolio (i.e. you own it), OR
+      - ticker is in Researching (active thesis-building).
+
+    2σ+ alerts always fire regardless; this gate only restricts the lower
+    1σ tier so the noisier alerts only surface for names you care about.
+    """
+    if portfolio_set and ticker in portfolio_set:
+        return True
+    if researching_set and ticker in researching_set:
+        return True
+    return (meta or {}).get("core", "").strip().upper() == "Y"
 
 # Decision: using 400 calendar days for the yfinance download window.
 # 252 trading days ≈ 365 calendar days, but we add buffer for holidays
@@ -243,20 +268,26 @@ def load_etf_names() -> dict:
 
 # Subcategory layout within each sigma tier. Order = render order.
 # A ticker can appear in multiple subcategories (shown once per match).
-# Anything matching none lands in "Other" so no alert is dropped.
+# Alerts that match no bucket are dropped (mainly: Biotech / Specialty
+# Pharma names that aren't Core / Portfolio / Researching / S&P 500).
 #
 # Portfolio and Researching replaced the prior single "Core Watchlist"
 # subcategory on 2026-05-03 (Coverage Manager Phase C). Held names render
 # under "Portfolio"; thesis-building names render under "Researching".
+#
+# 2026-05-06: Large Pharma added (subsector == "Large Pharma"); the legacy
+# "Other/PA" sector bucket dropped (CM no longer tags any row sector="Other"
+# after the 2026-05-03 taxonomy expansion). Replacement bucket explicitly
+# lists the seven sectors that absorbed "Other": Tech, SaaS, Financials,
+# Industrials, Consumer, Energy, Materials, Real Estate.
 SUBCATEGORIES = [
     ("Portfolio", lambda a, sp500: a.get("in_portfolio", False)),
     ("Researching", lambda a, sp500: a.get("in_researching", False)),
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
-    # Coverage Manager retired "PA" on 2026-04-17 (collapsed into "Other").
-    # Bucket label kept as "Other/PA" so the Slack block is consistent with
-    # prior weeks' history; predicate updated to match the new "Other" sector.
-    ("Other/PA", lambda a, sp500: a.get("sector") == "Other"),
+    ("Large Pharma", lambda a, sp500: a.get("subsector") == "Large Pharma"),
+    ("Other (Tech, SaaS, Fin, Ind, Cons, Energy, Mat, RE)",
+     lambda a, sp500: a.get("sector") in SECTORS_GROUPED_AS_OTHER),
     ("S&P 500", lambda a, sp500: a["ticker"] in sp500),
 ]
 
@@ -650,6 +681,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
         z = compute_z_score(today_return, mu, sigma)
         meta = (metadata or {}).get(ticker, {})
         sector = meta.get("sector", "")
+        subsector = meta.get("subsector", "")
         abs_z = abs(z)
 
         # Collect ETF stats regardless of threshold (drives Index & Sector
@@ -668,13 +700,15 @@ def screen_open_cached(tickers: list[str], cache: dict,
         tier = None
         if abs_z >= SIGMA_THRESHOLD:
             tier = "2sigma"
-        elif abs_z >= ONE_SIGMA_THRESHOLD and sector in ONE_SIGMA_SECTORS:
+        elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
+                meta, ticker, portfolio_set, researching_set):
             tier = "1sigma"
         if tier:
             alerts.append({
                 "ticker": ticker,
                 "name": meta.get("name", ""),
                 "sector": sector,
+                "subsector": subsector,
                 "z_score": z,
                 "return_pct": today_return * 100,
                 "price": today_open,
@@ -766,6 +800,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     meta = (metadata or {}).get(ticker, {})
     name = meta.get("name", "")
     sector = meta.get("sector", "")
+    subsector = meta.get("subsector", "")
 
     # Always-populated stats for sector ETF returns section
     ticker_stats = {
@@ -783,7 +818,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     tier = None
     if abs_z >= SIGMA_THRESHOLD:
         tier = "2sigma"
-    elif abs_z >= ONE_SIGMA_THRESHOLD and sector in ONE_SIGMA_SECTORS:
+    elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
+            meta, ticker, portfolio_set, researching_set):
         tier = "1sigma"
 
     if tier:
@@ -791,6 +827,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "ticker": ticker,
             "name": name,
             "sector": sector,
+            "subsector": subsector,
             "z_score": z,
             "return_pct": today_return * 100,
             "price": today_price,
