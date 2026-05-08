@@ -2101,10 +2101,6 @@
           "reason": "insufficient_history"
         },
         {
-          "ticker": "VMD",
-          "reason": "insufficient_history"
-        },
-        {
           "ticker": "YPSN",
           "reason": "insufficient_history"
         }
