@@ -58,6 +58,13 @@ ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 CORE_WATCHLIST_PATH = ROOT / "core_watchlist.json"  # DEPRECATED — see below
 PORTFOLIO_PATH = ROOT / "portfolio.json"
 RESEARCHING_PATH = ROOT / "researching.json"
+# Three additional position files added 2026-05-11 when Coverage Manager's
+# Position taxonomy expanded from {Portfolio, Researching} to five values.
+# All three render as their own Slack subcategories and are eligible for the
+# 1σ alert tier on the same footing as Portfolio / Researching.
+FOLLOWING_PATH = ROOT / "following_for_interest.json"
+READY_TO_BUY_PATH = ROOT / "ready_to_buy.json"
+READY_TO_SHORT_PATH = ROOT / "ready_to_short.json"
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -89,22 +96,35 @@ SECTORS_GROUPED_AS_OTHER = frozenset({
 
 
 def _is_one_sigma_eligible(meta: dict, ticker: str,
-                           portfolio_set, researching_set) -> bool:
+                           portfolio_set, researching_set,
+                           following_set=None, ready_to_buy_set=None,
+                           ready_to_short_set=None) -> bool:
     """Return True if `ticker` is eligible for the 1σ alert tier.
 
     Triggers on:
       - Coverage Manager `Core` flag == "Y" (read from ticker_metadata.json
         schema v3+; falls back to False on older snapshots that lack the
         field), OR
-      - ticker is in Portfolio (i.e. you own it), OR
-      - ticker is in Researching (active thesis-building).
+      - ticker is in any of the five Position lists from Coverage Manager:
+        Portfolio (held), Researching (active thesis), Ready to Buy or
+        Ready to Short (thesis complete; waiting for entry trigger), or
+        Following for Interest (passive earnings/signal tracking).
 
     2σ+ alerts always fire regardless; this gate only restricts the lower
     1σ tier so the noisier alerts only surface for names you care about.
+
+    The three trailing set arguments default to None for back-compat with
+    older callers / tests that only pass portfolio + researching.
     """
     if portfolio_set and ticker in portfolio_set:
         return True
     if researching_set and ticker in researching_set:
+        return True
+    if following_set and ticker in following_set:
+        return True
+    if ready_to_buy_set and ticker in ready_to_buy_set:
+        return True
+    if ready_to_short_set and ticker in ready_to_short_set:
         return True
     return (meta or {}).get("core", "").strip().upper() == "Y"
 
@@ -269,7 +289,7 @@ def load_etf_names() -> dict:
 # Subcategory layout within each sigma tier. Order = render order.
 # A ticker can appear in multiple subcategories (shown once per match).
 # Alerts that match no bucket are dropped (mainly: Biotech / Specialty
-# Pharma names that aren't Core / Portfolio / Researching / S&P 500).
+# Pharma names that aren't Core / any Position list / S&P 500).
 #
 # Portfolio and Researching replaced the prior single "Core Watchlist"
 # subcategory on 2026-05-03 (Coverage Manager Phase C). Held names render
@@ -280,9 +300,19 @@ def load_etf_names() -> dict:
 # after the 2026-05-03 taxonomy expansion). Replacement bucket explicitly
 # lists the seven sectors that absorbed "Other": Tech, SaaS, Financials,
 # Industrials, Consumer, Energy, Materials, Real Estate.
+#
+# 2026-05-11: Coverage Manager's Position taxonomy expanded from 2 values
+# to 5. Three new Position-derived subcategories render between Researching
+# and the sector buckets, ordered by closeness-to-action: Ready to Buy
+# (long thesis complete; waiting for trigger), Ready to Short (short
+# thesis complete; waiting for trigger), Following for Interest (passive
+# earnings/signal tracking; no intent to trade).
 SUBCATEGORIES = [
     ("Portfolio", lambda a, sp500: a.get("in_portfolio", False)),
     ("Researching", lambda a, sp500: a.get("in_researching", False)),
+    ("Ready to Buy", lambda a, sp500: a.get("in_ready_to_buy", False)),
+    ("Ready to Short", lambda a, sp500: a.get("in_ready_to_short", False)),
+    ("Following for Interest", lambda a, sp500: a.get("in_following_for_interest", False)),
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
     ("Large Pharma", lambda a, sp500: a.get("subsector") == "Large Pharma"),
@@ -320,6 +350,24 @@ def load_portfolio() -> set[str]:
 def load_researching() -> set[str]:
     """Return the set of tickers with Position == 'Researching' (thesis-building)."""
     return _load_position_set(RESEARCHING_PATH, "researching.json")
+
+
+def load_following_for_interest() -> set[str]:
+    """Return the set of tickers with Position == 'Following for Interest'
+    (passive earnings/signal tracking; no intent to trade)."""
+    return _load_position_set(FOLLOWING_PATH, "following_for_interest.json")
+
+
+def load_ready_to_buy() -> set[str]:
+    """Return the set of tickers with Position == 'Ready to Buy'
+    (long thesis complete; waiting for entry trigger)."""
+    return _load_position_set(READY_TO_BUY_PATH, "ready_to_buy.json")
+
+
+def load_ready_to_short() -> set[str]:
+    """Return the set of tickers with Position == 'Ready to Short'
+    (short thesis complete; waiting for entry trigger)."""
+    return _load_position_set(READY_TO_SHORT_PATH, "ready_to_short.json")
 
 
 def load_core_watchlist() -> set[str]:
@@ -636,6 +684,9 @@ def screen_open_cached(tickers: list[str], cache: dict,
                        metadata: dict | None = None,
                        portfolio_set: set[str] | None = None,
                        researching_set: set[str] | None = None,
+                       following_set: set[str] | None = None,
+                       ready_to_buy_set: set[str] | None = None,
+                       ready_to_short_set: set[str] | None = None,
                        etf_set: set[str] | None = None) -> tuple[list[dict], dict, list[dict]]:
     """Open-mode screening using cached mu/sigma — only downloads today's prices.
 
@@ -701,7 +752,10 @@ def screen_open_cached(tickers: list[str], cache: dict,
         if abs_z >= SIGMA_THRESHOLD:
             tier = "2sigma"
         elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
-                meta, ticker, portfolio_set, researching_set):
+                meta, ticker, portfolio_set, researching_set,
+                following_set=following_set,
+                ready_to_buy_set=ready_to_buy_set,
+                ready_to_short_set=ready_to_short_set):
             tier = "1sigma"
         if tier:
             alerts.append({
@@ -719,6 +773,9 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "tier": tier,
                 "in_portfolio": ticker in (portfolio_set or set()),
                 "in_researching": ticker in (researching_set or set()),
+                "in_following_for_interest": ticker in (following_set or set()),
+                "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
+                "in_ready_to_short": ticker in (ready_to_short_set or set()),
             })
     return alerts, stats, etf_returns
 
@@ -749,7 +806,10 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          high_series: pd.Series | None, low_series: pd.Series | None,
                          mode: str, metadata: dict | None = None,
                          portfolio_set: set[str] | None = None,
-                         researching_set: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
+                         researching_set: set[str] | None = None,
+                         following_set: set[str] | None = None,
+                         ready_to_buy_set: set[str] | None = None,
+                         ready_to_short_set: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
 
     Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none, ticker_stats_or_none, skip_reason_or_none).
@@ -819,7 +879,10 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if abs_z >= SIGMA_THRESHOLD:
         tier = "2sigma"
     elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
-            meta, ticker, portfolio_set, researching_set):
+            meta, ticker, portfolio_set, researching_set,
+            following_set=following_set,
+            ready_to_buy_set=ready_to_buy_set,
+            ready_to_short_set=ready_to_short_set):
         tier = "1sigma"
 
     if tier:
@@ -838,6 +901,9 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "tier": tier,
             "in_portfolio": ticker in (portfolio_set or set()),
             "in_researching": ticker in (researching_set or set()),
+            "in_following_for_interest": ticker in (following_set or set()),
+            "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
+            "in_ready_to_short": ticker in (ready_to_short_set or set()),
         }
 
     # 52-week high/low check (only when high/low data is provided)
@@ -860,6 +926,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 metadata: dict | None = None,
                 portfolio_set: set[str] | None = None,
                 researching_set: set[str] | None = None,
+                following_set: set[str] | None = None,
+                ready_to_buy_set: set[str] | None = None,
+                ready_to_short_set: set[str] | None = None,
                 etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
@@ -921,6 +990,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
                     portfolio_set=portfolio_set,
                     researching_set=researching_set,
+                    following_set=following_set,
+                    ready_to_buy_set=ready_to_buy_set,
+                    ready_to_short_set=ready_to_short_set,
                 )
 
                 if cache_entry is None:
@@ -972,6 +1044,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 ticker, close, open_prices, high_s, low_s, mode, metadata,
                 portfolio_set=portfolio_set,
                 researching_set=researching_set,
+                following_set=following_set,
+                ready_to_buy_set=ready_to_buy_set,
+                ready_to_short_set=ready_to_short_set,
             )
 
             if cache_entry is None:
@@ -985,8 +1060,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 alerts.append(alert)
             if hi_lo and track_52w:
                 hi_lo_hits.append(hi_lo)
-            if ticker_stats and ticker in _sector_etfs:
-                sector_returns.append(ticker_stats)
+            if ticker_stats and ticker in _etfs:
+                etf_returns.append(ticker_stats)
 
         except Exception as e:
             print(f"[WARN] {ticker} fallback processing failed: {e}")
@@ -1069,8 +1144,10 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     def _render_tier(tier_alerts, tier_header):
         """Render a tier as a header plus one subsection per SUBCATEGORIES match.
         An alert is duplicated across every category it matches. Alerts that
-        match none are dropped — 1σ can't hit this path (already sector-filtered);
-        2σ alerts outside HC Services/MedTech/PA/S&P 500 are intentionally hidden.
+        match none are dropped — 1σ can't hit this path (the eligibility gate
+        already requires Core or any Position-list membership, all of which
+        map to a subcategory); 2σ alerts outside Position lists / HC sectors /
+        Large Pharma / S&P 500 are intentionally hidden.
         """
         _append_section_chunked(blocks, tier_header, [])
         for label, predicate in SUBCATEGORIES:
@@ -1092,7 +1169,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 blocks.append({"type": "divider"})
             header_1 = (
                 f":chart_with_upwards_trend: *1\u03C3 Moves ({len(one_sig)})* "
-                f"— HC Services / MedTech / PA only"
+                f"— Core + Position lists only"
             )
             _render_tier(one_sig, header_1)
     else:
@@ -1261,10 +1338,19 @@ def main():
 
     portfolio_set = load_portfolio()
     researching_set = load_researching()
+    following_set = load_following_for_interest()
+    ready_to_buy_set = load_ready_to_buy()
+    ready_to_short_set = load_ready_to_short()
     if portfolio_set:
         print(f"[INFO] Loaded {len(portfolio_set)} Portfolio tickers")
     if researching_set:
         print(f"[INFO] Loaded {len(researching_set)} Researching tickers")
+    if following_set:
+        print(f"[INFO] Loaded {len(following_set)} Following-for-Interest tickers")
+    if ready_to_buy_set:
+        print(f"[INFO] Loaded {len(ready_to_buy_set)} Ready-to-Buy tickers")
+    if ready_to_short_set:
+        print(f"[INFO] Loaded {len(ready_to_short_set)} Ready-to-Short tickers")
     if not portfolio_set and not researching_set:
         # Fall back to legacy core_watchlist.json if neither new file is present
         # (e.g. fresh sigma-alert clone before Coverage Manager's first push of
@@ -1317,6 +1403,9 @@ def main():
             alerts, stats, etf_returns = screen_open_cached(
                 tickers, cache, metadata,
                 portfolio_set=portfolio_set, researching_set=researching_set,
+                following_set=following_set,
+                ready_to_buy_set=ready_to_buy_set,
+                ready_to_short_set=ready_to_short_set,
                 etf_set=etf_set,
             )
         else:
@@ -1324,6 +1413,9 @@ def main():
             alerts, _, stats, _, etf_returns, _ = screen_full(
                 tickers, "open", metadata=metadata,
                 portfolio_set=portfolio_set, researching_set=researching_set,
+                following_set=following_set,
+                ready_to_buy_set=ready_to_buy_set,
+                ready_to_short_set=ready_to_short_set,
                 etf_set=etf_set,
             )
             # Don't save cache on open runs — only EOD updates the cache
@@ -1332,6 +1424,9 @@ def main():
         alerts, _, stats, _, etf_returns, _ = screen_full(
             tickers, "close", metadata=metadata,
             portfolio_set=portfolio_set, researching_set=researching_set,
+            following_set=following_set,
+            ready_to_buy_set=ready_to_buy_set,
+            ready_to_short_set=ready_to_short_set,
             etf_set=etf_set,
         )
     else:
@@ -1339,6 +1434,9 @@ def main():
         alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
             portfolio_set=portfolio_set, researching_set=researching_set,
+            following_set=following_set,
+            ready_to_buy_set=ready_to_buy_set,
+            ready_to_short_set=ready_to_short_set,
             etf_set=etf_set,
         )
         save_cache(cache_data)

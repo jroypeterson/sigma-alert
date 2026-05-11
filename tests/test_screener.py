@@ -262,6 +262,27 @@ class TestOneSigmaEligibility:
         meta = {"sector": "Biopharma", "core": ""}
         assert _is_one_sigma_eligible(meta, "MRNA", set(), {"MRNA"}) is True
 
+    def test_following_for_interest_membership_is_eligible(self):
+        # Added 2026-05-11 with the Position taxonomy expansion. Following
+        # is a passive-tracking bucket but still gets 1σ alerts because
+        # the user wants to know about big moves on names they watch.
+        meta = {"sector": "Biopharma", "core": ""}
+        assert _is_one_sigma_eligible(
+            meta, "FFIX", set(), set(), following_set={"FFIX"}
+        ) is True
+
+    def test_ready_to_buy_membership_is_eligible(self):
+        meta = {"sector": "Biopharma", "core": ""}
+        assert _is_one_sigma_eligible(
+            meta, "RTBX", set(), set(), ready_to_buy_set={"RTBX"}
+        ) is True
+
+    def test_ready_to_short_membership_is_eligible(self):
+        meta = {"sector": "Biopharma", "core": ""}
+        assert _is_one_sigma_eligible(
+            meta, "RTSX", set(), set(), ready_to_short_set={"RTSX"}
+        ) is True
+
     def test_missing_metadata_falls_back_to_false(self):
         # Schema v3 hadn't shipped yet — a stale metadata file with no `core`
         # field is treated as "not Core". 1σ still fires for Portfolio/Researching.
@@ -375,6 +396,32 @@ class TestSlackSubcategories:
         i_re = text.index("Researching (1)")
         i_mt = text.index("MedTech (1)")
         assert i_re < i_mt, "Researching must render before sector subcategories"
+
+    def test_new_position_subcategories_render_in_declared_order(self):
+        """The three Position lists added 2026-05-11 (Ready to Buy, Ready to
+        Short, Following for Interest) render between Researching and the
+        sector buckets, in that order."""
+        alerts = [
+            self._make_alert("RTBX", "Biopharma"),
+            self._make_alert("RTSX", "Biopharma"),
+            self._make_alert("FFIX", "Biopharma"),
+            self._make_alert("ISRG", "MedTech"),
+        ]
+        alerts[0]["in_ready_to_buy"] = True
+        alerts[1]["in_ready_to_short"] = True
+        alerts[2]["in_following_for_interest"] = True
+        payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "Ready to Buy (1)" in text
+        assert "Ready to Short (1)" in text
+        assert "Following for Interest (1)" in text
+        i_rb = text.index("Ready to Buy (1)")
+        i_rs = text.index("Ready to Short (1)")
+        i_fi = text.index("Following for Interest (1)")
+        i_mt = text.index("MedTech (1)")
+        assert i_rb < i_rs < i_fi < i_mt, (
+            "Ready to Buy → Ready to Short → Following for Interest → sector"
+        )
 
     def test_alert_without_position_keys_defaults_false(self):
         """Legacy alert dicts without in_portfolio/in_researching keys must not crash
