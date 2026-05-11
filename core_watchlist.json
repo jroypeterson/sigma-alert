@@ -19,16 +19,6 @@
     "subsector": "",
     "sub_subsector": ""
   },
-  "ACVA": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "ACV Auctions Inc",
-    "sector": "Consumer",
-    "subsector": "",
-    "sub_subsector": ""
-  },
   "ADI": {
     "buy_price": null,
     "target_price": null,
@@ -106,16 +96,6 @@
     "notes": "",
     "name": "Brown & Brown Inc.",
     "sector": "Financials",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "CAT": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "Caterpillar Inc",
-    "sector": "Industrials",
     "subsector": "",
     "sub_subsector": ""
   },
@@ -199,26 +179,6 @@
     "subsector": "",
     "sub_subsector": ""
   },
-  "CSU": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "Constellation Software Inc.",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "CVNA": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "Carvana Co",
-    "sector": "Consumer",
-    "subsector": "",
-    "sub_subsector": ""
-  },
   "DBX": {
     "buy_price": null,
     "target_price": null,
@@ -257,26 +217,6 @@
     "name": "Ensign Group Inc",
     "sector": "Healthcare Services",
     "subsector": "Post-Acute",
-    "sub_subsector": ""
-  },
-  "FDX": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "FedEx Corp",
-    "sector": "Industrials",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "FER": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "Ferrovial SE",
-    "sector": "Industrials",
-    "subsector": "",
     "sub_subsector": ""
   },
   "FI": {
@@ -325,26 +265,6 @@
     "date_added": "2026-05-03",
     "notes": "",
     "name": "Robinhood Markets Inc",
-    "sector": "Financials",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "IDXX": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "IDEXX Laboratories Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Animal Health",
-    "sub_subsector": ""
-  },
-  "JPM": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "JPMorgan Chase & Co",
     "sector": "Financials",
     "subsector": "",
     "sub_subsector": ""
@@ -637,36 +557,6 @@
     "name": "Waystar Holding Corp",
     "sector": "Healthcare Services",
     "subsector": "HIT",
-    "sub_subsector": ""
-  },
-  "WELL": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "Welltower Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Healthcare Real Estate",
-    "sub_subsector": ""
-  },
-  "WMT": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-05-03",
-    "notes": "",
-    "name": "Walmart Inc",
-    "sector": "Consumer",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "WST": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "West Pharmaceutical Services Inc",
-    "sector": "MedTech",
-    "subsector": "Packaging",
     "sub_subsector": ""
   },
   "XE": {
