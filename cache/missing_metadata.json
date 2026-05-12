@@ -6,6 +6,7 @@
     "7701.T": "not_in_metadata",
     "7733.T": "not_in_metadata",
     "7741.T": "not_in_metadata",
+    "8086.T": "not_in_metadata",
     "ABNB": "not_in_metadata",
     "ACGL": "not_in_metadata",
     "ACN": "not_in_metadata",
@@ -419,5 +420,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-05-11T18:33:02.061805-04:00"
+  "updated": "2026-05-12T18:39:45.563928-04:00"
 }
