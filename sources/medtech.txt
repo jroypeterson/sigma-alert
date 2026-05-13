@@ -1,5 +1,5 @@
 # MedTech — Coverage Manager
-# Last updated: 2026-05-12
+# Last updated: 2026-05-13
 1SXP.DE
 4543.T
 6869.T
