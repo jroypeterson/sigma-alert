@@ -1071,11 +1071,106 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
 
+def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
+    """Fetch prior-year and YTD returns for index/sector ETFs.
+
+    Uses a dedicated, longer-window download (~800 calendar days) so we
+    reach the last close of the year *before* last — required as the
+    baseline for the prior year's full-year return (e.g. 2024-12-31 for
+    2025's return). The main batch download stays at 400 days to keep
+    the ~1500-ticker call snappy; this side fetch covers only the ~14
+    index + sector ETFs.
+
+    YTD return uses today's open in `open` mode and today's close
+    otherwise, matching the convention in `_process_ticker_full` /
+    `screen_open_cached`.
+
+    Returns `{ticker: {prior_year_label, prior_year_return_pct,
+    ytd_return_pct}}`. Tickers whose required year-end closes can't be
+    located (e.g. ETF inception after 2024-12-31) are omitted; their
+    Slack rows then render without the suffix.
+    """
+    if not etf_set:
+        return {}
+
+    today = today_et()
+    end_date = today + timedelta(days=1)  # yfinance end is exclusive
+    start_date = today - timedelta(days=800)
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    tickers = sorted(etf_set)
+    try:
+        data = yf.download(
+            tickers,
+            start=start_str,
+            end=end_str,
+            progress=False,
+            threads=True,
+        )
+    except Exception as e:
+        print(f"[WARN] ETF period-returns download failed: {e}")
+        return {}
+    if data is None or data.empty:
+        print("[WARN] ETF period-returns download returned no data")
+        return {}
+
+    current_year = today.year
+    prior_year = current_year - 1
+    prior_prior_year = current_year - 2
+
+    results: dict = {}
+    for ticker in tickers:
+        try:
+            if len(tickers) == 1:
+                close = data["Close"].dropna()
+                open_s = data["Open"].dropna()
+            else:
+                close = data["Close"][ticker].dropna()
+                open_s = data["Open"][ticker].dropna()
+        except (KeyError, IndexError):
+            continue
+
+        if close.empty:
+            continue
+
+        years = close.index.year
+        prior_year_closes = close[years == prior_year]
+        prior_prior_year_closes = close[years == prior_prior_year]
+        if prior_year_closes.empty or prior_prior_year_closes.empty:
+            continue
+
+        prior_year_end_close = float(prior_year_closes.iloc[-1])
+        prior_prior_year_end_close = float(prior_prior_year_closes.iloc[-1])
+        prior_year_return_pct = (
+            (prior_year_end_close - prior_prior_year_end_close)
+            / prior_prior_year_end_close * 100
+        )
+
+        if mode == "open" and not open_s.empty:
+            today_price = float(open_s.iloc[-1])
+        else:
+            today_price = float(close.iloc[-1])
+
+        ytd_return_pct = (
+            (today_price - prior_year_end_close) / prior_year_end_close * 100
+        )
+
+        results[ticker] = {
+            "prior_year_label": str(prior_year),
+            "prior_year_return_pct": prior_year_return_pct,
+            "ytd_return_pct": ytd_return_pct,
+        }
+
+    return results
+
+
 def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          stats: dict, hi_lo_hits: list[dict] | None = None,
                          sp500_set: set[str] | None = None,
                          etf_returns: list[dict] | None = None,
-                         index_etf_set: set[str] | None = None) -> dict:
+                         index_etf_set: set[str] | None = None,
+                         etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
     date_str = current.strftime("%Y-%m-%d")
@@ -1224,6 +1319,8 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             key=lambda s: s["z_score"], reverse=True,
         )
 
+        period_map = etf_period_returns or {}
+
         def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
             sign = "+" if s["return_pct"] > 0 else ""
@@ -1233,9 +1330,20 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             price_part = f"  |  ${price:.2f}" if price is not None else ""
             lo, hi = s.get("low_52w"), s.get("high_52w")
             range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
+            period = period_map.get(s["ticker"])
+            period_part = ""
+            if period:
+                py_sign = "+" if period["prior_year_return_pct"] > 0 else ""
+                ytd_sign = "+" if period["ytd_return_pct"] > 0 else ""
+                period_part = (
+                    f"  |  {period['prior_year_label']}: "
+                    f"{py_sign}{period['prior_year_return_pct']:.2f}%"
+                    f"  |  YTD: {ytd_sign}{period['ytd_return_pct']:.2f}%"
+                )
             return (
                 f"{marker}  *{s['ticker']}*{name_part}  "
-                f"|  {sign}{s['return_pct']:.2f}%  |  z = {s['z_score']:+.2f}{price_part}{range_part}"
+                f"|  {sign}{s['return_pct']:.2f}%  |  z = {s['z_score']:+.2f}"
+                f"{price_part}{range_part}{period_part}"
             )
 
         if index_rows or sector_rows:
@@ -1465,10 +1573,18 @@ def main():
     if etf_returns:
         print(f"[INFO] Index/sector ETF returns captured: {len(etf_returns)} tickers")
 
+    # Prior-year + YTD returns for ETFs use their own longer-window
+    # download (the main batch is capped at 400 days, which doesn't
+    # reach the year-before-last's year-end close).
+    etf_period_returns = fetch_etf_period_returns(etf_set, args.mode)
+    if etf_period_returns:
+        print(f"[INFO] ETF period returns computed: {len(etf_period_returns)} tickers")
+
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
+        etf_period_returns=etf_period_returns,
     )
     send_slack(payload)
 
