@@ -264,7 +264,6 @@
     "MMM": "not_in_metadata",
     "MNST": "not_in_metadata",
     "MO": "not_in_metadata",
-    "MOBI": "not_in_metadata",
     "MOS": "not_in_metadata",
     "MPC": "not_in_metadata",
     "MPWR": "not_in_metadata",
@@ -421,5 +420,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-05-22T18:32:46.786598-04:00"
+  "updated": "2026-05-25T18:02:51.705241-04:00"
 }
