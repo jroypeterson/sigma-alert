@@ -237,7 +237,7 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
         lines = [":red_circle: *Chronic skips* — skipped on every run this week"]
         for c in chronic:
             reasons = ", ".join(c["reasons"])
-            lines.append(f"• *{c['ticker']}* — {reasons}")
+            lines.append(f"• `{c['ticker']}` — {reasons}")
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "\n".join(lines)},
@@ -271,7 +271,7 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
         ]
         for u in unresolved:
             label = REASON_LABELS.get(u["reason"], u["reason"])
-            lines.append(f"• *{u['ticker']}* — {label}")
+            lines.append(f"• `{u['ticker']}` — {label}")
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "\n".join(lines)},

@@ -1196,10 +1196,14 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         price = a.get("price")
         price_part = f"  |  ${price:.2f}" if price is not None else ""
         lo, hi = a.get("low_52w"), a.get("high_52w")
+        pct_of_high_part = (
+            f"  |  {price / hi * 100:.0f}% of 52w high"
+            if price is not None and hi is not None and hi > 0 else ""
+        )
         range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
         return (
-            f"{marker}  *{a['ticker']}*{name_part}  "
-            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{range_part}{sigma_note}"
+            f"{marker}  `{a['ticker']}`{name_part}  "
+            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{pct_of_high_part}{range_part}{sigma_note}"
         )
 
     def _append_section_chunked(blocks_list, header, lines, max_len=2900):
@@ -1287,7 +1291,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             short = short_company_name(h.get("name", ""))
             name_part = f" ({short})" if short else ""
             sector = f" [{h['sector']}]" if h.get("sector") else ""
-            return f"*{h['ticker']}*{name_part}{sector}"
+            return f"`{h['ticker']}`{name_part}{sector}"
 
         hi_lo_lines = []
         if highs:
@@ -1329,6 +1333,10 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             price = s.get("price")
             price_part = f"  |  ${price:.2f}" if price is not None else ""
             lo, hi = s.get("low_52w"), s.get("high_52w")
+            pct_of_high_part = (
+                f"  |  {price / hi * 100:.0f}% of 52w high"
+                if price is not None and hi is not None and hi > 0 else ""
+            )
             range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
             period = period_map.get(s["ticker"])
             period_part = ""
@@ -1341,9 +1349,9 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     f"  |  YTD: {ytd_sign}{period['ytd_return_pct']:.2f}%"
                 )
             return (
-                f"{marker}  *{s['ticker']}*{name_part}  "
+                f"{marker}  `{s['ticker']}`{name_part}  "
                 f"|  {sign}{s['return_pct']:.2f}%  |  z = {s['z_score']:+.2f}"
-                f"{price_part}{range_part}{period_part}"
+                f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
         if index_rows or sector_rows:

@@ -327,7 +327,7 @@ class TestSlackSubcategories:
         sp500 = {"UNH"}
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
         text = self._all_text(payload)
-        assert text.count("*UNH*") == 2
+        assert text.count("`UNH`") == 2
         assert "Healthcare Services (1)" in text
         assert "S&P 500 (1)" in text
 
@@ -355,7 +355,7 @@ class TestSlackSubcategories:
         alerts.append(self._make_alert("MRNA", "Biopharma", subsector="Biotech", z=2.0))
         payload = format_slack_message(alerts, "close", 100, {"ref_date": "2026-04-10"}, None, sp500)
         text = self._all_text(payload)
-        assert "*MRNA*" not in text
+        assert "`MRNA`" not in text
 
     def test_price_rendered_in_line(self):
         alerts = [self._make_alert("UNH", "Healthcare Services", price=512.34)]
@@ -381,7 +381,7 @@ class TestSlackSubcategories:
         assert i_pw < i_hc, "Portfolio must render before sector subcategories"
         # INSM should be reachable from the Portfolio bucket (it wouldn't
         # otherwise appear because Biopharma is not in the subcategory list).
-        assert "*INSM*" in text
+        assert "`INSM`" in text
 
     def test_researching_subcategory_renders_after_portfolio(self):
         """A Researching hit renders in its own subcategory between Portfolio and the sector blocks."""
