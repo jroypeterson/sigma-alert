@@ -43,6 +43,7 @@ SP500_PATH = ROOT / "sources" / "sp500.txt"
 SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
+HEALTHCARE_ETFS_PATH = ROOT / "sources" / "healthcare_etfs.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 # Personal trading state pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
@@ -264,6 +265,16 @@ def load_index_etfs() -> set[str]:
     These render above sector ETFs in the Slack "Index & Sector Returns" block.
     """
     return _load_ticker_set(INDEX_ETFS_PATH)
+
+
+def load_healthcare_etfs() -> set[str]:
+    """Load healthcare sub-sector ETFs (XBI/IBB/IHI/XHS/PPH) from
+    sources/healthcare_etfs.txt.
+
+    These render under a `_Healthcare_` sub-header below `_Sectors_` in
+    the Slack "Index & Sector Returns" block.
+    """
+    return _load_ticker_set(HEALTHCARE_ETFS_PATH)
 
 
 def load_etf_names() -> dict:
@@ -1170,6 +1181,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          sp500_set: set[str] | None = None,
                          etf_returns: list[dict] | None = None,
                          index_etf_set: set[str] | None = None,
+                         healthcare_etf_set: set[str] | None = None,
                          etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
@@ -1314,12 +1326,18 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # z-score descending so the strongest move within each group leads.
     if etf_returns:
         idx_set = index_etf_set or set()
+        hc_set = healthcare_etf_set or set()
         index_rows = sorted(
             [s for s in etf_returns if s["ticker"] in idx_set],
             key=lambda s: s["z_score"], reverse=True,
         )
+        healthcare_rows = sorted(
+            [s for s in etf_returns if s["ticker"] in hc_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
         sector_rows = sorted(
-            [s for s in etf_returns if s["ticker"] not in idx_set],
+            [s for s in etf_returns
+             if s["ticker"] not in idx_set and s["ticker"] not in hc_set],
             key=lambda s: s["z_score"], reverse=True,
         )
 
@@ -1354,7 +1372,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
-        if index_rows or sector_rows:
+        if index_rows or sector_rows or healthcare_rows:
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index & Sector Returns*"
             lines = []
@@ -1366,6 +1384,11 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     lines.append("")  # blank spacer between groups
                 lines.append("_Sectors_")
                 lines.extend(_format_etf_line(s) for s in sector_rows)
+            if healthcare_rows:
+                if index_rows or sector_rows:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Healthcare_")
+                lines.extend(_format_etf_line(s) for s in healthcare_rows)
             _append_section_chunked(blocks, header, lines)
 
     blocks.append({"type": "divider"})
@@ -1478,11 +1501,13 @@ def main():
 
     index_etf_set = load_index_etfs()
     sector_etf_set = load_sector_etfs()
-    etf_set = index_etf_set | sector_etf_set
+    healthcare_etf_set = load_healthcare_etfs()
+    etf_set = index_etf_set | sector_etf_set | healthcare_etf_set
     if etf_set:
         print(
             f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
-            f"{len(sector_etf_set)} sector ETFs for returns block"
+            f"{len(sector_etf_set)} sector ETFs + "
+            f"{len(healthcare_etf_set)} healthcare ETFs for returns block"
         )
 
     # Merge ETF display names into metadata (CM doesn't track ETFs).
@@ -1592,6 +1617,7 @@ def main():
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
+        healthcare_etf_set=healthcare_etf_set,
         etf_period_returns=etf_period_returns,
     )
     send_slack(payload)

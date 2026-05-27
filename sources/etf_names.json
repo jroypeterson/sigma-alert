@@ -12,5 +12,10 @@
   "XLV": "Health Care",
   "XLK": "Technology",
   "XLY": "Consumer Discretionary",
-  "XLF": "Financials"
+  "XLF": "Financials",
+  "XBI": "Biotech (Equal Wt)",
+  "IBB": "Biotech (Cap Wt)",
+  "IHI": "Medical Devices",
+  "XHS": "Healthcare Services",
+  "PPH": "Pharmaceuticals"
 }
