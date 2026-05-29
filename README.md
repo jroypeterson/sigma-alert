@@ -54,6 +54,35 @@ The EOD run also writes `cache/skip_log.json` — a 30-day rolling log of per-ti
 
 All workflows support `workflow_dispatch` so you can trigger them manually from the Actions tab for testing.
 
+## Local backstop (optional)
+
+GitHub Actions cron is best-effort — scheduled runs can land late or get skipped during high load. The `Sigma Watchdog` recovers *dropped* runs within the hour, but you can also have the screener fire **locally on your laptop** as an independent backstop so an alert still goes out (and goes out on time) whenever the machine is on.
+
+The local runner is a **read-only consumer**: it refreshes a disposable clone to `origin/master`, runs the screener, and posts to Slack. It never commits or pushes. If GitHub Actions also fires the same slot you get two near-identical alerts — that duplication is intentional and harmless (the goal is that the alert always lands).
+
+**One-time setup** (run from any PowerShell prompt):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts\setup_local_runner.ps1 `
+  -SlackWebhook "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+```
+
+That script (`scripts/setup_local_runner.ps1`):
+
+1. Clones sigma-alert to a dedicated directory **outside Dropbox** (default `%LOCALAPPDATA%\sigma-alert-runner`) so scheduled runs never touch your Dropbox dev tree.
+2. Installs the Python dependencies.
+3. Writes a gitignored `.env` holding the Slack webhook (the same value as the `SLACK_WEBHOOK` GitHub secret — it's not stored in the repo, so you paste it in once).
+4. Registers three weekday Scheduled Tasks — `SigmaAlert-open` (09:40), `SigmaAlert-midday` (12:35), `SigmaAlert-close` (16:25), machine-time (assumed ET). Each is created with **`StartWhenAvailable`** (runs as soon as possible after a missed start — e.g. the laptop was asleep at the trigger time) and battery-friendly settings.
+
+Each run is performed by `scripts/local_run.ps1 -Mode {open|midday|close}`, which you can also invoke by hand to smoke-test. Re-running the setup script is idempotent (updates the clone, rewrites `.env`, re-registers the tasks). To remove the tasks:
+
+```powershell
+'open','midday','close' | ForEach-Object { Unregister-ScheduledTask -TaskName "SigmaAlert-$_" -Confirm:$false }
+```
+
+> Times are picked to land within ~30 min of each market event. Open/midday/close fire at 09:40 / 12:35 / 16:25 ET; close is offset past 16:00 to let Yahoo post the official closing print. Since the runs are EST-aligned on GitHub's side but real-ET locally, the local run usually fires *first* during EDT months — but dedup isn't relied on, so order doesn't matter.
+
 ## Watchlist
 
 The watchlist is built automatically from source files in `sources/`:
