@@ -7650,6 +7650,83 @@
     "sub_subsector": "",
     "core": ""
   },
+  "CBRS": {
+    "name": "Cerebras Systems Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "AI Hardware",
+    "core": ""
+  },
+  "MOBI": {
+    "name": "Mobia Medical, Inc.",
+    "sector": "MedTech",
+    "subsector": "Neuromodulation",
+    "sub_subsector": "Stroke Recovery",
+    "core": ""
+  },
+  "HAWK": {
+    "name": "HawkEye 360, Inc.",
+    "sector": "Industrials",
+    "subsector": "Space Tech / Instrumentation",
+    "sub_subsector": "RF SIGINT",
+    "core": ""
+  },
+  "FDXF": {
+    "name": "FedEx Freight Corporation",
+    "sector": "Industrials",
+    "subsector": "",
+    "sub_subsector": "LTL",
+    "core": ""
+  },
+  "FRVO": {
+    "name": "Fervo Energy Co.",
+    "sector": "Energy",
+    "subsector": "Clean Energy / Geothermal",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "OCTV": {
+    "name": "Octave Intelligence plc",
+    "sector": "SaaS",
+    "subsector": "Industrial / Design SaaS",
+    "sub_subsector": "EHS / CAD / ALI",
+    "core": ""
+  },
+  "GMRS": {
+    "name": "GMR Solutions Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "Emergency Medical Services",
+    "sub_subsector": "Patient Transport",
+    "core": ""
+  },
+  "BXDC": {
+    "name": "Blackstone Digital Infrastructure Trust Inc.",
+    "sector": "Real Estate",
+    "subsector": "Data Center REIT",
+    "sub_subsector": "Hyperscale",
+    "core": ""
+  },
+  "SPCX": {
+    "name": "Space Exploration Technologies Corp.",
+    "sector": "Tech",
+    "subsector": "Aerospace & Space",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "INIO": {
+    "name": "INNIO Group",
+    "sector": "Energy",
+    "subsector": "Power Generation / Gas Engines",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "QNT": {
+    "name": "Quantinuum Inc.",
+    "sector": "Tech",
+    "subsector": "Quantum Computing",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
