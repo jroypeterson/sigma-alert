@@ -1,13 +1,17 @@
 # Healthcare sub-sector ETFs — render under "_Healthcare_" in the Index &
 # Sector Returns Slack section, below the SPDR Select Sector funds.
-# Last updated: 2026-05-27
+# Last updated: 2026-05-31
 # XBI = SPDR S&P Biotech (equal-weighted)
 # IBB = iShares Biotechnology (cap-weighted)
 # IHI = iShares U.S. Medical Devices
 # XHS = SPDR S&P Health Care Services
-# PPH = VanEck Pharmaceutical
+# PPH = VanEck Pharmaceutical (concentrated 25-name MVIS index)
+# IHE = iShares U.S. Pharmaceuticals (cap-weighted Dow Jones U.S. Select Pharma;
+#       the standard "US pharma" sector proxy. NB: tracks DJ US Select Pharma,
+#       not the NYSE Arca Pharmaceutical Index ^DRG — no mainstream ETF tracks ^DRG.)
 XBI
 IBB
 IHI
 XHS
 PPH
+IHE
