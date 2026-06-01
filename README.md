@@ -1,4 +1,11 @@
 # sigma-alert
+> GitHub Actions stock screener that flags standard-deviation price moves vs. each ticker's trailing 52-week return distribution (2σ universe-wide, 1σ for covered names), posting tiered alerts to Slack.
+
+- **Status:** live
+- **Runtime/trigger:** Python via GitHub Actions (open 14:35, midday 17:35, close 21:30 UTC, Mon–Fri; hourly watchdog; weekly skip report Fri 22:30 UTC) · optional Windows local backstop
+- **Reads:** yfinance OHLCV · Coverage Manager `ticker_metadata.json` + position lists · Wikipedia (S&P 500 reconstitution)
+- **Writes:** Slack `#stock-price-alerts` (digests) · `#status-reports` (weekly skip report) · committed `cache/{distribution_cache,missing_metadata,skip_log}.json`
+- **Run:** `python scripts/sigma_screener.py --mode {open|midday|close}`  ·  **Entry points:** `scripts/sigma_screener.py`, `scripts/sync_watchlist.py`, `scripts/weekly_skip_report.py`
 
 GitHub Actions-based stock screener that flags standard-deviation price moves against each ticker's trailing 52-week daily return distribution. Alerts are posted to Slack with company names and sector tags.
 
