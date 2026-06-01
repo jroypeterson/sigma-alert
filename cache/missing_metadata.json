@@ -55,11 +55,11 @@
     "BEN": "not_in_metadata",
     "BF-B": "not_in_metadata",
     "BG": "not_in_metadata",
-    "BK": "not_in_metadata",
     "BKNG": "not_in_metadata",
     "BKR": "not_in_metadata",
     "BLDR": "not_in_metadata",
     "BLK": "not_in_metadata",
+    "BNY": "not_in_metadata",
     "BR": "not_in_metadata",
     "BRK-B": "not_in_metadata",
     "BX": "not_in_metadata",
@@ -106,7 +106,6 @@
     "CSX": "not_in_metadata",
     "CTAS": "not_in_metadata",
     "CTEC.LN": "not_in_metadata",
-    "CTRA": "not_in_metadata",
     "CTSH": "not_in_metadata",
     "CTVA": "not_in_metadata",
     "CVX": "not_in_metadata",
@@ -182,7 +181,6 @@
     "GL": "not_in_metadata",
     "GLW": "not_in_metadata",
     "GM": "not_in_metadata",
-    "GMRS": "not_in_metadata",
     "GN.DC": "not_in_metadata",
     "GNRC": "not_in_metadata",
     "GOOGL": "not_in_metadata",
@@ -265,7 +263,6 @@
     "MMM": "not_in_metadata",
     "MNST": "not_in_metadata",
     "MO": "not_in_metadata",
-    "MOBI": "not_in_metadata",
     "MOS": "not_in_metadata",
     "MPC": "not_in_metadata",
     "MPWR": "not_in_metadata",
@@ -422,5 +419,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-05-29T18:47:57.318945-04:00"
+  "updated": "2026-06-01T18:31:38.024856-04:00"
 }
