@@ -1,5 +1,5 @@
 # S&P 500 Constituents
-# Last updated: 2026-04-11
+# Last updated: 2026-06-01
 # Check for reconstitution updates quarterly (March, June, September, December)
 # Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
 A
@@ -63,12 +63,12 @@ BEN
 BF-B
 BG
 BIIB
-BK
 BKNG
 BKR
 BLDR
 BLK
 BMY
+BNY
 BR
 BRK-B
 BRO
@@ -125,7 +125,6 @@ CSCO
 CSGP
 CSX
 CTAS
-CTRA
 CTSH
 CTVA
 CVNA
@@ -468,6 +467,7 @@ UPS
 URI
 USB
 V
+VEEV
 VICI
 VLO
 VLTO
