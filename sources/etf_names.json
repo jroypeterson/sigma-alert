@@ -18,5 +18,6 @@
   "IHI": "Medical Devices",
   "XHS": "Healthcare Services",
   "PPH": "Pharma (VanEck 25)",
-  "IHE": "Pharma (US Select)"
+  "IHE": "Pharma (US Select)",
+  "^DRG": "Pharma Index (Arca)"
 }

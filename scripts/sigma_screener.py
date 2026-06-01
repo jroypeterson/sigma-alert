@@ -268,8 +268,8 @@ def load_index_etfs() -> set[str]:
 
 
 def load_healthcare_etfs() -> set[str]:
-    """Load healthcare sub-sector ETFs (XBI/IBB/IHI/XHS/PPH) from
-    sources/healthcare_etfs.txt.
+    """Load healthcare sub-sector ETFs + the ^DRG pharma index
+    (XBI/IBB/IHI/XHS/PPH/IHE/^DRG) from sources/healthcare_etfs.txt.
 
     These render under a `_Healthcare_` sub-header below `_Sectors_` in
     the Slack "Index & Sector Returns" block.

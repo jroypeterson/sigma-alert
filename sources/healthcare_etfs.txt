@@ -9,9 +9,18 @@
 # IHE = iShares U.S. Pharmaceuticals (cap-weighted Dow Jones U.S. Select Pharma;
 #       the standard "US pharma" sector proxy. NB: tracks DJ US Select Pharma,
 #       not the NYSE Arca Pharmaceutical Index ^DRG — no mainstream ETF tracks ^DRG.)
+# ^DRG = NYSE Arca Pharmaceutical INDEX (not an ETF — a caret index ticker). Added
+#        so the block shows the price-return benchmark a generalist would quote
+#        ("pharma was up ~X% in 2025") alongside the tradeable IHE/PPH funds.
+#        Verified: survives the yfinance batch download + MultiIndex extraction
+#        and the etf_set exemptions (missing-metadata, alert-suppression) like
+#        any other returns-block ticker. Renders under _Healthcare_ with the
+#        rest. NB: it's a price index (no dividends), so its return runs below
+#        the total-return ETFs — expected, not a bug.
 XBI
 IBB
 IHI
 XHS
 PPH
 IHE
+^DRG
