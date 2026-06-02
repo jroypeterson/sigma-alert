@@ -1284,6 +1284,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # long-window fetch, since the prior calendar-year return needs the
     # year-before-last's year-end close \u2014 older than the 400-day screen window).
     period_map = etf_period_returns or {}
+    prior_year_label = str(current.year - 1)
 
     def _format_alert_line(a):
         marker = "\U0001F7E9" if a["direction"] == "up" else "\U0001F7E5"
@@ -1301,14 +1302,17 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
 
         # Prior calendar-year return (e.g. "2025: +24.50%") comes from the
-        # dedicated long-window fetch; omitted when the year-before-last's
-        # year-end close can't be located (e.g. an IPO after that cutover).
+        # dedicated long-window fetch. When the year-before-last's year-end
+        # close can't be located (e.g. an IPO after that cutover), the column
+        # still renders as "2025: N/A" rather than being dropped.
         period = period_map.get(a["ticker"])
-        prior_year_part = ""
-        if period and period.get("prior_year_return_pct") is not None:
-            py = period["prior_year_return_pct"]
+        py = period.get("prior_year_return_pct") if period else None
+        if py is not None:
             py_sign = "+" if py > 0 else ""
-            prior_year_part = f"  |  {period['prior_year_label']}: {py_sign}{py:.2f}%"
+            py_label = (period or {}).get("prior_year_label") or prior_year_label
+            prior_year_part = f"  |  {py_label}: {py_sign}{py:.2f}%"
+        else:
+            prior_year_part = f"  |  {prior_year_label}: N/A"
 
         # YTD: prefer the inline value (computed from the screen history / cache,
         # so it's present even when the period fetch omits the ticker), falling

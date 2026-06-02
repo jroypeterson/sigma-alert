@@ -430,14 +430,17 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "2025: -12.30%" in text
 
-    def test_prior_year_omitted_when_no_period_data(self):
-        """No period entry for the ticker → no 2025 suffix, but the inline YTD
-        still renders (recent-IPO case: prior-prior-year close unavailable)."""
+    def test_prior_year_na_when_no_period_data(self):
+        """No period entry for the ticker → the prior-year column renders as
+        N/A (not dropped), and the inline YTD still renders (recent-IPO case:
+        prior-prior-year close unavailable). The N/A label uses the current
+        year minus one."""
         alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
         alert["ytd_return_pct"] = 6.10
         payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
         text = self._all_text(payload)
-        assert "2025:" not in text
+        prior_year = str(date.today().year - 1)
+        assert f"{prior_year}: N/A" in text
         assert "YTD: +6.10%" in text
 
     def test_ytd_falls_back_to_period_map(self):
