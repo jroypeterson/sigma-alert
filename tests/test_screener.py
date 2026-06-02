@@ -609,6 +609,54 @@ class TestMacroRendering:
         text = self._text(rows)
         assert text.index("`^TNX`") < text.index("`DX-Y.NYB`") < text.index("`CL=F`")
 
+    def test_yield_shows_year_start_level_and_ytd_bp(self):
+        # Year started at 4.57%, now 4.10% → YTD -47.0bp from 4.57%.
+        period = {"^TNX": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": None,
+            "ytd_return_pct": -10.3,  # the misleading % — must NOT be shown
+            "prior_year_end_close": 4.57,
+        }}
+        text = self._text(
+            [self._row("^TNX", "10Y Treasury Yield", 4.10, 2.5, z=0.63)],
+            etf_period_returns=period,
+        )
+        assert "YTD: -47.0bp from 4.57%" in text
+        # The day-change bp is still present and the misleading % is not.
+        assert "+10.0bp" in text
+        assert "YTD: -10.30%" not in text
+
+    def test_wti_shows_ytd_percent(self):
+        period = {"CL=F": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": 5.0,
+            "ytd_return_pct": 8.30,
+            "prior_year_end_close": 70.0,
+        }}
+        text = self._text(
+            [self._row("CL=F", "WTI Crude Oil", 92.50, -1.20, z=-0.4)],
+            etf_period_returns=period,
+        )
+        assert "YTD: +8.30%" in text
+
+    def test_dollar_index_shows_ytd_percent(self):
+        period = {"DX-Y.NYB": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": 2.0,
+            "ytd_return_pct": -3.10,
+            "prior_year_end_close": 102.3,
+        }}
+        text = self._text(
+            [self._row("DX-Y.NYB", "US Dollar Index", 99.13, 0.30)],
+            etf_period_returns=period,
+        )
+        assert "YTD: -3.10%" in text
+
+    def test_macro_without_period_data_omits_ytd(self):
+        # No period entry → no YTD suffix, existing behavior preserved.
+        text = self._text([self._row("^TNX", "10Y Treasury Yield", 4.10, 2.5)])
+        assert "YTD:" not in text
+
 
 class TestTechThemesRendering:
     TECH_SET = {"MAGS", "SMH", "IGV"}

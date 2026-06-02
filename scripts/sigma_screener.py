@@ -1175,9 +1175,12 @@ def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
     `screen_open_cached`.
 
     Returns `{ticker: {prior_year_label, prior_year_return_pct,
-    ytd_return_pct}}`. Tickers whose required year-end closes can't be
-    located (e.g. ETF inception after 2024-12-31) are omitted; their
-    Slack rows then render without the suffix.
+    ytd_return_pct, prior_year_end_close}}`. `prior_year_end_close` is the
+    raw year-start level, used by the _Macro_ rows (the 10Y yield shows its
+    year-start level + YTD basis-point move rather than a misleading % return).
+    Tickers whose required year-end closes can't be located (e.g. ETF
+    inception after 2024-12-31) are omitted; their Slack rows then render
+    without the suffix.
     """
     if not etf_set:
         return {}
@@ -1249,6 +1252,7 @@ def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
             "prior_year_label": str(prior_year),
             "prior_year_return_pct": prior_year_return_pct,
             "ytd_return_pct": ytd_return_pct,
+            "prior_year_end_close": prior_year_end_close,
         }
 
     return results
@@ -1479,6 +1483,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             name = s.get("name") or t
             marker = "\U0001F7E9" if rp > 0 else "\U0001F7E5"
             sign = "+" if rp > 0 else ""
+            period = period_map.get(t)
             if style == "yield" and level is not None:
                 # level is the yield in percent (e.g. 4.45); recover the prior
                 # close from the % change to express the move in basis points.
@@ -1488,10 +1493,22 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     prev = level / denom
                     bp_part = f"  |  {(level - prev) * 100:+.1f}bp"
                 core = f"{level:.2f}%{bp_part}  |  z = {z:+.2f}"
+                # A "% return" on a yield is misleading, so for the 10Y we show
+                # the year-start level (prior year-end close) and the YTD move
+                # in basis points off it instead.
+                start = period.get("prior_year_end_close") if period else None
+                if start:
+                    core += f"  |  YTD: {(level - start) * 100:+.1f}bp from {start:.2f}%"
             elif style == "price" and level is not None:
                 core = f"${level:.2f}  |  {sign}{rp:.2f}%  |  z = {z:+.2f}"
+                ytd = period.get("ytd_return_pct") if period else None
+                if ytd is not None:
+                    core += f"  |  YTD: {'+' if ytd > 0 else ''}{ytd:.2f}%"
             elif level is not None:  # bare level (e.g. DXY)
                 core = f"{level:.2f}  |  {sign}{rp:.2f}%  |  z = {z:+.2f}"
+                ytd = period.get("ytd_return_pct") if period else None
+                if ytd is not None:
+                    core += f"  |  YTD: {'+' if ytd > 0 else ''}{ytd:.2f}%"
             else:
                 core = f"{sign}{rp:.2f}%  |  z = {z:+.2f}"
             return f"{marker}  `{t}` ({name})  |  {core}"
@@ -1785,16 +1802,17 @@ def main():
     # Prior-year + YTD returns use their own longer-window download (the main
     # batch is capped at 400 days, which doesn't reach the year-before-last's
     # year-end close needed for the prior calendar-year return). Covers the
-    # index/sector ETFs AND the alert tickers, so alert rows can show the same
-    # `2025: ±% | YTD: ±%` suffix as the returns block. Macro tickers are
-    # excluded — a prior-year/YTD "return" on a bond yield is misleading, and
-    # the _Macro_ rows render level + day-change only.
+    # index/sector ETFs, the alert tickers, AND the macro tickers. Alert/ETF
+    # rows show the `2025: ±% | YTD: ±%` suffix; macro rows use the same fetch
+    # for YTD too — WTI/dollar index as a YTD % return, and the 10Y yield as a
+    # YTD basis-point move from its year-start level (a % return on a yield is
+    # misleading, so we surface the level + bp move instead).
     alert_tickers = {a["ticker"] for a in alerts}
-    period_fetch_set = (etf_set - macro_set) | alert_tickers
+    period_fetch_set = etf_set | alert_tickers
     etf_period_returns = fetch_etf_period_returns(period_fetch_set, args.mode)
     if etf_period_returns:
         print(f"[INFO] Period returns computed: {len(etf_period_returns)} tickers "
-              f"({len(alert_tickers)} alert + ETFs)")
+              f"({len(alert_tickers)} alert + ETFs + macro)")
 
     # Send to Slack
     payload = format_slack_message(

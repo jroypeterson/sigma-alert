@@ -84,7 +84,7 @@ def build_blocks() -> dict:
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Index, Sector & Macro Returns* (every digest, at the bottom)\n"
-            f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y shows level + bp change)_\n"
+            f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
             f"• *Indices* — {', '.join(_named(index, names))}\n"
             f"• *Sectors* — SPDR Select Sector ETFs ({', '.join('`'+t+'`' for t in sector)})\n"
             f"• *Healthcare* — {', '.join(_named(healthcare, names))}\n"
