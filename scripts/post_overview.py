@@ -93,9 +93,9 @@ def build_blocks() -> dict:
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Reading an alert line*\n"
             "```🟩/🟥  `TICKER` (name)  |  ±%chg  |  z = ±X.XX  |  $price  |  P% of 52w high  |  "
-            "52w: $lo - $hi  |  YTD: ±%```\n"
-            "🟩 up / 🟥 down. `YTD` = year-to-date return vs the prior year-end close. "
-            "ETF rows also append `| 2025: ±%` (prior-year return)."
+            "52w: $lo - $hi  |  2025: ±%  |  YTD: ±%```\n"
+            "🟩 up / 🟥 down. `2025` = prior calendar-year return; `YTD` = year-to-date "
+            "return vs the prior year-end close. ETF rows carry the same pair."
         )}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": (
             "Source: `jroypeterson/sigma-alert` · regenerate this card with "

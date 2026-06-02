@@ -396,6 +396,67 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "YTD:" not in text
 
+    def test_prior_year_and_ytd_rendered_in_order(self):
+        """The prior calendar-year return (from the period fetch) renders
+        before the YTD return, mirroring the ETF rows."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = 6.10
+        period = {"UNH": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": 24.50,
+            "ytd_return_pct": 6.10,
+        }}
+        payload = format_slack_message(
+            [alert], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_period_returns=period,
+        )
+        text = self._all_text(payload)
+        assert "2025: +24.50%" in text
+        assert "YTD: +6.10%" in text
+        assert text.index("2025: +24.50%") < text.index("YTD: +6.10%")
+
+    def test_negative_prior_year_rendered(self):
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = 6.10
+        period = {"UNH": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": -12.30,
+            "ytd_return_pct": 6.10,
+        }}
+        payload = format_slack_message(
+            [alert], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_period_returns=period,
+        )
+        text = self._all_text(payload)
+        assert "2025: -12.30%" in text
+
+    def test_prior_year_omitted_when_no_period_data(self):
+        """No period entry for the ticker → no 2025 suffix, but the inline YTD
+        still renders (recent-IPO case: prior-prior-year close unavailable)."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = 6.10
+        payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "2025:" not in text
+        assert "YTD: +6.10%" in text
+
+    def test_ytd_falls_back_to_period_map(self):
+        """When the inline YTD is absent (e.g. an old cache lacking the
+        year-end close), YTD falls back to the period fetch's value."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        # No inline ytd_return_pct set.
+        period = {"UNH": {
+            "prior_year_label": "2025",
+            "prior_year_return_pct": 24.50,
+            "ytd_return_pct": 9.99,
+        }}
+        payload = format_slack_message(
+            [alert], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_period_returns=period,
+        )
+        text = self._all_text(payload)
+        assert "YTD: +9.99%" in text
+
     def test_portfolio_subcategory_renders_first(self):
         """A Portfolio hit should render in the Portfolio subcategory
         at the top of its tier, and also in its sector subcategory below."""

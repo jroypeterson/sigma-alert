@@ -1157,7 +1157,11 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
 
 def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
-    """Fetch prior-year and YTD returns for index/sector ETFs.
+    """Fetch prior-year and YTD returns for a set of tickers.
+
+    Despite the name, the caller passes both the index/sector ETFs and the
+    alert tickers here so alert rows can carry the same prior-year/YTD suffix
+    as the returns block.
 
     Uses a dedicated, longer-window download (~800 calendar days) so we
     reach the last close of the year *before* last — required as the
@@ -1275,6 +1279,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         },
     ]
 
+    # Prior-year + YTD returns, keyed by ticker. Covers both the index/sector
+    # ETFs and the alert tickers (main() folds the alert names into the same
+    # long-window fetch, since the prior calendar-year return needs the
+    # year-before-last's year-end close \u2014 older than the 400-day screen window).
+    period_map = etf_period_returns or {}
+
     def _format_alert_line(a):
         marker = "\U0001F7E9" if a["direction"] == "up" else "\U0001F7E5"
         sigma_note = "  *\u26A0\uFE0F 3\u03C3+ move!*" if a["three_sigma"] else ""
@@ -1289,14 +1299,32 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             if price is not None and hi is not None and hi > 0 else ""
         )
         range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
+
+        # Prior calendar-year return (e.g. "2025: +24.50%") comes from the
+        # dedicated long-window fetch; omitted when the year-before-last's
+        # year-end close can't be located (e.g. an IPO after that cutover).
+        period = period_map.get(a["ticker"])
+        prior_year_part = ""
+        if period and period.get("prior_year_return_pct") is not None:
+            py = period["prior_year_return_pct"]
+            py_sign = "+" if py > 0 else ""
+            prior_year_part = f"  |  {period['prior_year_label']}: {py_sign}{py:.2f}%"
+
+        # YTD: prefer the inline value (computed from the screen history / cache,
+        # so it's present even when the period fetch omits the ticker), falling
+        # back to the period fetch's YTD when inline isn't available.
         ytd = a.get("ytd_return_pct")
+        if ytd is None and period is not None:
+            ytd = period.get("ytd_return_pct")
         ytd_part = ""
         if ytd is not None:
             ytd_sign = "+" if ytd > 0 else ""
             ytd_part = f"  |  YTD: {ytd_sign}{ytd:.2f}%"
+
         return (
             f"{marker}  `{a['ticker']}`{name_part}  "
-            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{pct_of_high_part}{range_part}{ytd_part}{sigma_note}"
+            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}"
+            f"{price_part}{pct_of_high_part}{range_part}{prior_year_part}{ytd_part}{sigma_note}"
         )
 
     def _append_section_chunked(blocks_list, header, lines, max_len=2900):
@@ -1435,8 +1463,6 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         # Any macro ticker not in MACRO_ORDER (shouldn't happen) still shows.
         macro_rows += [s for s in etf_returns
                        if s["ticker"] in macro_set and s["ticker"] not in MACRO_ORDER]
-
-        period_map = etf_period_returns or {}
 
         def _format_macro_line(s):
             """Render a macro row. Yields show level% + bp change; price/level
@@ -1752,14 +1778,19 @@ def main():
     if etf_returns:
         print(f"[INFO] Index/sector ETF returns captured: {len(etf_returns)} tickers")
 
-    # Prior-year + YTD returns for ETFs use their own longer-window
-    # download (the main batch is capped at 400 days, which doesn't
-    # reach the year-before-last's year-end close). Macro tickers are
-    # excluded — a prior-year/YTD "return" on a bond yield is misleading,
-    # and the _Macro_ rows render level + day-change only.
-    etf_period_returns = fetch_etf_period_returns(etf_set - macro_set, args.mode)
+    # Prior-year + YTD returns use their own longer-window download (the main
+    # batch is capped at 400 days, which doesn't reach the year-before-last's
+    # year-end close needed for the prior calendar-year return). Covers the
+    # index/sector ETFs AND the alert tickers, so alert rows can show the same
+    # `2025: ±% | YTD: ±%` suffix as the returns block. Macro tickers are
+    # excluded — a prior-year/YTD "return" on a bond yield is misleading, and
+    # the _Macro_ rows render level + day-change only.
+    alert_tickers = {a["ticker"] for a in alerts}
+    period_fetch_set = (etf_set - macro_set) | alert_tickers
+    etf_period_returns = fetch_etf_period_returns(period_fetch_set, args.mode)
     if etf_period_returns:
-        print(f"[INFO] ETF period returns computed: {len(etf_period_returns)} tickers")
+        print(f"[INFO] Period returns computed: {len(etf_period_returns)} tickers "
+              f"({len(alert_tickers)} alert + ETFs)")
 
     # Send to Slack
     payload = format_slack_message(
