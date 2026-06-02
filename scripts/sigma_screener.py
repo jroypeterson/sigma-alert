@@ -44,6 +44,7 @@ SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
 HEALTHCARE_ETFS_PATH = ROOT / "sources" / "healthcare_etfs.txt"
+MACRO_PATH = ROOT / "sources" / "macro.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 # Personal trading state pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
@@ -275,6 +276,31 @@ def load_healthcare_etfs() -> set[str]:
     the Slack "Index & Sector Returns" block.
     """
     return _load_ticker_set(HEALTHCARE_ETFS_PATH)
+
+
+def load_macro() -> set[str]:
+    """Load macro / cross-asset tickers (^TNX/DX-Y.NYB/CL=F) from sources/macro.txt.
+
+    These render under a `_Macro_` sub-header at the TOP of the Slack "Index &
+    Sector Returns" block. They are unioned into `etf_set` so they go through
+    the same download path and inherit the ETF exemptions (no alert, no
+    missing-metadata flag), but are rendered by `_format_macro_line` rather than
+    `_format_etf_line` (a bond yield is a level, not a price).
+    """
+    return _load_ticker_set(MACRO_PATH)
+
+
+# Per-ticker render style for the _Macro_ sub-group. `yield` shows the level as
+# a percent plus a basis-point change; `level` shows a bare index level plus a
+# %change; `price` shows a $ price plus a %change. All three append the z-score.
+# MACRO_ORDER fixes the display order (rates -> FX -> commodity); z-sorting
+# across asset classes would be meaningless for three unlike instruments.
+MACRO_STYLE = {
+    "^TNX": "yield",
+    "DX-Y.NYB": "level",
+    "CL=F": "price",
+}
+MACRO_ORDER = ["^TNX", "DX-Y.NYB", "CL=F"]
 
 
 def load_etf_names() -> dict:
@@ -1182,6 +1208,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          etf_returns: list[dict] | None = None,
                          index_etf_set: set[str] | None = None,
                          healthcare_etf_set: set[str] | None = None,
+                         macro_etf_set: set[str] | None = None,
                          etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
@@ -1327,6 +1354,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     if etf_returns:
         idx_set = index_etf_set or set()
         hc_set = healthcare_etf_set or set()
+        macro_set = macro_etf_set or set()
         index_rows = sorted(
             [s for s in etf_returns if s["ticker"] in idx_set],
             key=lambda s: s["z_score"], reverse=True,
@@ -1337,11 +1365,47 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         )
         sector_rows = sorted(
             [s for s in etf_returns
-             if s["ticker"] not in idx_set and s["ticker"] not in hc_set],
+             if s["ticker"] not in idx_set and s["ticker"] not in hc_set
+             and s["ticker"] not in macro_set],
             key=lambda s: s["z_score"], reverse=True,
         )
+        # Macro rows render in fixed MACRO_ORDER (rates -> FX -> commodity),
+        # not z-sorted — three unlike asset classes don't sort meaningfully.
+        _macro_by_ticker = {s["ticker"]: s for s in etf_returns if s["ticker"] in macro_set}
+        macro_rows = [_macro_by_ticker[t] for t in MACRO_ORDER if t in _macro_by_ticker]
+        # Any macro ticker not in MACRO_ORDER (shouldn't happen) still shows.
+        macro_rows += [s for s in etf_returns
+                       if s["ticker"] in macro_set and s["ticker"] not in MACRO_ORDER]
 
         period_map = etf_period_returns or {}
+
+        def _format_macro_line(s):
+            """Render a macro row. Yields show level% + bp change; price/level
+            rows show $price or bare level + %change. All append the z-score."""
+            t = s["ticker"]
+            style = MACRO_STYLE.get(t, "price")
+            rp = s["return_pct"]
+            z = s["z_score"]
+            level = s.get("price")
+            name = s.get("name") or t
+            marker = "\U0001F7E9" if rp > 0 else "\U0001F7E5"
+            sign = "+" if rp > 0 else ""
+            if style == "yield" and level is not None:
+                # level is the yield in percent (e.g. 4.45); recover the prior
+                # close from the % change to express the move in basis points.
+                denom = 1 + rp / 100
+                bp_part = ""
+                if denom != 0:
+                    prev = level / denom
+                    bp_part = f"  |  {(level - prev) * 100:+.1f}bp"
+                core = f"{level:.2f}%{bp_part}  |  z = {z:+.2f}"
+            elif style == "price" and level is not None:
+                core = f"${level:.2f}  |  {sign}{rp:.2f}%  |  z = {z:+.2f}"
+            elif level is not None:  # bare level (e.g. DXY)
+                core = f"{level:.2f}  |  {sign}{rp:.2f}%  |  z = {z:+.2f}"
+            else:
+                core = f"{sign}{rp:.2f}%  |  z = {z:+.2f}"
+            return f"{marker}  `{t}` ({name})  |  {core}"
 
         def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
@@ -1372,23 +1436,33 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
-        if index_rows or sector_rows or healthcare_rows:
+        if index_rows or sector_rows or healthcare_rows or macro_rows:
             blocks.append({"type": "divider"})
-            header = ":chart_with_upwards_trend: *Index & Sector Returns*"
+            header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
+            rendered_any = False
+            if macro_rows:
+                lines.append("_Macro_")
+                lines.extend(_format_macro_line(s) for s in macro_rows)
+                rendered_any = True
             if index_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
                 lines.append("_Indices_")
                 lines.extend(_format_etf_line(s) for s in index_rows)
+                rendered_any = True
             if sector_rows:
-                if index_rows:
+                if rendered_any:
                     lines.append("")  # blank spacer between groups
                 lines.append("_Sectors_")
                 lines.extend(_format_etf_line(s) for s in sector_rows)
+                rendered_any = True
             if healthcare_rows:
-                if index_rows or sector_rows:
+                if rendered_any:
                     lines.append("")  # blank spacer between groups
                 lines.append("_Healthcare_")
                 lines.extend(_format_etf_line(s) for s in healthcare_rows)
+                rendered_any = True
             _append_section_chunked(blocks, header, lines)
 
     blocks.append({"type": "divider"})
@@ -1502,12 +1576,16 @@ def main():
     index_etf_set = load_index_etfs()
     sector_etf_set = load_sector_etfs()
     healthcare_etf_set = load_healthcare_etfs()
-    etf_set = index_etf_set | sector_etf_set | healthcare_etf_set
+    macro_set = load_macro()
+    # Macro tickers join etf_set so they share the download path, alert
+    # suppression, and missing-metadata exemption — but render separately.
+    etf_set = index_etf_set | sector_etf_set | healthcare_etf_set | macro_set
     if etf_set:
         print(
             f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
             f"{len(sector_etf_set)} sector ETFs + "
-            f"{len(healthcare_etf_set)} healthcare ETFs for returns block"
+            f"{len(healthcare_etf_set)} healthcare ETFs + "
+            f"{len(macro_set)} macro tickers for returns block"
         )
 
     # Merge ETF display names into metadata (CM doesn't track ETFs).
@@ -1608,8 +1686,10 @@ def main():
 
     # Prior-year + YTD returns for ETFs use their own longer-window
     # download (the main batch is capped at 400 days, which doesn't
-    # reach the year-before-last's year-end close).
-    etf_period_returns = fetch_etf_period_returns(etf_set, args.mode)
+    # reach the year-before-last's year-end close). Macro tickers are
+    # excluded — a prior-year/YTD "return" on a bond yield is misleading,
+    # and the _Macro_ rows render level + day-change only.
+    etf_period_returns = fetch_etf_period_returns(etf_set - macro_set, args.mode)
     if etf_period_returns:
         print(f"[INFO] ETF period returns computed: {len(etf_period_returns)} tickers")
 
@@ -1618,6 +1698,7 @@ def main():
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
         healthcare_etf_set=healthcare_etf_set,
+        macro_etf_set=macro_set,
         etf_period_returns=etf_period_returns,
     )
     send_slack(payload)

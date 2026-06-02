@@ -1,0 +1,17 @@
+# Macro / cross-asset tickers — render under "_Macro_" at the TOP of the
+# Index & Sector Returns Slack section (the daily market backdrop).
+# Added 2026-06-02. These are NOT ETFs: they go through the same download +
+# distribution + z-score machinery and inherit the etf_set exemptions
+# (no alert, no missing-metadata flag), but render with a custom formatter
+# (see MACRO_STYLE / _format_macro_line in sigma_screener.py) because a
+# bond yield is a level, not a price.
+#
+# ^TNX     = CBOE 10-Year US Treasury Yield. Value IS the yield in percent
+#            (e.g. 4.45 = 4.45%), so it renders as level + basis-point change
+#            + z, not the "%change | z" the price-like rows use.
+# DX-Y.NYB = ICE US Dollar Index (DXY). Level + %change + z. (DX=F does not
+#            resolve in yfinance; DX-Y.NYB is the working symbol.)
+# CL=F     = WTI Crude Oil front-month future. $price + %change + z.
+^TNX
+DX-Y.NYB
+CL=F

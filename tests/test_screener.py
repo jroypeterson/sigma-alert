@@ -445,6 +445,87 @@ class TestSlackSubcategories:
 
 
 # ---------------------------------------------------------------------------
+# Macro (rates / FX / commodity) returns rendering
+# ---------------------------------------------------------------------------
+
+class TestMacroRendering:
+    MACRO_SET = {"^TNX", "DX-Y.NYB", "CL=F"}
+
+    def _row(self, ticker, name, price, return_pct, z=0.5):
+        return {
+            "ticker": ticker, "name": name, "z_score": z,
+            "return_pct": return_pct, "price": price,
+            "high_52w": None, "low_52w": None,
+        }
+
+    def _text(self, etf_returns, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=etf_returns, macro_etf_set=self.MACRO_SET, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_yield_renders_level_and_bp(self):
+        # prev 4.00 -> 4.10 is +2.5% and +10.0bp
+        text = self._text([self._row("^TNX", "10Y Treasury Yield", 4.10, 2.5, z=0.63)])
+        assert "_Macro_" in text
+        assert "4.10%" in text
+        assert "+10.0bp" in text
+        assert "z = +0.63" in text
+        # A yield must NOT render as a $price.
+        assert "$4.10" not in text
+
+    def test_price_renders_dollar(self):
+        text = self._text([self._row("CL=F", "WTI Crude Oil", 92.50, -1.20, z=-0.4)])
+        assert "$92.50" in text
+        assert "-1.20%" in text
+        assert "\U0001F7E5" in text  # red marker on a down move
+
+    def test_level_renders_bare(self):
+        text = self._text([self._row("DX-Y.NYB", "US Dollar Index", 99.13, 0.30)])
+        assert "99.13" in text
+        assert "+0.30%" in text
+        assert "$99.13" not in text  # the dollar index is a level, not a $price
+
+    def test_macro_group_renders_first_and_separate_from_sectors(self):
+        rows = [
+            self._row("CL=F", "WTI Crude Oil", 92.50, 1.0),
+            self._row("XLE", "Energy", 90.0, 1.0),
+        ]
+        text = self._text(rows, index_etf_set=set(), healthcare_etf_set=set())
+        assert "Index, Sector & Macro Returns" in text
+        assert "_Macro_" in text and "_Sectors_" in text
+        assert text.index("_Macro_") < text.index("_Sectors_")
+        # CL=F is macro, so it must appear above the _Sectors_ header, not within it.
+        assert text.index("`CL=F`") < text.index("_Sectors_")
+
+    def test_macro_order_is_fixed_not_z_sorted(self):
+        # Provide rows out of order and with z that would re-sort them.
+        rows = [
+            self._row("CL=F", "WTI Crude Oil", 92.5, 1.0, z=9.0),
+            self._row("DX-Y.NYB", "US Dollar Index", 99.1, 0.3, z=8.0),
+            self._row("^TNX", "10Y Treasury Yield", 4.1, 2.5, z=0.1),
+        ]
+        text = self._text(rows)
+        assert text.index("`^TNX`") < text.index("`DX-Y.NYB`") < text.index("`CL=F`")
+
+
+class TestLoadMacro:
+    def test_load_macro_reads_tickers(self, tmp_path, monkeypatch):
+        p = tmp_path / "macro.txt"
+        p.write_text("# comment\n^TNX\nDX-Y.NYB\ncl=f\n\n")
+        monkeypatch.setattr(sigma_screener, "MACRO_PATH", p)
+        assert sigma_screener.load_macro() == {"^TNX", "DX-Y.NYB", "CL=F"}
+
+    def test_load_macro_missing_returns_empty(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sigma_screener, "MACRO_PATH", tmp_path / "nope.txt")
+        assert sigma_screener.load_macro() == set()
+
+
+# ---------------------------------------------------------------------------
 # Portfolio / Researching / legacy core_watchlist loaders
 # ---------------------------------------------------------------------------
 

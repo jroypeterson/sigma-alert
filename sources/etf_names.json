@@ -2,6 +2,7 @@
   "SPYM": "S&P 500",
   "DIA": "Dow Jones",
   "QQQ": "Nasdaq 100",
+  "^W5000": "Wilshire 5000",
   "XLE": "Energy",
   "XLB": "Materials",
   "XLU": "Utilities",
@@ -17,7 +18,10 @@
   "IBB": "Biotech (Cap Wt)",
   "IHI": "Medical Devices",
   "XHS": "Healthcare Services",
-  "PPH": "Pharma (VanEck 25)",
-  "IHE": "Pharma (US Select)",
-  "^DRG": "Pharma Index (Arca)"
+  "PPH": "Pharma (25 large-cap)",
+  "IHE": "Pharma (US diversified)",
+  "^DRG": "Pharma (large-cap index)",
+  "^TNX": "10Y Treasury Yield",
+  "DX-Y.NYB": "US Dollar Index",
+  "CL=F": "WTI Crude Oil"
 }

@@ -5,11 +5,16 @@
 # IBB = iShares Biotechnology (cap-weighted)
 # IHI = iShares U.S. Medical Devices
 # XHS = SPDR S&P Health Care Services
-# PPH = VanEck Pharmaceutical (concentrated 25-name MVIS index)
+# Display labels (etf_names.json) emphasize COMPOSITION so the three pharma rows
+# are distinguishable at a glance: large-cap-concentrated vs US-diversified.
+# PPH = VanEck Pharmaceutical (concentrated 25-name MVIS index = the 25 biggest;
+#       labeled "Pharma (25 large-cap)")
 # IHE = iShares U.S. Pharmaceuticals (cap-weighted Dow Jones U.S. Select Pharma;
-#       the standard "US pharma" sector proxy. NB: tracks DJ US Select Pharma,
-#       not the NYSE Arca Pharmaceutical Index ^DRG — no mainstream ETF tracks ^DRG.)
-# ^DRG = NYSE Arca Pharmaceutical INDEX (not an ETF — a caret index ticker). Added
+#       the "Select" capping pulls in mid/small US pharma, so it's the broader,
+#       more diversified US book — labeled "Pharma (US diversified)". NB: tracks
+#       DJ US Select Pharma, not ^DRG — no mainstream ETF tracks ^DRG.)
+# ^DRG = NYSE Arca Pharmaceutical INDEX (not an ETF — a caret index ticker; ~20
+#        large-cap pharma majors, labeled "Pharma (large-cap index)"). Added
 #        so the block shows the price-return benchmark a generalist would quote
 #        ("pharma was up ~X% in 2025") alongside the tradeable IHE/PPH funds.
 #        Verified: survives the yfinance batch download + MultiIndex extraction
