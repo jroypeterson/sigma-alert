@@ -774,9 +774,20 @@ def screen_open_cached(tickers: list[str], cache: dict,
         # post-upgrade run until cache is refreshed.
         high_52w = ticker_cache[ticker].get("high_52w")
         low_52w = ticker_cache[ticker].get("low_52w")
+        # Prior year-end close cached by the last EOD close run — drives YTD.
+        prior_year_end_close = ticker_cache[ticker].get("prior_year_end_close")
+        prior_year_end_year = ticker_cache[ticker].get("prior_year_end_year")
         prev_close = prices[ticker]["prev_close"]
         today_open = prices[ticker]["today_open"]
         today_return = (today_open - prev_close) / prev_close
+
+        # YTD vs the cached prior year-end close. Guard the year so a stale
+        # December cache used on the first session of a new year doesn't
+        # compute YTD off the wrong baseline — omit it for that one morning
+        # until the next EOD close run refreshes the cache.
+        ytd_return_pct = None
+        if prior_year_end_close and prior_year_end_year == today_et().year - 1:
+            ytd_return_pct = (today_open - prior_year_end_close) / prior_year_end_close * 100
 
         z = compute_z_score(today_return, mu, sigma)
         meta = (metadata or {}).get(ticker, {})
@@ -817,6 +828,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "price": today_open,
                 "high_52w": high_52w,
                 "low_52w": low_52w,
+                "ytd_return_pct": ytd_return_pct,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
@@ -890,11 +902,30 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     elif len(close) >= 2:
         low_52w = float(close.iloc[-min(len(close), 253):].min())
 
+    # Prior calendar year-end close → drives the YTD return shown on alert
+    # rows, and is cached so the morning cached-open path can compute YTD
+    # without a full history download. `close` carries a DatetimeIndex from
+    # yfinance; the 400-day download window always reaches the prior year-end.
+    # None when the series doesn't span into the prior year (e.g. a recent
+    # IPO) or has no DatetimeIndex (some tests pass a plain-int index) — YTD
+    # is then omitted downstream rather than failing.
+    prior_year = today_et().year - 1
+    prior_year_end_close = None
+    try:
+        py_closes = close[close.index.year == prior_year]
+        if not py_closes.empty:
+            prior_year_end_close = float(py_closes.iloc[-1])
+    except (AttributeError, TypeError):
+        prior_year_end_close = None
+
     cache_entry = {"mu": mu, "sigma": sigma, "sample_size": sample_size}
     if high_52w is not None:
         cache_entry["high_52w"] = high_52w
     if low_52w is not None:
         cache_entry["low_52w"] = low_52w
+    if prior_year_end_close is not None:
+        cache_entry["prior_year_end_close"] = prior_year_end_close
+        cache_entry["prior_year_end_year"] = prior_year
 
     # Compute today's return based on mode
     prev_close = float(close.iloc[-2])
@@ -905,6 +936,10 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
 
     today_return = (today_price - prev_close) / prev_close
     z = compute_z_score(today_return, mu, sigma)
+
+    ytd_return_pct = None
+    if prior_year_end_close:
+        ytd_return_pct = (today_price - prior_year_end_close) / prior_year_end_close * 100
 
     meta = (metadata or {}).get(ticker, {})
     name = meta.get("name", "")
@@ -945,6 +980,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "price": today_price,
             "high_52w": high_52w,
             "low_52w": low_52w,
+            "ytd_return_pct": ytd_return_pct,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
@@ -1253,9 +1289,14 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             if price is not None and hi is not None and hi > 0 else ""
         )
         range_part = f"  |  52w: ${lo:.2f} - ${hi:.2f}" if lo is not None and hi is not None else ""
+        ytd = a.get("ytd_return_pct")
+        ytd_part = ""
+        if ytd is not None:
+            ytd_sign = "+" if ytd > 0 else ""
+            ytd_part = f"  |  YTD: {ytd_sign}{ytd:.2f}%"
         return (
             f"{marker}  `{a['ticker']}`{name_part}  "
-            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{pct_of_high_part}{range_part}{sigma_note}"
+            f"|  {sign}{a['return_pct']:.2f}%  |  z = {a['z_score']:+.2f}{price_part}{pct_of_high_part}{range_part}{ytd_part}{sigma_note}"
         )
 
     def _append_section_chunked(blocks_list, header, lines, max_len=2900):

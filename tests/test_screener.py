@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import sigma_screener
 from sigma_screener import (
     _is_one_sigma_eligible,
+    _process_ticker_full,
     check_52w_high_low,
     compute_distribution,
     compute_z_score,
@@ -363,6 +364,38 @@ class TestSlackSubcategories:
         text = self._all_text(payload)
         assert "$512.34" in text
 
+    def test_ytd_rendered_in_line(self):
+        """A positive YTD return renders with a + sign in the alert row."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = 18.42
+        payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "YTD: +18.42%" in text
+
+    def test_negative_ytd_rendered_in_line(self):
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = -7.10
+        payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "YTD: -7.10%" in text
+
+    def test_missing_ytd_omits_suffix(self):
+        """Alerts without ytd_return_pct (e.g. recent IPO, stale cache) render
+        no YTD suffix and must not crash."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        # ytd_return_pct deliberately absent
+        payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "YTD:" not in text
+
+    def test_none_ytd_omits_suffix(self):
+        """An explicit None ytd_return_pct also omits the suffix."""
+        alert = self._make_alert("UNH", "Healthcare Services", price=512.34)
+        alert["ytd_return_pct"] = None
+        payload = format_slack_message([alert], "close", 100, {"ref_date": "2026-04-10"}, None, set())
+        text = self._all_text(payload)
+        assert "YTD:" not in text
+
     def test_portfolio_subcategory_renders_first(self):
         """A Portfolio hit should render in the Portfolio subcategory
         at the top of its tier, and also in its sector subcategory below."""
@@ -588,6 +621,64 @@ class TestLoadMacro:
     def test_load_macro_missing_returns_empty(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sigma_screener, "MACRO_PATH", tmp_path / "nope.txt")
         assert sigma_screener.load_macro() == set()
+
+
+# ---------------------------------------------------------------------------
+# YTD return computation in the full-screen path
+# ---------------------------------------------------------------------------
+
+class TestYtdReturn:
+    """_process_ticker_full computes YTD vs the prior calendar year-end close
+    (from the downloaded history) and caches the year-end close so the morning
+    cached-open path can reuse it."""
+
+    def _make_series(self):
+        """A business-day close series spanning the prior year-end through
+        today, with a +10% jump on the last bar so a 2σ alert fires."""
+        prior_year = date.today().year - 1
+        idx = pd.bdate_range(start=f"{prior_year}-09-01", end=date.today())
+        n = len(idx)
+        np.random.seed(1)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.005, n - 1))
+        close_vals = list(base) + [float(base[-1] * 1.10)]  # +10% today
+        close = pd.Series(close_vals, index=idx)
+        open_prices = close.copy()  # unused in close mode
+        return close, open_prices, prior_year
+
+    def test_ytd_on_alert_and_cache_entry(self):
+        close, open_prices, prior_year = self._make_series()
+        prior_year_end_close = float(close[close.index.year == prior_year].iloc[-1])
+        today_price = float(close.iloc[-1])
+        expected_ytd = (today_price - prior_year_end_close) / prior_year_end_close * 100
+
+        alert, cache_entry, _hi_lo, _stats, skip = _process_ticker_full(
+            "UNH", close, open_prices, None, None, "close",
+        )
+        assert skip is None
+        # Alert fired (the +10% last bar is a multi-sigma move).
+        assert alert is not None
+        assert alert["ytd_return_pct"] == pytest.approx(expected_ytd, rel=1e-6)
+        # Cache carries the prior year-end close + its year for the cached-open path.
+        assert cache_entry["prior_year_end_close"] == pytest.approx(prior_year_end_close, rel=1e-6)
+        assert cache_entry["prior_year_end_year"] == prior_year
+
+    def test_ytd_none_when_no_prior_year_data(self):
+        """A series confined to the current year has no prior-year-end close;
+        YTD is None and the cache omits the year-end fields."""
+        idx = pd.bdate_range(start=f"{date.today().year}-01-02", end=date.today())
+        if len(idx) < 40:
+            pytest.skip("too early in the year for a 40-bar current-year series")
+        np.random.seed(2)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.005, len(idx) - 1))
+        close = pd.Series(list(base) + [float(base[-1] * 1.10)], index=idx)
+        alert, cache_entry, _hi_lo, _stats, skip = _process_ticker_full(
+            "UNH", close, close.copy(), None, None, "close",
+        )
+        assert skip is None
+        assert alert is not None
+        assert alert["ytd_return_pct"] is None
+        assert "prior_year_end_close" not in cache_entry
+        assert "prior_year_end_year" not in cache_entry
 
 
 # ---------------------------------------------------------------------------
