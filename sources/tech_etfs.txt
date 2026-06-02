@@ -1,0 +1,20 @@
+# Tech-theme ETFs — render under "_Tech Themes_" in the Index, Sector & Macro
+# Returns Slack section, below the _Healthcare_ group. Added 2026-06-02.
+# Regular total-return ETFs (price + %change + z + prior-year/YTD like the
+# other ETF groups). Display names (etf_names.json) carry representative
+# holdings in the parenthetical so you can see what's in each at a glance.
+#
+# MAGS = Roundhill Magnificent Seven (equal-weight the 7 megacaps)
+# SMH  = VanEck Semiconductor (cap-weighted, top-heavy NVDA/TSM)
+# SOXX = iShares Semiconductor (broader US semis, less TSM-concentrated)
+# IGV  = iShares Expanded Tech-Software (the large software-sector benchmark)
+# DTCR = Global X Data Center & Digital Infrastructure REITs (EQIX/DLR/towers)
+# AIQ  = Global X Artificial Intelligence & Tech. NB: top holdings are actually
+#        memory/semis-heavy (SK Hynix, Samsung, Intel, AMD, Micron) — it's a
+#        fuzzy "AI" basket, labeled accordingly so the row isn't misleading.
+MAGS
+SMH
+SOXX
+IGV
+DTCR
+AIQ

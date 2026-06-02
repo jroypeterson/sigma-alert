@@ -23,5 +23,11 @@
   "^DRG": "Pharma (large-cap index)",
   "^TNX": "10Y Treasury Yield",
   "DX-Y.NYB": "US Dollar Index",
-  "CL=F": "WTI Crude Oil"
+  "CL=F": "WTI Crude Oil",
+  "MAGS": "Mag-7: AAPL, NVDA, MSFT, AMZN",
+  "SMH": "Semis: NVDA, TSM, AVGO",
+  "SOXX": "Semis broad: AVGO, AMD, MU",
+  "IGV": "Software: MSFT, ORCL, PLTR, CRM",
+  "DTCR": "Data-center REITs: EQIX, DLR, AMT",
+  "AIQ": "AI/Tech, semis-heavy: SK Hynix, Samsung, AMD"
 }

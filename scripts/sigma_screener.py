@@ -44,6 +44,7 @@ SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
 HEALTHCARE_ETFS_PATH = ROOT / "sources" / "healthcare_etfs.txt"
+TECH_ETFS_PATH = ROOT / "sources" / "tech_etfs.txt"
 MACRO_PATH = ROOT / "sources" / "macro.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 # Personal trading state pushed by Coverage Manager's weekly sigma_export step.
@@ -276,6 +277,17 @@ def load_healthcare_etfs() -> set[str]:
     the Slack "Index & Sector Returns" block.
     """
     return _load_ticker_set(HEALTHCARE_ETFS_PATH)
+
+
+def load_tech_etfs() -> set[str]:
+    """Load tech-theme ETFs (MAGS/SMH/SOXX/IGV/DTCR/AIQ) from sources/tech_etfs.txt.
+
+    Regular total-return ETFs that render under a `_Tech Themes_` sub-header in
+    the Slack returns block (below `_Healthcare_`). Like the other ETF groups
+    they carry prior-year/YTD period returns; they differ from `_Macro_` only in
+    grouping/label.
+    """
+    return _load_ticker_set(TECH_ETFS_PATH)
 
 
 def load_macro() -> set[str]:
@@ -1208,6 +1220,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          etf_returns: list[dict] | None = None,
                          index_etf_set: set[str] | None = None,
                          healthcare_etf_set: set[str] | None = None,
+                         tech_etf_set: set[str] | None = None,
                          macro_etf_set: set[str] | None = None,
                          etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
@@ -1354,6 +1367,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     if etf_returns:
         idx_set = index_etf_set or set()
         hc_set = healthcare_etf_set or set()
+        tech_set = tech_etf_set or set()
         macro_set = macro_etf_set or set()
         index_rows = sorted(
             [s for s in etf_returns if s["ticker"] in idx_set],
@@ -1363,10 +1377,14 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             [s for s in etf_returns if s["ticker"] in hc_set],
             key=lambda s: s["z_score"], reverse=True,
         )
+        tech_rows = sorted(
+            [s for s in etf_returns if s["ticker"] in tech_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
         sector_rows = sorted(
             [s for s in etf_returns
              if s["ticker"] not in idx_set and s["ticker"] not in hc_set
-             and s["ticker"] not in macro_set],
+             and s["ticker"] not in tech_set and s["ticker"] not in macro_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         # Macro rows render in fixed MACRO_ORDER (rates -> FX -> commodity),
@@ -1436,7 +1454,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
-        if index_rows or sector_rows or healthcare_rows or macro_rows:
+        if index_rows or sector_rows or healthcare_rows or tech_rows or macro_rows:
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
@@ -1462,6 +1480,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     lines.append("")  # blank spacer between groups
                 lines.append("_Healthcare_")
                 lines.extend(_format_etf_line(s) for s in healthcare_rows)
+                rendered_any = True
+            if tech_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Tech Themes_")
+                lines.extend(_format_etf_line(s) for s in tech_rows)
                 rendered_any = True
             _append_section_chunked(blocks, header, lines)
 
@@ -1576,15 +1600,18 @@ def main():
     index_etf_set = load_index_etfs()
     sector_etf_set = load_sector_etfs()
     healthcare_etf_set = load_healthcare_etfs()
+    tech_etf_set = load_tech_etfs()
     macro_set = load_macro()
-    # Macro tickers join etf_set so they share the download path, alert
-    # suppression, and missing-metadata exemption — but render separately.
-    etf_set = index_etf_set | sector_etf_set | healthcare_etf_set | macro_set
+    # Tech-theme + macro tickers join etf_set so they share the download path,
+    # alert suppression, and missing-metadata exemption — but render separately.
+    etf_set = (index_etf_set | sector_etf_set | healthcare_etf_set
+               | tech_etf_set | macro_set)
     if etf_set:
         print(
             f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
             f"{len(sector_etf_set)} sector ETFs + "
             f"{len(healthcare_etf_set)} healthcare ETFs + "
+            f"{len(tech_etf_set)} tech-theme ETFs + "
             f"{len(macro_set)} macro tickers for returns block"
         )
 
@@ -1698,6 +1725,7 @@ def main():
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
         healthcare_etf_set=healthcare_etf_set,
+        tech_etf_set=tech_etf_set,
         macro_etf_set=macro_set,
         etf_period_returns=etf_period_returns,
     )

@@ -513,7 +513,72 @@ class TestMacroRendering:
         assert text.index("`^TNX`") < text.index("`DX-Y.NYB`") < text.index("`CL=F`")
 
 
+class TestTechThemesRendering:
+    TECH_SET = {"MAGS", "SMH", "IGV"}
+
+    def _row(self, ticker, name, price, return_pct, z=0.5):
+        return {
+            "ticker": ticker, "name": name, "z_score": z,
+            "return_pct": return_pct, "price": price,
+            "high_52w": None, "low_52w": None,
+        }
+
+    def _text(self, etf_returns, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=etf_returns, tech_etf_set=self.TECH_SET, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_tech_group_renders_with_holdings_name(self):
+        text = self._text([self._row("SMH", "Semis: NVDA, TSM, AVGO", 250.0, 1.5)])
+        assert "_Tech Themes_" in text
+        assert "`SMH` (Semis: NVDA, TSM, AVGO)" in text
+
+    def test_tech_separate_from_sectors_and_after_healthcare(self):
+        rows = [
+            self._row("SMH", "Semis", 250.0, 1.0, z=2.0),
+            self._row("XLE", "Energy", 90.0, 1.0, z=1.0),
+            self._row("XBI", "Biotech", 100.0, 1.0, z=1.0),
+        ]
+        text = self._text(rows, healthcare_etf_set={"XBI"})
+        assert "_Sectors_" in text and "_Healthcare_" in text and "_Tech Themes_" in text
+        # SMH is tech, not a sector — must not fall into the _Sectors_ group.
+        assert text.index("_Healthcare_") < text.index("_Tech Themes_")
+        assert text.index("`SMH`") > text.index("_Tech Themes_")
+        # XLE (a real sector ETF) stays under _Sectors_, above _Tech Themes_.
+        assert text.index("`XLE`") < text.index("_Tech Themes_")
+
+
+class TestOverviewCard:
+    def test_build_blocks_is_valid_and_lists_groups(self):
+        import post_overview
+        payload = post_overview.build_blocks()
+        assert payload["blocks"][0]["type"] == "header"
+        text = "\n".join(
+            b["text"]["text"] for b in payload["blocks"] if b.get("type") == "section"
+        )
+        # Mentions each returns-block group and a couple of the live tickers,
+        # proving it reads the source files rather than hard-coding.
+        for token in ("_Macro_".strip("_"), "Indices", "Sectors", "Healthcare",
+                      "Tech Themes", "`^W5000`", "`SMH`", "2σ+", "1σ"):
+            assert token in text
+        # Slack section hard limit.
+        for b in payload["blocks"]:
+            if b.get("type") == "section":
+                assert len(b["text"]["text"]) < 3000
+
+
 class TestLoadMacro:
+    def test_load_tech_etfs_reads_tickers(self, tmp_path, monkeypatch):
+        p = tmp_path / "tech.txt"
+        p.write_text("# c\nMAGS\nsmh\nIGV\n")
+        monkeypatch.setattr(sigma_screener, "TECH_ETFS_PATH", p)
+        assert sigma_screener.load_tech_etfs() == {"MAGS", "SMH", "IGV"}
+
     def test_load_macro_reads_tickers(self, tmp_path, monkeypatch):
         p = tmp_path / "macro.txt"
         p.write_text("# comment\n^TNX\nDX-Y.NYB\ncl=f\n\n")
