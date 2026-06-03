@@ -739,6 +739,48 @@ class TestCommoditiesRendering:
         assert text.index("`XLE`") < text.index("_Commodities_")
 
 
+class TestGlobalEquityRendering:
+    GLOBAL_SET = {"ACWI", "EFA", "EEM", "VGK", "EWJ", "EWY", "FXI", "INDA"}
+
+    def _row(self, ticker, name, price, return_pct, z=0.5):
+        return {
+            "ticker": ticker, "name": name, "z_score": z,
+            "return_pct": return_pct, "price": price,
+            "high_52w": None, "low_52w": None,
+        }
+
+    def _text(self, etf_returns, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=etf_returns, global_equity_etf_set=self.GLOBAL_SET, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_global_equity_group_renders(self):
+        text = self._text([self._row("ACWI", "MSCI All-Country World", 120.0, 0.5)])
+        assert "_Global Equity_" in text
+        assert "`ACWI` (MSCI All-Country World)" in text
+
+    def test_global_equity_after_indices_before_sectors_not_in_sectors(self):
+        rows = [
+            self._row("EEM", "Emerging Markets", 44.0, 1.0, z=2.0),
+            self._row("SPYM", "S&P 500", 100.0, 1.0, z=1.0),
+            self._row("XLE", "Energy", 90.0, 1.0, z=1.0),
+        ]
+        text = self._text(rows, index_etf_set={"SPYM"})
+        assert "_Indices_" in text and "_Global Equity_" in text and "_Sectors_" in text
+        # US indices first, then global equity, then sectors.
+        assert text.index("_Indices_") < text.index("_Global Equity_") < text.index("_Sectors_")
+        # EEM belongs to Global Equity, not the catch-all _Sectors_ group.
+        assert text.index("`EEM`") > text.index("_Global Equity_")
+        assert text.index("`EEM`") < text.index("_Sectors_")
+        # XLE (a real sector ETF) stays under _Sectors_.
+        assert text.index("`XLE`") > text.index("_Sectors_")
+
+
 class TestCreditRendering:
     def _text(self, credit_data, **kw):
         payload = format_slack_message(
@@ -962,8 +1004,9 @@ class TestOverviewCard:
         )
         # Mentions each returns-block group and a couple of the live tickers,
         # proving it reads the source files rather than hard-coding.
-        for token in ("_Macro_".strip("_"), "Indices", "Sectors", "Healthcare",
-                      "Tech Themes", "`^W5000`", "`SMH`", "2σ+", "1σ"):
+        for token in ("_Macro_".strip("_"), "Indices", "Global Equity", "Sectors",
+                      "Healthcare", "Tech Themes", "`^W5000`", "`SMH`", "`ACWI`",
+                      "2σ+", "1σ"):
             assert token in text
         # Slack section hard limit.
         for b in payload["blocks"]:

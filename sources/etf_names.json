@@ -30,5 +30,13 @@
   "IGV": "Software: MSFT, ORCL, PLTR, CRM",
   "DTCR": "Data-center REITs: EQIX, DLR, AMT",
   "AIQ": "AI/Tech, semis-heavy: SK Hynix, Samsung, AMD",
-  "GLD": "Gold"
+  "GLD": "Gold",
+  "ACWI": "MSCI All-Country World",
+  "EFA": "Developed ex-US",
+  "EEM": "Emerging Markets",
+  "VGK": "Developed Europe",
+  "EWJ": "Japan",
+  "EWY": "South Korea",
+  "FXI": "China Large-Cap",
+  "INDA": "India"
 }

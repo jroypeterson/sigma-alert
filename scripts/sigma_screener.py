@@ -43,6 +43,7 @@ SP500_PATH = ROOT / "sources" / "sp500.txt"
 SP500_NAMES_PATH = ROOT / "sources" / "sp500_names.json"
 SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
+GLOBAL_EQUITY_ETFS_PATH = ROOT / "sources" / "global_equity_etfs.txt"
 HEALTHCARE_ETFS_PATH = ROOT / "sources" / "healthcare_etfs.txt"
 TECH_ETFS_PATH = ROOT / "sources" / "tech_etfs.txt"
 COMMODITY_ETFS_PATH = ROOT / "sources" / "commodity_etfs.txt"
@@ -268,6 +269,18 @@ def load_index_etfs() -> set[str]:
     These render above sector ETFs in the Slack "Index & Sector Returns" block.
     """
     return _load_ticker_set(INDEX_ETFS_PATH)
+
+
+def load_global_equity_etfs() -> set[str]:
+    """Load global/international equity index ETFs (ACWI/EFA/EEM/VGK/EWJ/EWY/
+    FXI/INDA) from sources/global_equity_etfs.txt.
+
+    Regular total-return ETFs that render under a `_Global Equity_` sub-header
+    directly below the US `_Indices_` group, via the normal `_format_etf_line`
+    (prior-year/YTD returns). The country ETFs are USD-denominated, so each
+    bundles the local-equity move and the FX move vs the dollar.
+    """
+    return _load_ticker_set(GLOBAL_EQUITY_ETFS_PATH)
 
 
 def load_healthcare_etfs() -> set[str]:
@@ -1404,6 +1417,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          sp500_set: set[str] | None = None,
                          etf_returns: list[dict] | None = None,
                          index_etf_set: set[str] | None = None,
+                         global_equity_etf_set: set[str] | None = None,
                          healthcare_etf_set: set[str] | None = None,
                          tech_etf_set: set[str] | None = None,
                          commodity_etf_set: set[str] | None = None,
@@ -1613,12 +1627,17 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     if etf_returns or credit_data:
         _etf_returns = etf_returns or []
         idx_set = index_etf_set or set()
+        global_eq_set = global_equity_etf_set or set()
         hc_set = healthcare_etf_set or set()
         tech_set = tech_etf_set or set()
         commodity_set = commodity_etf_set or set()
         macro_set = macro_etf_set or set()
         index_rows = sorted(
             [s for s in _etf_returns if s["ticker"] in idx_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
+        global_equity_rows = sorted(
+            [s for s in _etf_returns if s["ticker"] in global_eq_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         healthcare_rows = sorted(
@@ -1635,7 +1654,8 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         )
         sector_rows = sorted(
             [s for s in _etf_returns
-             if s["ticker"] not in idx_set and s["ticker"] not in hc_set
+             if s["ticker"] not in idx_set and s["ticker"] not in global_eq_set
+             and s["ticker"] not in hc_set
              and s["ticker"] not in tech_set and s["ticker"] not in commodity_set
              and s["ticker"] not in macro_set],
             key=lambda s: s["z_score"], reverse=True,
@@ -1748,8 +1768,8 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
-        if (index_rows or sector_rows or healthcare_rows or tech_rows
-                or commodity_rows or macro_rows or credit_rows):
+        if (index_rows or global_equity_rows or sector_rows or healthcare_rows
+                or tech_rows or commodity_rows or macro_rows or credit_rows):
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
@@ -1769,6 +1789,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     lines.append("")  # blank spacer between groups
                 lines.append("_Indices_")
                 lines.extend(_format_etf_line(s) for s in index_rows)
+                rendered_any = True
+            if global_equity_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Global Equity_")
+                lines.extend(_format_etf_line(s) for s in global_equity_rows)
                 rendered_any = True
             if sector_rows:
                 if rendered_any:
@@ -1905,19 +1931,21 @@ def main():
             portfolio_set = legacy
 
     index_etf_set = load_index_etfs()
+    global_equity_etf_set = load_global_equity_etfs()
     sector_etf_set = load_sector_etfs()
     healthcare_etf_set = load_healthcare_etfs()
     tech_etf_set = load_tech_etfs()
     commodity_etf_set = load_commodity_etfs()
     macro_set = load_macro()
-    # Tech-theme + commodity + macro tickers join etf_set so they share the
-    # download path, alert suppression, and missing-metadata exemption — but
-    # render under their own sub-headers.
-    etf_set = (index_etf_set | sector_etf_set | healthcare_etf_set
-               | tech_etf_set | commodity_etf_set | macro_set)
+    # Global-equity + tech-theme + commodity + macro tickers join etf_set so
+    # they share the download path, alert suppression, and missing-metadata
+    # exemption — but render under their own sub-headers.
+    etf_set = (index_etf_set | global_equity_etf_set | sector_etf_set
+               | healthcare_etf_set | tech_etf_set | commodity_etf_set | macro_set)
     if etf_set:
         print(
             f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
+            f"{len(global_equity_etf_set)} global-equity ETFs + "
             f"{len(sector_etf_set)} sector ETFs + "
             f"{len(healthcare_etf_set)} healthcare ETFs + "
             f"{len(tech_etf_set)} tech-theme ETFs + "
@@ -2049,6 +2077,7 @@ def main():
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
+        global_equity_etf_set=global_equity_etf_set,
         healthcare_etf_set=healthcare_etf_set,
         tech_etf_set=tech_etf_set,
         commodity_etf_set=commodity_etf_set,
