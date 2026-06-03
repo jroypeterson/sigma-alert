@@ -698,6 +698,243 @@ class TestTechThemesRendering:
         assert text.index("`XLE`") < text.index("_Tech Themes_")
 
 
+class TestCommoditiesRendering:
+    COMMO_SET = {"GLD"}
+
+    def _row(self, ticker, name, price, return_pct, z=0.5):
+        return {
+            "ticker": ticker, "name": name, "z_score": z,
+            "return_pct": return_pct, "price": price,
+            "high_52w": None, "low_52w": None,
+        }
+
+    def _text(self, etf_returns, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=etf_returns, commodity_etf_set=self.COMMO_SET, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_commodities_group_renders(self):
+        text = self._text([self._row("GLD", "Gold", 244.10, 0.80)])
+        assert "_Commodities_" in text
+        assert "`GLD` (Gold)" in text
+
+    def test_commodity_separate_from_sectors_and_after_tech(self):
+        rows = [
+            self._row("GLD", "Gold", 244.0, 0.8, z=2.0),
+            self._row("XLE", "Energy", 90.0, 1.0, z=1.0),
+            self._row("SMH", "Semis", 250.0, 1.0, z=1.0),
+        ]
+        text = self._text(rows, tech_etf_set={"SMH"})
+        assert "_Sectors_" in text and "_Tech Themes_" in text and "_Commodities_" in text
+        # Commodities renders last, after Tech Themes.
+        assert text.index("_Tech Themes_") < text.index("_Commodities_")
+        # GLD belongs to Commodities, not the catch-all _Sectors_ group.
+        assert text.index("`GLD`") > text.index("_Commodities_")
+        # XLE (a real sector ETF) stays under _Sectors_, above _Commodities_.
+        assert text.index("`XLE`") < text.index("_Commodities_")
+
+
+class TestCreditRendering:
+    def _text(self, credit_data, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            credit_data=credit_data, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_credit_renders_yield_oas_ytd(self):
+        cd = {"HY": {"label": "US High Yield", "yield_level": 7.42,
+                     "yield_bp_chg": 3.1, "oas_bp": 312, "oas_bp_chg": 5,
+                     "yield_ytd_bp": 18}}
+        text = self._text(cd)
+        assert "_Credit_" in text
+        assert "`HY` (US High Yield)" in text
+        assert "yield 7.42% +3.1bp" in text
+        assert "OAS 312bp +5bp" in text
+        assert "YTD +18bp" in text
+
+    def test_widening_spread_is_red_tightening_is_green(self):
+        widen = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": 1.0,
+                        "oas_bp": 300, "oas_bp_chg": 5}}
+        assert "\U0001F7E5" in self._text(widen)  # red on widening
+        tighten = {"IG": {"label": "y", "yield_level": 5.0, "yield_bp_chg": -1.0,
+                          "oas_bp": 80, "oas_bp_chg": -3}}
+        assert "\U0001F7E9" in self._text(tighten)  # green on tightening
+
+    def test_missing_oas_colors_by_yield_change(self):
+        # No OAS field → color by the yield move; rising yield = risk-off = red.
+        d = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": 2.0,
+                    "yield_ytd_bp": 10}}
+        text = self._text(d)
+        assert "OAS" not in text
+        assert "\U0001F7E5" in text
+
+    def test_missing_ytd_omits_suffix(self):
+        d = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": -1.0,
+                    "oas_bp": 300, "oas_bp_chg": -2}}
+        text = self._text(d)
+        assert "YTD" not in text
+
+    def test_credit_renders_without_etf_returns(self):
+        # A credit-only message (no yfinance returns) still emits the section.
+        d = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": 1.0,
+                    "oas_bp": 300, "oas_bp_chg": 1}}
+        text = self._text(d)
+        assert "Index, Sector & Macro Returns" in text
+        assert "_Credit_" in text
+
+    def test_credit_order_hy_before_ig(self):
+        cd = {  # insertion order IG-first; render order must still be HY → IG
+            "IG": {"label": "IG", "yield_level": 5.0, "yield_bp_chg": 0.0,
+                   "oas_bp": 74, "oas_bp_chg": 1},
+            "HY": {"label": "HY", "yield_level": 7.0, "yield_bp_chg": 0.0,
+                   "oas_bp": 300, "oas_bp_chg": 1},
+        }
+        text = self._text(cd)
+        assert text.index("`HY`") < text.index("`IG`")
+
+    def test_credit_after_macro_before_indices(self):
+        cd = {"HY": {"label": "HY", "yield_level": 7.0, "yield_bp_chg": 1.0,
+                     "oas_bp": 300, "oas_bp_chg": 1}}
+        macro_row = {"ticker": "^TNX", "name": "10Y", "z_score": 0.5,
+                     "return_pct": 1.0, "price": 4.1, "high_52w": None, "low_52w": None}
+        idx_row = {"ticker": "SPYM", "name": "S&P 500", "z_score": 0.5,
+                   "return_pct": 1.0, "price": 100.0, "high_52w": None, "low_52w": None}
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=[macro_row, idx_row], macro_etf_set={"^TNX"},
+            index_etf_set={"SPYM"}, credit_data=cd,
+        )
+        text = "\n".join(b["text"]["text"] for b in payload["blocks"]
+                         if b.get("type") == "section")
+        assert text.index("_Macro_") < text.index("_Credit_") < text.index("_Indices_")
+
+
+class TestFetchCreditIndices:
+    def test_computes_bp_changes_and_ytd(self, monkeypatch):
+        series = {
+            "BAMLH0A0HYM2EY": [("2025-12-31", 6.50), ("2026-06-01", 6.87), ("2026-06-02", 6.88)],
+            "BAMLH0A0HYM2": [("2026-06-01", 2.72), ("2026-06-02", 2.71)],
+            "BAMLC0A0CMEY": [("2025-12-31", 4.84), ("2026-06-01", 5.14), ("2026-06-02", 5.14)],
+            "BAMLC0A0CM": [("2026-06-01", 0.73), ("2026-06-02", 0.74)],
+        }
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series.get(sid, []))
+        cd = sigma_screener.fetch_credit_indices()
+        assert set(cd) == {"HY", "IG"}
+        assert cd["HY"]["yield_level"] == 6.88
+        assert round(cd["HY"]["yield_bp_chg"], 1) == 1.0       # (6.88-6.87)*100
+        assert round(cd["HY"]["yield_ytd_bp"], 0) == 38        # (6.88-6.50)*100
+        assert round(cd["HY"]["oas_bp"], 0) == 271             # 2.71*100
+        assert round(cd["HY"]["oas_bp_chg"], 0) == -1          # (2.71-2.72)*100
+        assert round(cd["IG"]["oas_bp"], 0) == 74
+
+    def test_skips_series_with_insufficient_data(self, monkeypatch):
+        # HY yield resolves; IG yield returns nothing → IG dropped, HY kept.
+        series = {
+            "BAMLH0A0HYM2EY": [("2026-06-01", 6.87), ("2026-06-02", 6.88)],
+            "BAMLH0A0HYM2": [("2026-06-01", 2.72), ("2026-06-02", 2.71)],
+        }
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series.get(sid, []))
+        cd = sigma_screener.fetch_credit_indices()
+        assert set(cd) == {"HY"}
+
+    def test_fred_parse_drops_missing_and_is_header_agnostic(self, monkeypatch):
+        class FakeResp:
+            text = ("observation_date,BAMLH0A0HYM2EY\n"
+                    "2026-05-30,.\n2026-06-01,6.89\n2026-06-02,6.88\n")
+            def raise_for_status(self):
+                pass
+        monkeypatch.setattr(sigma_screener.requests, "get",
+                            lambda *a, **k: FakeResp())
+        out = sigma_screener._fetch_fred_series("X", start="2025-01-01")
+        assert out == [("2026-06-01", 6.89), ("2026-06-02", 6.88)]
+
+    def test_fred_network_failure_returns_empty(self, monkeypatch):
+        import requests as _rq
+
+        def boom(*a, **k):
+            raise _rq.RequestException("timeout")
+        monkeypatch.setattr(sigma_screener.requests, "get", boom)
+        # retries=0 so the test doesn't sleep.
+        assert sigma_screener._fetch_fred_series("X", retries=0) == []
+
+
+class TestFiftyTwoWeekGrouping:
+    """The 52-week high/low list is grouped by the alert subcategory taxonomy
+    with an `Other` catch-all (added 2026-06-03)."""
+
+    def _hilo(self, ticker, type_, sector="", subsector="", **flags):
+        d = {
+            "ticker": ticker, "name": f"{ticker} Corp", "sector": sector,
+            "subsector": subsector, "type": type_, "price": 50.0,
+            "in_portfolio": False, "in_researching": False,
+            "in_following_for_interest": False, "in_ready_to_buy": False,
+            "in_ready_to_short": False,
+        }
+        d.update(flags)
+        return d
+
+    def _text(self, hi_lo_hits, sp500=None):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, hi_lo_hits, sp500 or set(),
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_lows_grouped_by_taxonomy_with_other(self):
+        hits = [
+            self._hilo("INSM", "low", sector="Biopharma", in_portfolio=True),
+            self._hilo("ISRG", "low", sector="MedTech"),
+            self._hilo("AAPL", "low", sector="Tech"),       # S&P 500 only
+            self._hilo("ZZZZ", "low", sector="Biotech"),    # matches nothing → Other
+        ]
+        text = self._text(hits, sp500={"AAPL"})
+        assert "*52-Week Lows (4)*" in text
+        assert "_Portfolio (1):_" in text
+        assert "_MedTech (1):_" in text
+        assert "_S&P 500 (1):_" in text
+        assert "_Uncategorized (1):_" in text
+        # The uncategorized name is surfaced, not dropped.
+        assert "`ZZZZ`" in text
+
+    def test_name_in_multiple_buckets_duplicated(self):
+        hits = [self._hilo("UNH", "low", sector="Healthcare Services", in_portfolio=True)]
+        text = self._text(hits, sp500={"UNH"})
+        # UNH is Portfolio, Healthcare Services, AND S&P 500 → three buckets.
+        assert "_Portfolio (1):_" in text
+        assert "_Healthcare Services (1):_" in text
+        assert "_S&P 500 (1):_" in text
+        assert text.count("`UNH`") == 3
+
+    def test_highs_also_grouped(self):
+        hits = [self._hilo("ISRG", "high", sector="MedTech")]
+        text = self._text(hits)
+        assert "*52-Week Highs (1)*" in text
+        assert "_MedTech (1):_" in text
+
+    def test_highs_and_lows_both_present(self):
+        hits = [
+            self._hilo("ISRG", "high", sector="MedTech"),
+            self._hilo("HCA", "low", sector="Healthcare Services"),
+        ]
+        text = self._text(hits)
+        assert "*52-Week Highs (1)*" in text
+        assert "*52-Week Lows (1)*" in text
+        assert text.index("52-Week Highs") < text.index("52-Week Lows")
+
+
 class TestOverviewCard:
     def test_build_blocks_is_valid_and_lists_groups(self):
         import post_overview

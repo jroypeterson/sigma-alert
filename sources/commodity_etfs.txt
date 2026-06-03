@@ -1,0 +1,6 @@
+# Commodity ETFs — render under a _Commodities_ sub-header in the
+# "Index, Sector & Macro Returns" Slack section (below _Tech Themes_).
+# Regular total-return ETFs: go through the normal _format_etf_line()
+# path with prior-year/YTD returns, like the sector/tech groups.
+# Added 2026-06-03 (GLD, per the "gold index price return" request).
+GLD

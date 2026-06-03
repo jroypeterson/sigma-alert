@@ -45,6 +45,7 @@ SECTOR_ETFS_PATH = ROOT / "sources" / "sector_etfs.txt"
 INDEX_ETFS_PATH = ROOT / "sources" / "index_etfs.txt"
 HEALTHCARE_ETFS_PATH = ROOT / "sources" / "healthcare_etfs.txt"
 TECH_ETFS_PATH = ROOT / "sources" / "tech_etfs.txt"
+COMMODITY_ETFS_PATH = ROOT / "sources" / "commodity_etfs.txt"
 MACRO_PATH = ROOT / "sources" / "macro.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
 # Personal trading state pushed by Coverage Manager's weekly sigma_export step.
@@ -290,6 +291,16 @@ def load_tech_etfs() -> set[str]:
     return _load_ticker_set(TECH_ETFS_PATH)
 
 
+def load_commodity_etfs() -> set[str]:
+    """Load commodity ETFs (GLD) from sources/commodity_etfs.txt.
+
+    Regular total-return ETFs that render under a `_Commodities_` sub-header in
+    the Slack returns block (below `_Tech Themes_`). Like the other ETF groups
+    they carry prior-year/YTD period returns and go through `_format_etf_line`.
+    """
+    return _load_ticker_set(COMMODITY_ETFS_PATH)
+
+
 def load_macro() -> set[str]:
     """Load macro / cross-asset tickers (^TNX/DX-Y.NYB/CL=F) from sources/macro.txt.
 
@@ -313,6 +324,121 @@ MACRO_STYLE = {
     "CL=F": "price",
 }
 MACRO_ORDER = ["^TNX", "DX-Y.NYB", "CL=F"]
+
+
+# ---------------------------------------------------------------------------
+# Credit indices (HY / IG) — sourced from FRED, NOT yfinance.
+# ---------------------------------------------------------------------------
+# JP asked for "HY and IG index levels and YTD yield changes" — actual credit
+# index levels, not bond-ETF prices. The ICE BofA index families publish daily
+# effective yields AND option-adjusted spreads (OAS, the rate-stripped credit
+# signal) on FRED. FRED's public CSV endpoint needs no API key, so this adds a
+# credit backdrop without a new secret. These are levels, not tradeable
+# tickers, so they render in their own `_Credit_` sub-group (after `_Macro_`)
+# via `_format_credit_line` and never produce alerts or join the download path.
+#
+# Series (yields + OAS both reported in percent on FRED; ×100 → basis points):
+#   BAMLH0A0HYM2EY — ICE BofA US High Yield Index Effective Yield
+#   BAMLH0A0HYM2   — ICE BofA US High Yield Index Option-Adjusted Spread
+#   BAMLC0A0CMEY   — ICE BofA US Corporate (IG) Index Effective Yield
+#   BAMLC0A0CM     — ICE BofA US Corporate (IG) Index Option-Adjusted Spread
+CREDIT_SERIES = {
+    "HY": {"label": "US High Yield", "yield_id": "BAMLH0A0HYM2EY", "oas_id": "BAMLH0A0HYM2"},
+    "IG": {"label": "US Corp IG", "yield_id": "BAMLC0A0CMEY", "oas_id": "BAMLC0A0CM"},
+}
+CREDIT_ORDER = ["HY", "IG"]
+FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}&cosd={start}"
+
+
+def _fetch_fred_series(series_id: str, start: str | None = None,
+                       timeout: int = 15, retries: int = 1) -> list[tuple[str, float]]:
+    """Fetch one FRED series via the public no-key CSV endpoint.
+
+    `start` bounds the download to observations on/after that date (FRED `cosd`
+    param). These ICE BofA series go back ~25 years; left unbounded the CSV is
+    multi-MB and times out, so the caller passes a ~2-year window — all that's
+    needed for last/prev values + the prior-year-end YTD baseline.
+
+    Returns an ascending list of `(YYYY-MM-DD, value)` with missing observations
+    (`.`) dropped. Returns `[]` on any network/parse failure — the caller then
+    renders the rest of the message without the credit block (warn-and-proceed,
+    never a hard stop). One retry with a short backoff guards the wake/catch-up
+    network race. Parses positionally (field 0 = date, field 1 = value) so it's
+    robust to FRED's header-name changes (`DATE` → `observation_date`).
+    """
+    url = FRED_CSV_URL.format(series_id=series_id, start=start or "1900-01-01")
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(url, timeout=timeout)
+            resp.raise_for_status()
+            break
+        except requests.RequestException as e:
+            last_err = e
+            if attempt < retries:
+                time.sleep(1.5 * (attempt + 1))
+    else:
+        print(f"[WARN] FRED fetch failed for {series_id}: {last_err}")
+        return []
+
+    out: list[tuple[str, float]] = []
+    for line in resp.text.splitlines()[1:]:  # skip header row
+        parts = line.split(",")
+        if len(parts) < 2:
+            continue
+        d, v = parts[0].strip(), parts[1].strip()
+        if not v or v == ".":
+            continue
+        try:
+            out.append((d, float(v)))
+        except ValueError:
+            continue
+    return out
+
+
+def fetch_credit_indices() -> dict:
+    """Fetch HY/IG effective yields + OAS spreads from FRED for the `_Credit_`
+    returns sub-group.
+
+    Returns `{key: {label, yield_level, yield_bp_chg, [oas_bp, oas_bp_chg],
+    [yield_ytd_bp]}}` for each of HY/IG that resolves. Levels are in percent;
+    the `*_bp*` fields are basis points (yield/OAS delta ×100). YTD is the
+    yield's move in bp from its prior calendar-year-end level (a % "return" on a
+    yield/spread is misleading — basis points are the right unit, mirroring the
+    10Y treatment in `_format_macro_line`). A series that fails to resolve is
+    omitted; an empty dict means the whole credit block is skipped.
+    """
+    prior_year = str(today_et().year - 1)
+    # Bound the FRED download to Jan 1 of the prior year — enough for last/prev
+    # values plus the prior-year-end YTD baseline, and small enough to be fast.
+    start = f"{prior_year}-01-01"
+    results: dict = {}
+    for key in CREDIT_ORDER:
+        cfg = CREDIT_SERIES[key]
+        yseries = _fetch_fred_series(cfg["yield_id"], start=start)
+        if len(yseries) < 2:
+            print(f"[WARN] credit: insufficient yield data for {key}, skipping")
+            continue
+        y_last = yseries[-1][1]
+        y_prev = yseries[-2][1]
+        entry = {
+            "label": cfg["label"],
+            "yield_level": y_last,
+            "yield_bp_chg": (y_last - y_prev) * 100,
+        }
+        prior_year_obs = [v for (d, v) in yseries if d[:4] == prior_year]
+        if prior_year_obs:
+            entry["yield_ytd_bp"] = (y_last - prior_year_obs[-1]) * 100
+
+        oseries = _fetch_fred_series(cfg["oas_id"], start=start)
+        if len(oseries) >= 2:
+            o_last = oseries[-1][1]
+            o_prev = oseries[-2][1]
+            entry["oas_bp"] = o_last * 100
+            entry["oas_bp_chg"] = (o_last - o_prev) * 100
+
+        results[key] = entry
+    return results
 
 
 def load_etf_names() -> dict:
@@ -996,12 +1122,22 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if high_series is not None and low_series is not None:
         result = check_52w_high_low(high_series, low_series, close)
         if result:
+            # Carry the same subcategory-membership fields as alert dicts so the
+            # 52-week list can be grouped by JP's taxonomy (Portfolio → … →
+            # MedTech → HC Services → S&P 500 → Other) via the shared
+            # SUBCATEGORIES predicates, instead of rendering as a flat list.
             hi_lo = {
                 "ticker": ticker,
                 "name": name,
                 "sector": sector,
+                "subsector": subsector,
                 "type": result,
                 "price": float(close.iloc[-1]),
+                "in_portfolio": ticker in (portfolio_set or set()),
+                "in_researching": ticker in (researching_set or set()),
+                "in_following_for_interest": ticker in (following_set or set()),
+                "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
+                "in_ready_to_short": ticker in (ready_to_short_set or set()),
             }
 
     return alert, cache_entry, hi_lo, ticker_stats, None
@@ -1265,7 +1401,9 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          index_etf_set: set[str] | None = None,
                          healthcare_etf_set: set[str] | None = None,
                          tech_etf_set: set[str] | None = None,
+                         commodity_etf_set: set[str] | None = None,
                          macro_etf_set: set[str] | None = None,
+                         credit_data: dict | None = None,
                          etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
@@ -1409,7 +1547,13 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             },
         })
 
-    # 52-week high/low section (close mode only)
+    # 52-week high/low section (close mode only). Grouped by the same
+    # subcategory taxonomy as the alert tiers (Portfolio → Researching → …
+    # → MedTech → HC Services → S&P 500) so the new-highs/lows readout is
+    # legible by the buckets JP cares about, with an `Other` catch-all so
+    # names outside every bucket are surfaced rather than hidden (unlike the
+    # alert tiers, which drop unmatched names). A name matching multiple
+    # buckets shows once per bucket, mirroring the alert duplication.
     if hi_lo_hits:
         blocks.append({"type": "divider"})
 
@@ -1422,55 +1566,84 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             sector = f" [{h['sector']}]" if h.get("sector") else ""
             return f"`{h['ticker']}`{name_part}{sector}"
 
+        def _grouped_hi_lo_lines(items):
+            """Render one indented sub-line per non-empty subcategory, plus an
+            `Other` line for names matching no bucket."""
+            lines = []
+            for label, predicate in SUBCATEGORIES:
+                members = [h for h in items if predicate(h, sp500)]
+                if members:
+                    chips = ", ".join(_format_hi_lo_ticker(h) for h in members)
+                    lines.append(f"    _{label} ({len(members)}):_  {chips}")
+            # Names matching no bucket (e.g. non-Core Biotech / Specialty Pharma
+            # not in S&P 500). Labeled "Uncategorized" to avoid colliding with
+            # the "Other (Tech, SaaS, …)" sector subcategory above.
+            others = [
+                h for h in items
+                if not any(predicate(h, sp500) for _, predicate in SUBCATEGORIES)
+            ]
+            if others:
+                chips = ", ".join(_format_hi_lo_ticker(h) for h in others)
+                lines.append(f"    _Uncategorized ({len(others)}):_  {chips}")
+            return lines
+
         hi_lo_lines = []
         if highs:
-            tickers_str = ", ".join(_format_hi_lo_ticker(h) for h in highs)
-            hi_lo_lines.append(f"\U0001F7E2 *52-Week Highs ({len(highs)}):*  {tickers_str}")
+            hi_lo_lines.append(f"\U0001F7E2 *52-Week Highs ({len(highs)})*")
+            hi_lo_lines.extend(_grouped_hi_lo_lines(highs))
         if lows:
-            tickers_str = ", ".join(_format_hi_lo_ticker(h) for h in lows)
-            hi_lo_lines.append(f"\U0001F534 *52-Week Lows ({len(lows)}):*  {tickers_str}")
+            if highs:
+                hi_lo_lines.append("")  # blank spacer between highs and lows
+            hi_lo_lines.append(f"\U0001F534 *52-Week Lows ({len(lows)})*")
+            hi_lo_lines.extend(_grouped_hi_lo_lines(lows))
 
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "\n".join(hi_lo_lines),
-            },
-        })
+        # Chunk in case a heavy new-lows day overflows Slack's 3000-char limit
+        # (the old single-block render could silently exceed it).
+        if hi_lo_lines:
+            _append_section_chunked(blocks, hi_lo_lines[0], hi_lo_lines[1:])
 
     # Index & sector ETF returns section. Indices (SPYM/DIA/QQQ) render
     # at the top, then sector ETFs underneath. Both groups sorted by
     # z-score descending so the strongest move within each group leads.
-    if etf_returns:
+    if etf_returns or credit_data:
+        _etf_returns = etf_returns or []
         idx_set = index_etf_set or set()
         hc_set = healthcare_etf_set or set()
         tech_set = tech_etf_set or set()
+        commodity_set = commodity_etf_set or set()
         macro_set = macro_etf_set or set()
         index_rows = sorted(
-            [s for s in etf_returns if s["ticker"] in idx_set],
+            [s for s in _etf_returns if s["ticker"] in idx_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         healthcare_rows = sorted(
-            [s for s in etf_returns if s["ticker"] in hc_set],
+            [s for s in _etf_returns if s["ticker"] in hc_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         tech_rows = sorted(
-            [s for s in etf_returns if s["ticker"] in tech_set],
+            [s for s in _etf_returns if s["ticker"] in tech_set],
+            key=lambda s: s["z_score"], reverse=True,
+        )
+        commodity_rows = sorted(
+            [s for s in _etf_returns if s["ticker"] in commodity_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         sector_rows = sorted(
-            [s for s in etf_returns
+            [s for s in _etf_returns
              if s["ticker"] not in idx_set and s["ticker"] not in hc_set
-             and s["ticker"] not in tech_set and s["ticker"] not in macro_set],
+             and s["ticker"] not in tech_set and s["ticker"] not in commodity_set
+             and s["ticker"] not in macro_set],
             key=lambda s: s["z_score"], reverse=True,
         )
         # Macro rows render in fixed MACRO_ORDER (rates -> FX -> commodity),
         # not z-sorted — three unlike asset classes don't sort meaningfully.
-        _macro_by_ticker = {s["ticker"]: s for s in etf_returns if s["ticker"] in macro_set}
+        _macro_by_ticker = {s["ticker"]: s for s in _etf_returns if s["ticker"] in macro_set}
         macro_rows = [_macro_by_ticker[t] for t in MACRO_ORDER if t in _macro_by_ticker]
         # Any macro ticker not in MACRO_ORDER (shouldn't happen) still shows.
-        macro_rows += [s for s in etf_returns
+        macro_rows += [s for s in _etf_returns
                        if s["ticker"] in macro_set and s["ticker"] not in MACRO_ORDER]
+        # Credit rows come from FRED (credit_data), not the yfinance returns.
+        credit_rows = [k for k in CREDIT_ORDER if k in (credit_data or {})]
 
         def _format_macro_line(s):
             """Render a macro row. Yields show level% + bp change; price/level
@@ -1513,6 +1686,24 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 core = f"{sign}{rp:.2f}%  |  z = {z:+.2f}"
             return f"{marker}  `{t}` ({name})  |  {core}"
 
+        def _format_credit_line(key, d):
+            """Render a credit row: `HY (US High Yield) | yield 7.42% +3.1bp |
+            OAS 312bp +5bp | YTD +18bp`. Colored by the spread move (widening =
+            risk-off = red, tightening = green) — the OAS change is THE credit
+            signal; falls back to the yield change when OAS is unavailable.
+            Yields/spreads are levels, so no z-score and no $price."""
+            color_chg = d.get("oas_bp_chg")
+            if color_chg is None:
+                color_chg = d.get("yield_bp_chg", 0.0)
+            marker = "\U0001F7E5" if color_chg > 0 else "\U0001F7E9"
+            parts = [f"yield {d['yield_level']:.2f}% {d['yield_bp_chg']:+.1f}bp"]
+            if "oas_bp" in d:
+                parts.append(f"OAS {d['oas_bp']:.0f}bp {d['oas_bp_chg']:+.0f}bp")
+            if "yield_ytd_bp" in d:
+                parts.append(f"YTD {d['yield_ytd_bp']:+.0f}bp")
+            label = d.get("label") or key
+            return f"{marker}  `{key}` ({label})  |  " + "  |  ".join(parts)
+
         def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
             sign = "+" if s["return_pct"] > 0 else ""
@@ -1542,7 +1733,8 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 f"{price_part}{pct_of_high_part}{range_part}{period_part}"
             )
 
-        if index_rows or sector_rows or healthcare_rows or tech_rows or macro_rows:
+        if (index_rows or sector_rows or healthcare_rows or tech_rows
+                or commodity_rows or macro_rows or credit_rows):
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
@@ -1550,6 +1742,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             if macro_rows:
                 lines.append("_Macro_")
                 lines.extend(_format_macro_line(s) for s in macro_rows)
+                rendered_any = True
+            if credit_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Credit_")
+                lines.extend(_format_credit_line(k, credit_data[k]) for k in credit_rows)
                 rendered_any = True
             if index_rows:
                 if rendered_any:
@@ -1574,6 +1772,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     lines.append("")  # blank spacer between groups
                 lines.append("_Tech Themes_")
                 lines.extend(_format_etf_line(s) for s in tech_rows)
+                rendered_any = True
+            if commodity_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Commodities_")
+                lines.extend(_format_etf_line(s) for s in commodity_rows)
                 rendered_any = True
             _append_section_chunked(blocks, header, lines)
 
@@ -1689,17 +1893,20 @@ def main():
     sector_etf_set = load_sector_etfs()
     healthcare_etf_set = load_healthcare_etfs()
     tech_etf_set = load_tech_etfs()
+    commodity_etf_set = load_commodity_etfs()
     macro_set = load_macro()
-    # Tech-theme + macro tickers join etf_set so they share the download path,
-    # alert suppression, and missing-metadata exemption — but render separately.
+    # Tech-theme + commodity + macro tickers join etf_set so they share the
+    # download path, alert suppression, and missing-metadata exemption — but
+    # render under their own sub-headers.
     etf_set = (index_etf_set | sector_etf_set | healthcare_etf_set
-               | tech_etf_set | macro_set)
+               | tech_etf_set | commodity_etf_set | macro_set)
     if etf_set:
         print(
             f"[INFO] Loaded {len(index_etf_set)} index ETFs + "
             f"{len(sector_etf_set)} sector ETFs + "
             f"{len(healthcare_etf_set)} healthcare ETFs + "
             f"{len(tech_etf_set)} tech-theme ETFs + "
+            f"{len(commodity_etf_set)} commodity ETFs + "
             f"{len(macro_set)} macro tickers for returns block"
         )
 
@@ -1814,13 +2021,24 @@ def main():
         print(f"[INFO] Period returns computed: {len(etf_period_returns)} tickers "
               f"({len(alert_tickers)} alert + ETFs + macro)")
 
+    # Credit indices (HY/IG effective yields + OAS spreads) from FRED's no-key
+    # CSV. A separate fetch from the yfinance path — these are levels, not
+    # tickers. Failure is non-fatal: an empty dict just omits the _Credit_ block.
+    credit_data = fetch_credit_indices()
+    if credit_data:
+        print(f"[INFO] Credit indices fetched from FRED: {sorted(credit_data)}")
+    else:
+        print("[WARN] No credit data from FRED — _Credit_ block will be omitted")
+
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
         etf_returns=etf_returns, index_etf_set=index_etf_set,
         healthcare_etf_set=healthcare_etf_set,
         tech_etf_set=tech_etf_set,
+        commodity_etf_set=commodity_etf_set,
         macro_etf_set=macro_set,
+        credit_data=credit_data,
         etf_period_returns=etf_period_returns,
     )
     send_slack(payload)

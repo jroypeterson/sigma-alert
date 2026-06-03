@@ -58,6 +58,10 @@ def build_blocks() -> dict:
     sector = _ordered(s.SECTOR_ETFS_PATH)
     healthcare = _ordered(s.HEALTHCARE_ETFS_PATH)
     tech = _ordered(s.TECH_ETFS_PATH)
+    commodity = _ordered(s.COMMODITY_ETFS_PATH)
+    credit = ", ".join(
+        f"`{k}` ({s.CREDIT_SERIES[k]['label']})" for k in s.CREDIT_ORDER
+    )
 
     blocks = [
         {"type": "header",
@@ -80,15 +84,18 @@ def build_blocks() -> dict:
             "Portfolio → Researching → Ready to Buy → Ready to Short → Following for Interest "
             "→ Healthcare Services → MedTech → Large Pharma → Other (Tech/SaaS/Fin/Ind/Cons/"
             "Energy/Mat/RE) → S&P 500.  _A name in multiple buckets shows once per bucket._\n"
-            "*Close digest also lists* any new *52-week highs / lows* from the session."
+            "*Close digest also lists* any new *52-week highs / lows* from the session, "
+            "grouped by the same subcategories (with an _Uncategorized_ catch-all)."
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Index, Sector & Macro Returns* (every digest, at the bottom)\n"
             f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
+            f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; level + day bp + YTD yield bp; colored by spread move)_\n"
             f"• *Indices* — {', '.join(_named(index, names))}\n"
             f"• *Sectors* — SPDR Select Sector ETFs ({', '.join('`'+t+'`' for t in sector)})\n"
             f"• *Healthcare* — {', '.join(_named(healthcare, names))}\n"
-            f"• *Tech Themes* — {', '.join(_named(tech, names))}"
+            f"• *Tech Themes* — {', '.join(_named(tech, names))}\n"
+            f"• *Commodities* — {', '.join(_named(commodity, names))}"
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Reading an alert line*\n"
