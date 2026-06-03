@@ -401,12 +401,14 @@ def fetch_credit_indices() -> dict:
     returns sub-group.
 
     Returns `{key: {label, yield_level, yield_bp_chg, [oas_bp, oas_bp_chg],
-    [yield_ytd_bp]}}` for each of HY/IG that resolves. Levels are in percent;
-    the `*_bp*` fields are basis points (yield/OAS delta ×100). YTD is the
-    yield's move in bp from its prior calendar-year-end level (a % "return" on a
-    yield/spread is misleading — basis points are the right unit, mirroring the
-    10Y treatment in `_format_macro_line`). A series that fails to resolve is
-    omitted; an empty dict means the whole credit block is skipped.
+    [yield_ytd_bp], [oas_ytd_bp]}}` for each of HY/IG that resolves. Levels are
+    in percent; the `*_bp*` fields are basis points (yield/OAS delta ×100). The
+    two YTD fields are the year-to-date moves in bp from each metric's prior
+    calendar-year-end level — one for the yield, one for the OAS spread — and
+    are rendered separately labeled (a % "return" on a yield/spread is
+    misleading, and a single YTD figure is ambiguous when both a yield and a
+    spread are shown). A series that fails to resolve is omitted; an empty dict
+    means the whole credit block is skipped.
     """
     prior_year = str(today_et().year - 1)
     # Bound the FRED download to Jan 1 of the prior year — enough for last/prev
@@ -436,6 +438,9 @@ def fetch_credit_indices() -> dict:
             o_prev = oseries[-2][1]
             entry["oas_bp"] = o_last * 100
             entry["oas_bp_chg"] = (o_last - o_prev) * 100
+            oas_prior_obs = [v for (d, v) in oseries if d[:4] == prior_year]
+            if oas_prior_obs:
+                entry["oas_ytd_bp"] = (o_last - oas_prior_obs[-1]) * 100
 
         results[key] = entry
     return results
@@ -1687,8 +1692,13 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             return f"{marker}  `{t}` ({name})  |  {core}"
 
         def _format_credit_line(key, d):
-            """Render a credit row: `HY (US High Yield) | yield 7.42% +3.1bp |
-            OAS 312bp +5bp | YTD +18bp`. Colored by the spread move (widening =
+            """Render a credit row, e.g.:
+            `HY (US High Yield) | yield 7.42% +3.1bp | OAS 312bp +5bp |
+             YTD: yield +18bp, OAS +12bp`.
+            Each metric shows level + 1-day bp change inline; the trailing YTD
+            segment carries BOTH year-to-date changes (yield level and OAS
+            spread, in absolute bp), each labeled, so it's never ambiguous which
+            move the YTD figure refers to. Colored by the spread move (widening =
             risk-off = red, tightening = green) — the OAS change is THE credit
             signal; falls back to the yield change when OAS is unavailable.
             Yields/spreads are levels, so no z-score and no $price."""
@@ -1699,8 +1709,13 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             parts = [f"yield {d['yield_level']:.2f}% {d['yield_bp_chg']:+.1f}bp"]
             if "oas_bp" in d:
                 parts.append(f"OAS {d['oas_bp']:.0f}bp {d['oas_bp_chg']:+.0f}bp")
+            ytd_bits = []
             if "yield_ytd_bp" in d:
-                parts.append(f"YTD {d['yield_ytd_bp']:+.0f}bp")
+                ytd_bits.append(f"yield {d['yield_ytd_bp']:+.0f}bp")
+            if "oas_ytd_bp" in d:
+                ytd_bits.append(f"OAS {d['oas_ytd_bp']:+.0f}bp")
+            if ytd_bits:
+                parts.append("YTD: " + ", ".join(ytd_bits))
             label = d.get("label") or key
             return f"{marker}  `{key}` ({label})  |  " + "  |  ".join(parts)
 

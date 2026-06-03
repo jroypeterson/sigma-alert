@@ -753,13 +753,27 @@ class TestCreditRendering:
     def test_credit_renders_yield_oas_ytd(self):
         cd = {"HY": {"label": "US High Yield", "yield_level": 7.42,
                      "yield_bp_chg": 3.1, "oas_bp": 312, "oas_bp_chg": 5,
-                     "yield_ytd_bp": 18}}
+                     "yield_ytd_bp": 18, "oas_ytd_bp": 12}}
         text = self._text(cd)
         assert "_Credit_" in text
         assert "`HY` (US High Yield)" in text
         assert "yield 7.42% +3.1bp" in text
         assert "OAS 312bp +5bp" in text
-        assert "YTD +18bp" in text
+        # Both YTD changes render, each labeled, in absolute bp.
+        assert "YTD: yield +18bp, OAS +12bp" in text
+
+    def test_credit_ytd_labels_each_change(self):
+        # Only the yield YTD present → label it, no bare/ambiguous "YTD".
+        d = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": 1.0,
+                    "oas_bp": 300, "oas_bp_chg": 1, "yield_ytd_bp": 20}}
+        text = self._text(d)
+        assert "YTD: yield +20bp" in text
+        assert "OAS +" not in text.split("YTD:")[1]  # no OAS YTD when absent
+        # Only the OAS YTD present → label it.
+        d2 = {"IG": {"label": "y", "yield_level": 5.0, "yield_bp_chg": 0.0,
+                     "oas_bp": 80, "oas_bp_chg": -1, "oas_ytd_bp": -8}}
+        text2 = self._text(d2)
+        assert "YTD: OAS -8bp" in text2
 
     def test_widening_spread_is_red_tightening_is_green(self):
         widen = {"HY": {"label": "x", "yield_level": 7.0, "yield_bp_chg": 1.0,
@@ -822,7 +836,7 @@ class TestFetchCreditIndices:
     def test_computes_bp_changes_and_ytd(self, monkeypatch):
         series = {
             "BAMLH0A0HYM2EY": [("2025-12-31", 6.50), ("2026-06-01", 6.87), ("2026-06-02", 6.88)],
-            "BAMLH0A0HYM2": [("2026-06-01", 2.72), ("2026-06-02", 2.71)],
+            "BAMLH0A0HYM2": [("2025-12-31", 2.40), ("2026-06-01", 2.72), ("2026-06-02", 2.71)],
             "BAMLC0A0CMEY": [("2025-12-31", 4.84), ("2026-06-01", 5.14), ("2026-06-02", 5.14)],
             "BAMLC0A0CM": [("2026-06-01", 0.73), ("2026-06-02", 0.74)],
         }
@@ -835,7 +849,10 @@ class TestFetchCreditIndices:
         assert round(cd["HY"]["yield_ytd_bp"], 0) == 38        # (6.88-6.50)*100
         assert round(cd["HY"]["oas_bp"], 0) == 271             # 2.71*100
         assert round(cd["HY"]["oas_bp_chg"], 0) == -1          # (2.71-2.72)*100
+        assert round(cd["HY"]["oas_ytd_bp"], 0) == 31          # (2.71-2.40)*100
         assert round(cd["IG"]["oas_bp"], 0) == 74
+        # IG OAS series has no prior-year obs → oas_ytd_bp omitted (not crash).
+        assert "oas_ytd_bp" not in cd["IG"]
 
     def test_skips_series_with_insufficient_data(self, monkeypatch):
         # HY yield resolves; IG yield returns nothing → IG dropped, HY kept.

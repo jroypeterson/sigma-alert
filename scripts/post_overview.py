@@ -90,7 +90,7 @@ def build_blocks() -> dict:
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Index, Sector & Macro Returns* (every digest, at the bottom)\n"
             f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
-            f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; level + day bp + YTD yield bp; colored by spread move)_\n"
+            f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_\n"
             f"• *Indices* — {', '.join(_named(index, names))}\n"
             f"• *Sectors* — SPDR Select Sector ETFs ({', '.join('`'+t+'`' for t in sector)})\n"
             f"• *Healthcare* — {', '.join(_named(healthcare, names))}\n"
