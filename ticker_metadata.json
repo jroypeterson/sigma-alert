@@ -7727,6 +7727,48 @@
     "sub_subsector": "",
     "core": ""
   },
+  "WOOF": {
+    "name": "Petco Health and Wellness Company, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CHWY": {
+    "name": "Chewy, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "FRPT": {
+    "name": "Freshpet, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "TRUP": {
+    "name": "Trupanion, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "PETS": {
+    "name": "PetMed Express, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CENTA": {
+    "name": "Central Garden & Pet Company",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",

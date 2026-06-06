@@ -29,6 +29,36 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "CENTA": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Central Garden & Pet Company",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CHWY": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Chewy, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "CSU": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
@@ -89,6 +119,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "FRPT": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Freshpet, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "JPM": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
@@ -104,6 +149,36 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "PETS": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "PetMed Express, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "TRUP": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Trupanion, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "WMT": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
@@ -118,5 +193,20 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y"
+  },
+  "WOOF": {
+    "position": "Following for Interest",
+    "position_date": "2026-06-06",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Petco Health and Wellness Company, Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
   }
 }
