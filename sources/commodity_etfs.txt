@@ -4,3 +4,9 @@
 # path with prior-year/YTD returns, like the sector/tech groups.
 # Added 2026-06-03 (GLD, per the "gold index price return" request).
 GLD
+# BTC-USD = bitcoin spot price (yfinance 24/7 pair, like CL=F/^TNX have special
+# chars). Added 2026-06-06 per the "add bitcoin price, next to gold" request.
+# Trades 7 days/wk, so its trailing-252 daily-return z-score spans ~252 calendar
+# days vs ~365 for the weekday ETFs — its own distribution, which is correct for
+# BTC. Smoke-tested: downloads clean, day%/YTD/52w-range all compute.
+BTC-USD
