@@ -40,7 +40,7 @@
     "notes": "",
     "name": "Central Garden & Pet Company",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   },
@@ -55,7 +55,7 @@
     "notes": "",
     "name": "Chewy, Inc.",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   },
@@ -130,7 +130,7 @@
     "notes": "",
     "name": "Freshpet, Inc.",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   },
@@ -160,7 +160,7 @@
     "notes": "",
     "name": "PetMed Express, Inc.",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   },
@@ -175,7 +175,7 @@
     "notes": "",
     "name": "Trupanion, Inc.",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   },
@@ -205,7 +205,7 @@
     "notes": "",
     "name": "Petco Health and Wellness Company, Inc.",
     "sector": "Consumer",
-    "subsector": "",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
   }
