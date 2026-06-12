@@ -657,6 +657,28 @@ class TestMacroRendering:
         text = self._text([self._row("^TNX", "10Y Treasury Yield", 4.10, 2.5)])
         assert "YTD:" not in text
 
+    def test_yield_rise_is_red_not_green(self):
+        # A 10Y yield RISE is a price decline → must be RED, never green.
+        # (Regression for the color-sign bug: yields are colored like bonds,
+        # the inverse of an equity return.)
+        text = self._text([self._row("^TNX", "10Y Treasury Yield", 4.10, 2.5, z=0.6)])
+        assert "\U0001F7E5" in text       # red marker on a yield rise
+        assert "\U0001F7E9" not in text   # never green on a yield rise
+
+    def test_yield_fall_is_green(self):
+        # A yield FALL is a price gain → green.
+        text = self._text([self._row("^TNX", "10Y Treasury Yield", 4.10, -2.5, z=-0.6)])
+        assert "\U0001F7E9" in text       # green marker on a yield fall
+        assert "\U0001F7E5" not in text
+
+    def test_price_down_still_red_yield_inversion_scoped(self):
+        # The yield inversion must NOT leak to price/level styles: a WTI down
+        # day stays red (normal equity coloring) and an up day green.
+        assert "\U0001F7E5" in self._text(
+            [self._row("CL=F", "WTI Crude Oil", 92.5, -1.2, z=-0.4)])
+        assert "\U0001F7E9" in self._text(
+            [self._row("CL=F", "WTI Crude Oil", 92.5, 1.2, z=0.4)])
+
 
 class TestTechThemesRendering:
     TECH_SET = {"MAGS", "SMH", "IGV"}
@@ -872,6 +894,110 @@ class TestCreditRendering:
         text = "\n".join(b["text"]["text"] for b in payload["blocks"]
                          if b.get("type") == "section")
         assert text.index("_Macro_") < text.index("_Credit_") < text.index("_Indices_")
+
+
+class TestTreasuryCurveRendering:
+    def _text(self, curve_data, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            curve_data=curve_data, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_renders_level_bp_and_ytd(self):
+        cd = {"10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0, "ytd_bp": 33}}
+        text = self._text(cd)
+        assert "_Treasury Curve_" in text
+        assert "`10Y`" in text
+        assert "4.41%" in text
+        assert "+5.0bp" in text
+        assert "YTD: +33bp" in text
+        # A yield is a level, not a $price, and carries no z-score.
+        assert "$4.41" not in text
+        assert "z =" not in text
+
+    def test_yield_rise_is_red_fall_is_green(self):
+        rise = {"10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0}}
+        assert "\U0001F7E5" in self._text(rise)   # red on a yield rise
+        fall = {"2Y": {"label": "2Y", "level": 3.90, "bp_chg": -3.0}}
+        assert "\U0001F7E9" in self._text(fall)   # green on a yield fall
+
+    def test_curve_order_2y_10y_30y(self):
+        cd = {  # insertion order scrambled; render order must be 2Y → 10Y → 30Y
+            "30Y": {"label": "30Y", "level": 4.68, "bp_chg": 4.0},
+            "2Y": {"label": "2Y", "level": 3.92, "bp_chg": 2.0},
+            "10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0},
+        }
+        text = self._text(cd)
+        assert text.index("`2Y`") < text.index("`10Y`") < text.index("`30Y`")
+
+    def test_missing_ytd_omits_suffix(self):
+        cd = {"2Y": {"label": "2Y", "level": 3.92, "bp_chg": 2.0}}
+        assert "YTD" not in self._text(cd)
+
+    def test_renders_without_etf_returns(self):
+        # A curve-only message (no yfinance returns) still emits the section.
+        cd = {"10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0}}
+        text = self._text(cd)
+        assert "Index, Sector & Macro Returns" in text
+        assert "_Treasury Curve_" in text
+
+    def test_curve_after_macro_before_credit(self):
+        cd = {"10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0}}
+        credit = {"HY": {"label": "HY", "yield_level": 7.0, "yield_bp_chg": 1.0,
+                         "oas_bp": 300, "oas_bp_chg": 1}}
+        macro_row = {"ticker": "^TNX", "name": "10Y", "z_score": 0.5,
+                     "return_pct": 1.0, "price": 4.1, "high_52w": None, "low_52w": None}
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=[macro_row], macro_etf_set={"^TNX"},
+            curve_data=cd, credit_data=credit,
+        )
+        text = "\n".join(b["text"]["text"] for b in payload["blocks"]
+                         if b.get("type") == "section")
+        assert (text.index("_Macro_") < text.index("_Treasury Curve_")
+                < text.index("_Credit_"))
+
+
+class TestFetchTreasuryCurve:
+    def test_computes_bp_changes_and_ytd(self, monkeypatch):
+        series = {
+            "DGS2":  [("2025-12-31", 4.25), ("2026-06-01", 3.90), ("2026-06-02", 3.92)],
+            "DGS10": [("2025-12-31", 4.08), ("2026-06-01", 4.36), ("2026-06-02", 4.41)],
+            "DGS30": [("2025-12-31", 4.47), ("2026-06-01", 4.64), ("2026-06-02", 4.68)],
+        }
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series.get(sid, []))
+        cv = sigma_screener.fetch_treasury_curve()
+        assert set(cv) == {"2Y", "10Y", "30Y"}
+        assert cv["10Y"]["level"] == 4.41
+        assert round(cv["10Y"]["bp_chg"], 1) == 5.0     # (4.41-4.36)*100
+        assert round(cv["10Y"]["ytd_bp"], 0) == 33      # (4.41-4.08)*100
+        assert round(cv["2Y"]["bp_chg"], 1) == 2.0      # (3.92-3.90)*100
+        assert round(cv["30Y"]["ytd_bp"], 0) == 21      # (4.68-4.47)*100
+
+    def test_skips_series_with_insufficient_data(self, monkeypatch):
+        # DGS2 has a single obs → dropped; the other two keep.
+        series = {
+            "DGS2":  [("2026-06-02", 3.92)],
+            "DGS10": [("2026-06-01", 4.36), ("2026-06-02", 4.41)],
+            "DGS30": [("2026-06-01", 4.64), ("2026-06-02", 4.68)],
+        }
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series.get(sid, []))
+        cv = sigma_screener.fetch_treasury_curve()
+        assert set(cv) == {"10Y", "30Y"}
+
+    def test_omits_ytd_when_no_prior_year_obs(self, monkeypatch):
+        # No prior-calendar-year observation → ytd_bp omitted (not a crash).
+        series = {"DGS10": [("2026-06-01", 4.36), ("2026-06-02", 4.41)]}
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series.get(sid, []))
+        cv = sigma_screener.fetch_treasury_curve()
+        assert "ytd_bp" not in cv["10Y"]
 
 
 class TestFetchCreditIndices:

@@ -363,6 +363,30 @@ CREDIT_ORDER = ["HY", "IG"]
 FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}&cosd={start}"
 
 
+# ---------------------------------------------------------------------------
+# US Treasury yield curve (2/10/30) — sourced from FRED, NOT yfinance.
+# ---------------------------------------------------------------------------
+# JP asked for the US yield curve (2, 10, 30-year) "as of yesterday's close".
+# Yahoo/yfinance has no 2-year yield ticker (only ^FVX 5Y / ^TNX 10Y / ^TYX 30Y),
+# so the full 2/10/30 curve must come from FRED's daily constant-maturity series
+# (DGS2/DGS10/DGS30). FRED daily yields publish the prior business day's close
+# next morning — i.e. exactly "yesterday's close". Rendered in its own
+# `_Treasury Curve_` sub-group (after `_Macro_`, before `_Credit_`) via
+# `_format_curve_line`: each maturity shows level% + 1-day bp move + YTD bp.
+# Colored like a bond, NOT an equity: a yield RISE = price DOWN = 🟥, a yield
+# FALL = 🟩 (the same inversion `_format_credit_line` applies to OAS). This is
+# deliberately separate from the intraday ^TNX 10Y in `_Macro_` — that row is a
+# live (today) tick; this curve is the prior-close snapshot across maturities,
+# so the 10Y intentionally appears in both. No API key required (FRED CSV is
+# public).
+TREASURY_CURVE_SERIES = {
+    "2Y": "DGS2",
+    "10Y": "DGS10",
+    "30Y": "DGS30",
+}
+TREASURY_CURVE_ORDER = ["2Y", "10Y", "30Y"]
+
+
 def _fetch_fred_series(series_id: str, start: str | None = None,
                        timeout: int = 15, retries: int = 1) -> list[tuple[str, float]]:
     """Fetch one FRED series via the public no-key CSV endpoint.
@@ -455,6 +479,46 @@ def fetch_credit_indices() -> dict:
             if oas_prior_obs:
                 entry["oas_ytd_bp"] = (o_last - oas_prior_obs[-1]) * 100
 
+        results[key] = entry
+    return results
+
+
+def fetch_treasury_curve() -> dict:
+    """Fetch the US Treasury 2/10/30 yield curve from FRED for the
+    `_Treasury Curve_` returns sub-group.
+
+    Returns `{key: {label, level, bp_chg, [ytd_bp]}}` for each maturity that
+    resolves (key in TREASURY_CURVE_ORDER). `level` is the yield in percent as of
+    the most recent FRED observation — the prior business-day close, since FRED's
+    daily constant-maturity yields publish next morning ("yesterday's close").
+    `bp_chg` is the 1-day move in basis points (latest minus prior observation,
+    which skips weekends/holidays since FRED reports those as missing). `ytd_bp`
+    is the move in bp from the prior calendar year-end level. A maturity that
+    fails to resolve is omitted; an empty dict means the whole curve block is
+    skipped (warn-and-proceed — never a hard stop). No API key required.
+    """
+    prior_year = str(today_et().year - 1)
+    # Bound the FRED download to Jan 1 of the prior year — enough for last/prev
+    # values plus the prior-year-end YTD baseline, and small enough to be fast.
+    start = f"{prior_year}-01-01"
+    results: dict = {}
+    for key in TREASURY_CURVE_ORDER:
+        series_id = TREASURY_CURVE_SERIES[key]
+        series = _fetch_fred_series(series_id, start=start)
+        if len(series) < 2:
+            print(f"[WARN] treasury curve: insufficient data for {key} "
+                  f"({series_id}), skipping")
+            continue
+        last = series[-1][1]
+        prev = series[-2][1]
+        entry = {
+            "label": key,
+            "level": last,
+            "bp_chg": (last - prev) * 100,
+        }
+        prior_year_obs = [v for (d, v) in series if d[:4] == prior_year]
+        if prior_year_obs:
+            entry["ytd_bp"] = (last - prior_year_obs[-1]) * 100
         results[key] = entry
     return results
 
@@ -1423,6 +1487,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          commodity_etf_set: set[str] | None = None,
                          macro_etf_set: set[str] | None = None,
                          credit_data: dict | None = None,
+                         curve_data: dict | None = None,
                          etf_period_returns: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting."""
     current = now_et()
@@ -1624,7 +1689,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # Index & sector ETF returns section. Indices (SPYM/DIA/QQQ) render
     # at the top, then sector ETFs underneath. Both groups sorted by
     # z-score descending so the strongest move within each group leads.
-    if etf_returns or credit_data:
+    if etf_returns or credit_data or curve_data:
         _etf_returns = etf_returns or []
         idx_set = index_etf_set or set()
         global_eq_set = global_equity_etf_set or set()
@@ -1669,6 +1734,9 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                        if s["ticker"] in macro_set and s["ticker"] not in MACRO_ORDER]
         # Credit rows come from FRED (credit_data), not the yfinance returns.
         credit_rows = [k for k in CREDIT_ORDER if k in (credit_data or {})]
+        # Treasury-curve rows also come from FRED (curve_data), in fixed
+        # short->long maturity order.
+        curve_rows = [k for k in TREASURY_CURVE_ORDER if k in (curve_data or {})]
 
         def _format_macro_line(s):
             """Render a macro row. Yields show level% + bp change; price/level
@@ -1679,7 +1747,15 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             z = s["z_score"]
             level = s.get("price")
             name = s.get("name") or t
-            marker = "\U0001F7E9" if rp > 0 else "\U0001F7E5"
+            if style == "yield":
+                # A bond yield RISE is a price decline, so color it like a loss
+                # (red), the inverse of an equity return. Mirrors the inversion
+                # in _format_credit_line (widening OAS = red) and the
+                # international dashboard's yield rows. The price/level styles
+                # (DXY, oil) keep the normal green-on-up rule below.
+                marker = "\U0001F7E5" if rp > 0 else "\U0001F7E9"
+            else:
+                marker = "\U0001F7E9" if rp > 0 else "\U0001F7E5"
             sign = "+" if rp > 0 else ""
             period = period_map.get(t)
             if style == "yield" and level is not None:
@@ -1739,6 +1815,21 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             label = d.get("label") or key
             return f"{marker}  `{key}` ({label})  |  " + "  |  ".join(parts)
 
+        def _format_curve_line(key, d):
+            """Render a Treasury-curve row, e.g.:
+            `🟥 `10Y` | 4.41% | +5.0bp | YTD: +33bp`.
+            Level (prior-close yield, percent) + 1-day bp move + YTD bp from the
+            prior year-end. Colored like a bond: a yield RISE is a price decline
+            so it's red (🟥), a yield FALL is green (🟩) — the inverse of an
+            equity return (same inversion as the credit OAS row). Yields are
+            levels, so no z-score and no $price."""
+            bp = d["bp_chg"]
+            marker = "\U0001F7E5" if bp > 0 else "\U0001F7E9"
+            parts = [f"{d['level']:.2f}%", f"{bp:+.1f}bp"]
+            if "ytd_bp" in d:
+                parts.append(f"YTD: {d['ytd_bp']:+.0f}bp")
+            return f"{marker}  `{key}`  |  " + "  |  ".join(parts)
+
         def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
             sign = "+" if s["return_pct"] > 0 else ""
@@ -1769,7 +1860,8 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             )
 
         if (index_rows or global_equity_rows or sector_rows or healthcare_rows
-                or tech_rows or commodity_rows or macro_rows or credit_rows):
+                or tech_rows or commodity_rows or macro_rows or credit_rows
+                or curve_rows):
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
@@ -1777,6 +1869,12 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             if macro_rows:
                 lines.append("_Macro_")
                 lines.extend(_format_macro_line(s) for s in macro_rows)
+                rendered_any = True
+            if curve_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
+                lines.append("_Treasury Curve_ (prior close, FRED)")
+                lines.extend(_format_curve_line(k, curve_data[k]) for k in curve_rows)
                 rendered_any = True
             if credit_rows:
                 if rendered_any:
@@ -2073,6 +2171,15 @@ def main():
     else:
         print("[WARN] No credit data from FRED — _Credit_ block will be omitted")
 
+    # US Treasury 2/10/30 yield curve from FRED's no-key CSV (DGS2/10/30).
+    # Prior-close snapshot across maturities — separate from the intraday ^TNX
+    # 10Y in _Macro_. Failure is non-fatal: an empty dict omits the curve block.
+    curve_data = fetch_treasury_curve()
+    if curve_data:
+        print(f"[INFO] Treasury curve fetched from FRED: {sorted(curve_data)}")
+    else:
+        print("[WARN] No treasury-curve data from FRED — _Treasury Curve_ block will be omitted")
+
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
@@ -2083,6 +2190,7 @@ def main():
         commodity_etf_set=commodity_etf_set,
         macro_etf_set=macro_set,
         credit_data=credit_data,
+        curve_data=curve_data,
         etf_period_returns=etf_period_returns,
     )
     send_slack(payload)
