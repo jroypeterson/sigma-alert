@@ -269,6 +269,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "PACS": {
+    "position": "Portfolio",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "PACS Group Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Post-Acute",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "Q": {
     "position": "Portfolio",
     "position_date": "2026-04-11",
