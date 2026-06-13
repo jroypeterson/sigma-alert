@@ -214,6 +214,93 @@ def load_watchlist() -> list[str]:
     return tickers
 
 
+# ---------------------------------------------------------------------------
+# Foreign-ticker symbol normalization
+# ---------------------------------------------------------------------------
+# Coverage Manager pushes foreign coverage names as Bloomberg-style symbols
+# (GETIB.SS, COH.AU, ...) and keys ticker_metadata.json + the position files by
+# the BARE base symbol (GETIB, COH, ...). yfinance needs yet a third form
+# (GETI-B.ST, COH.AX). So a foreign watchlist ticker carries three identities:
+#   • display   — the watchlist ticker (Slack label, cache key, skip-log key)
+#   • yf symbol — what we hand to yf.download()                (to_yf_symbol)
+#   • meta key  — the base symbol CM keys metadata/positions by (to_metadata_key)
+# US tickers and caret indices (^TNX) have all three identical. US class shares
+# already use the dash form in the watchlist (BF-B, BRK-B), so a dotted ticker
+# is always a foreign exchange listing — no US-class-share collision.
+# All mappings below verified live against yfinance on 2026-06-13.
+
+# Bloomberg exchange suffix → yfinance exchange suffix, for the suffixes that
+# DIFFER. Suffixes already in yfinance form (.DE/.MI/.SW/.L/.SA/.T/.HK) need no
+# remap and are intentionally absent here.
+_BLOOMBERG_SUFFIX_MAP = {
+    "SS": "ST",   # Stockholm (Nasdaq Stockholm)
+    "AU": "AX",   # Australia (ASX)
+    "IM": "MI",   # Milan (Borsa Italiana)
+    "DC": "CO",   # Copenhagen
+    "LN": "L",    # London (LSE)
+    "FP": "PA",   # Paris (Euronext)
+    "CH": "SW",   # Switzerland (SIX)
+    "GY": "DE",   # Germany (Xetra)
+}
+
+# Every exchange suffix recognized as a foreign listing (Bloomberg forms +
+# already-yfinance forms that appear in the watchlist). A dotted ticker whose
+# suffix is in here is keyed in CM metadata/positions by its bare base symbol.
+_EXCHANGE_SUFFIXES = set(_BLOOMBERG_SUFFIX_MAP) | {
+    "ST", "AX", "MI", "CO", "L", "PA", "SW", "DE", "SA", "T", "HK",
+}
+
+# Explicit display → yfinance overrides the suffix rule can't derive:
+#   - class shares, where Bloomberg glues the class letter onto the base
+#     (GETIB → GETI-B), and
+#   - bare foreign names carrying no exchange suffix in the watchlist.
+# Each verified to return live yfinance data whose name matches the CM
+# metadata entry (2026-06-13). Names NOT included (ASX/OSSFF/SHMZF) already
+# resolve as-is; MMED is left untouched (ambiguous — "MMED" on Nasdaq is a
+# different company than CM's metadata name).
+_YF_SYMBOL_OVERRIDES = {
+    # Class shares
+    "GETIB.SS": "GETI-B.ST",   # Getinge B
+    "COLOB.DC": "COLO-B.CO",   # Coloplast B
+    "AMBUSH.DC": "AMBU-B.CO",  # Ambu B
+    "SECARE.SS": "SECT-B.ST",  # Sectra B
+    # Bare foreign names (watchlist has no exchange suffix)
+    "BIM": "BIM.PA",      # bioMerieux (Euronext Paris)
+    "FRE": "FRE.DE",      # Fresenius (Xetra)
+    "GXI": "GXI.DE",      # Gerresheimer (Xetra)
+    "DAE": "DAE.SW",      # Daetwyler (SIX)
+    "SOON": "SOON.SW",    # Sonova (SIX)
+    "YPSN": "YPSN.SW",    # Ypsomed (SIX)
+    "RDOR3": "RDOR3.SA",  # Rede D'Or (B3, Brazil)
+    "CPH": "CPH.TO",      # Cipher Pharmaceuticals (TSX)
+}
+
+
+def to_yf_symbol(display: str) -> str:
+    """Map a watchlist (display/Bloomberg) ticker to its yfinance symbol."""
+    if display in _YF_SYMBOL_OVERRIDES:
+        return _YF_SYMBOL_OVERRIDES[display]
+    if "." not in display or display.startswith("^"):
+        return display
+    base, _, suffix = display.rpartition(".")
+    if suffix in _BLOOMBERG_SUFFIX_MAP:
+        return f"{base}.{_BLOOMBERG_SUFFIX_MAP[suffix]}"
+    return display  # already a yfinance-form suffix (.DE/.MI/.SW/.L/.SA/.T/.HK)
+
+
+def to_metadata_key(display: str) -> str:
+    """Map a watchlist ticker to the base symbol Coverage Manager keys
+    ticker_metadata.json + the position files by. A foreign exchange listing
+    is keyed by its bare base (GETIB.SS → GETIB); US tickers, dash-form class
+    shares (BF-B), and caret indices are returned unchanged."""
+    if "." not in display or display.startswith("^"):
+        return display
+    base, _, suffix = display.rpartition(".")
+    if suffix in _EXCHANGE_SUFFIXES:
+        return base
+    return display
+
+
 def load_sp500_set() -> set[str]:
     """Load S&P 500 tickers from sources/sp500.txt into a set for membership checks."""
     if not SP500_PATH.exists():
@@ -704,7 +791,11 @@ def write_missing_metadata_flag(tickers: list[str], metadata: dict,
     for t in tickers:
         if t in exempt:
             continue
-        meta = metadata.get(t)
+        # Foreign listings are keyed in CM metadata by their base symbol
+        # (GETIB.SS → GETIB), so join on the base key — otherwise every
+        # foreign name false-flags as a gap. The gap itself is still reported
+        # under the display ticker so the operator sees the watchlist entry.
+        meta = metadata.get(to_metadata_key(t))
         if meta is None:
             gaps[t] = "not_in_metadata"
         elif not (meta.get("name") or "").strip():
@@ -893,8 +984,12 @@ def download_todays_prices(tickers: list[str]) -> dict:
     We then validate that the latest bar is from today before using it.
     """
     prices = {}
+    # Download under yfinance symbols (foreign names need them) but key the
+    # returned dict by the display ticker so the caller's cache/metadata joins
+    # — which are display/base-keyed — line up.
+    yf_symbols = [to_yf_symbol(t) for t in tickers]
     try:
-        data = yf.download(tickers, period="5d", progress=False, threads=True)
+        data = yf.download(yf_symbols, period="5d", progress=False, threads=True)
         if data.empty:
             return prices
 
@@ -913,9 +1008,10 @@ def download_todays_prices(tickers: list[str]) -> dict:
                 print("[WARN] Stale batch data, skipping all tickers in cached path")
                 return prices
             for ticker in tickers:
+                yf_sym = to_yf_symbol(ticker)
                 try:
-                    close_col = data["Close"][ticker].dropna()
-                    open_col = data["Open"][ticker].dropna()
+                    close_col = data["Close"][yf_sym].dropna()
+                    open_col = data["Open"][yf_sym].dropna()
                     if len(close_col) >= 2 and len(open_col) >= 1:
                         prev_close = float(close_col.iloc[-2])
                         today_open = float(open_col.iloc[-1])
@@ -927,7 +1023,7 @@ def download_todays_prices(tickers: list[str]) -> dict:
         for ticker in tickers:
             time.sleep(random.uniform(1, 2))
             try:
-                d = yf.download(ticker, period="5d", progress=False)
+                d = yf.download(to_yf_symbol(ticker), period="5d", progress=False)
                 if len(d) >= 2 and validate_bar_date(d.index, "open"):
                     prev_close = float(d["Close"].iloc[-2])
                     today_open = float(d["Open"].iloc[-1])
@@ -998,7 +1094,8 @@ def screen_open_cached(tickers: list[str], cache: dict,
             ytd_return_pct = (today_open - prior_year_end_close) / prior_year_end_close * 100
 
         z = compute_z_score(today_return, mu, sigma)
-        meta = (metadata or {}).get(ticker, {})
+        mkey = to_metadata_key(ticker)
+        meta = (metadata or {}).get(mkey, {})
         sector = meta.get("sector", "")
         subsector = meta.get("subsector", "")
         abs_z = abs(z)
@@ -1020,7 +1117,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
         if abs_z >= SIGMA_THRESHOLD:
             tier = "2sigma"
         elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
-                meta, ticker, portfolio_set, researching_set,
+                meta, mkey, portfolio_set, researching_set,
                 following_set=following_set,
                 ready_to_buy_set=ready_to_buy_set,
                 ready_to_short_set=ready_to_short_set):
@@ -1040,11 +1137,11 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "direction": "up" if today_return > 0 else "down",
                 "three_sigma": abs_z >= THREE_SIGMA,
                 "tier": tier,
-                "in_portfolio": ticker in (portfolio_set or set()),
-                "in_researching": ticker in (researching_set or set()),
-                "in_following_for_interest": ticker in (following_set or set()),
-                "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
-                "in_ready_to_short": ticker in (ready_to_short_set or set()),
+                "in_portfolio": mkey in (portfolio_set or set()),
+                "in_researching": mkey in (researching_set or set()),
+                "in_following_for_interest": mkey in (following_set or set()),
+                "in_ready_to_buy": mkey in (ready_to_buy_set or set()),
+                "in_ready_to_short": mkey in (ready_to_short_set or set()),
             })
     return alerts, stats, etf_returns
 
@@ -1078,13 +1175,21 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          researching_set: set[str] | None = None,
                          following_set: set[str] | None = None,
                          ready_to_buy_set: set[str] | None = None,
-                         ready_to_short_set: set[str] | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
+                         ready_to_short_set: set[str] | None = None,
+                         meta_key: str | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
+
+    `ticker` is the display identity (stamped on alerts/cache/stats — the
+    Slack label and cache key). `meta_key` is the key Coverage Manager uses
+    for ticker_metadata.json + the position sets; it differs from `ticker`
+    only for foreign listings (GETIB.SS display → GETIB meta key). Defaults
+    to `ticker` for US names, so existing callers/tests are unaffected.
 
     Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none, ticker_stats_or_none, skip_reason_or_none).
     ticker_stats is always populated when computation succeeds (used for sector ETF returns).
     skip_reason is set (and other values None) when the ticker cannot be screened.
     """
+    meta_key = meta_key or ticker
     if len(close) < 32:
         print(f"[WARN] {ticker}: insufficient data ({len(close)} days), skipping")
         return None, None, None, None, "insufficient_history"
@@ -1149,7 +1254,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if prior_year_end_close:
         ytd_return_pct = (today_price - prior_year_end_close) / prior_year_end_close * 100
 
-    meta = (metadata or {}).get(ticker, {})
+    meta = (metadata or {}).get(meta_key, {})
     name = meta.get("name", "")
     sector = meta.get("sector", "")
     subsector = meta.get("subsector", "")
@@ -1171,7 +1276,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if abs_z >= SIGMA_THRESHOLD:
         tier = "2sigma"
     elif abs_z >= ONE_SIGMA_THRESHOLD and _is_one_sigma_eligible(
-            meta, ticker, portfolio_set, researching_set,
+            meta, meta_key, portfolio_set, researching_set,
             following_set=following_set,
             ready_to_buy_set=ready_to_buy_set,
             ready_to_short_set=ready_to_short_set):
@@ -1192,11 +1297,11 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "direction": "up" if today_return > 0 else "down",
             "three_sigma": abs_z >= THREE_SIGMA,
             "tier": tier,
-            "in_portfolio": ticker in (portfolio_set or set()),
-            "in_researching": ticker in (researching_set or set()),
-            "in_following_for_interest": ticker in (following_set or set()),
-            "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
-            "in_ready_to_short": ticker in (ready_to_short_set or set()),
+            "in_portfolio": meta_key in (portfolio_set or set()),
+            "in_researching": meta_key in (researching_set or set()),
+            "in_following_for_interest": meta_key in (following_set or set()),
+            "in_ready_to_buy": meta_key in (ready_to_buy_set or set()),
+            "in_ready_to_short": meta_key in (ready_to_short_set or set()),
         }
 
     # 52-week high/low check (only when high/low data is provided)
@@ -1215,11 +1320,11 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                 "subsector": subsector,
                 "type": result,
                 "price": float(close.iloc[-1]),
-                "in_portfolio": ticker in (portfolio_set or set()),
-                "in_researching": ticker in (researching_set or set()),
-                "in_following_for_interest": ticker in (following_set or set()),
-                "in_ready_to_buy": ticker in (ready_to_buy_set or set()),
-                "in_ready_to_short": ticker in (ready_to_short_set or set()),
+                "in_portfolio": meta_key in (portfolio_set or set()),
+                "in_researching": meta_key in (researching_set or set()),
+                "in_following_for_interest": meta_key in (following_set or set()),
+                "in_ready_to_buy": meta_key in (ready_to_buy_set or set()),
+                "in_ready_to_short": meta_key in (ready_to_short_set or set()),
             }
 
     return alert, cache_entry, hi_lo, ticker_stats, None
@@ -1263,8 +1368,12 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
 
-    # Attempt batch download
-    data = batch_download(tickers, start_str, end_str)
+    # Attempt batch download. Foreign coverage names are downloaded under
+    # their yfinance symbol (GETIB.SS → GETI-B.ST) while everything downstream
+    # — cache key, alert identity, skip log — stays keyed by the display
+    # ticker, and the CM metadata/position join uses the base symbol.
+    yf_symbols = [to_yf_symbol(t) for t in tickers]
+    data = batch_download(yf_symbols, start_str, end_str)
     failed_tickers = []
 
     if data is not None:
@@ -1278,16 +1387,17 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
         for ticker in tickers:
             try:
+                yf_sym = to_yf_symbol(ticker)
                 if len(tickers) == 1:
                     close = data["Close"].dropna()
                     open_prices = data["Open"].dropna()
                     high_s = data["High"].dropna()
                     low_s = data["Low"].dropna()
                 else:
-                    close = data["Close"][ticker].dropna()
-                    open_prices = data["Open"][ticker].dropna()
-                    high_s = data["High"][ticker].dropna()
-                    low_s = data["Low"][ticker].dropna()
+                    close = data["Close"][yf_sym].dropna()
+                    open_prices = data["Open"][yf_sym].dropna()
+                    high_s = data["High"][yf_sym].dropna()
+                    low_s = data["Low"][yf_sym].dropna()
 
                 alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
@@ -1296,6 +1406,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     following_set=following_set,
                     ready_to_buy_set=ready_to_buy_set,
                     ready_to_short_set=ready_to_short_set,
+                    meta_key=to_metadata_key(ticker),
                 )
 
                 if cache_entry is None:
@@ -1322,7 +1433,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     for ticker in failed_tickers:
         print(f"[INFO] Falling back to individual download for {ticker}")
         time.sleep(random.uniform(1, 2))
-        single_data = fallback_download_single(ticker, start_str, end_str)
+        single_data = fallback_download_single(to_yf_symbol(ticker), start_str, end_str)
         if single_data is None or len(single_data) < 32:
             print(f"[WARN] {ticker}: insufficient data in fallback, skipping")
             stats["skipped"] += 1
@@ -1350,6 +1461,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 following_set=following_set,
                 ready_to_buy_set=ready_to_buy_set,
                 ready_to_short_set=ready_to_short_set,
+                meta_key=to_metadata_key(ticker),
             )
 
             if cache_entry is None:
@@ -1410,9 +1522,13 @@ def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
     end_str = end_date.strftime("%Y-%m-%d")
 
     tickers = sorted(etf_set)
+    # Download under yfinance symbols (the alert tickers folded in here can be
+    # foreign names) but key results by the display ticker so the caller's
+    # join against alert/ETF rows lines up.
+    yf_symbols = [to_yf_symbol(t) for t in tickers]
     try:
         data = yf.download(
-            tickers,
+            yf_symbols,
             start=start_str,
             end=end_str,
             progress=False,
@@ -1431,13 +1547,14 @@ def fetch_etf_period_returns(etf_set: set[str], mode: str) -> dict:
 
     results: dict = {}
     for ticker in tickers:
+        yf_sym = to_yf_symbol(ticker)
         try:
             if len(tickers) == 1:
                 close = data["Close"].dropna()
                 open_s = data["Open"].dropna()
             else:
-                close = data["Close"][ticker].dropna()
-                open_s = data["Open"][ticker].dropna()
+                close = data["Close"][yf_sym].dropna()
+                open_s = data["Open"][yf_sym].dropna()
         except (KeyError, IndexError):
             continue
 

@@ -1309,3 +1309,98 @@ class TestMissingMetadataFlag:
         )
         assert result == {}
         assert not flag_path.exists()
+
+    def test_foreign_ticker_not_false_flagged(self, tmp_path, monkeypatch):
+        """A foreign display ticker (GETIB.SS) joins CM metadata by its base
+        key (GETIB), so it must not be reported as a gap."""
+        flag_path = tmp_path / "missing_metadata.json"
+        monkeypatch.setattr(sigma_screener, "MISSING_METADATA_PATH", flag_path)
+        tickers = ["AAPL", "GETIB.SS", "ZZZZ.SS"]
+        metadata = {"AAPL": {"name": "Apple Inc"}, "GETIB": {"name": "Getinge AB"}}
+        result = write_missing_metadata_flag(tickers, metadata)
+        # GETIB.SS resolves via base; only the genuinely-unknown ZZZZ.SS flags,
+        # and it's reported under its display ticker.
+        assert set(result["tickers"].keys()) == {"ZZZZ.SS"}
+
+
+# ---------------------------------------------------------------------------
+# Foreign-ticker symbol normalization
+# ---------------------------------------------------------------------------
+
+from sigma_screener import to_metadata_key, to_yf_symbol  # noqa: E402
+
+
+class TestSymbolNormalization:
+    def test_us_ticker_unchanged(self):
+        for t in ["AAPL", "UNH", "BF-B", "BRK-B"]:
+            assert to_yf_symbol(t) == t
+            assert to_metadata_key(t) == t
+
+    def test_caret_index_unchanged(self):
+        assert to_yf_symbol("^TNX") == "^TNX"
+        assert to_metadata_key("^DRG") == "^DRG"
+
+    def test_bloomberg_suffix_remap(self):
+        # Suffix-only remaps (Bloomberg → yfinance exchange suffix).
+        assert to_yf_symbol("COH.AU") == "COH.AX"
+        assert to_yf_symbol("AMP.IM") == "AMP.MI"
+        assert to_yf_symbol("CTEC.LN") == "CTEC.L"
+        assert to_yf_symbol("ERF.FP") == "ERF.PA"
+        assert to_yf_symbol("GN.DC") == "GN.CO"
+        assert to_yf_symbol("LONN.CH") == "LONN.SW"
+        assert to_yf_symbol("SHL.GY") == "SHL.DE"
+
+    def test_already_yf_suffix_left_alone(self):
+        # Suffixes already in yfinance form are not remapped.
+        for t in ["1SXP.DE", "DIA.MI", "ONT.L", "HAPV3.SA", "STMN.SW"]:
+            assert to_yf_symbol(t) == t
+
+    def test_class_share_overrides(self):
+        assert to_yf_symbol("GETIB.SS") == "GETI-B.ST"
+        assert to_yf_symbol("COLOB.DC") == "COLO-B.CO"
+        assert to_yf_symbol("AMBUSH.DC") == "AMBU-B.CO"
+        assert to_yf_symbol("SECARE.SS") == "SECT-B.ST"
+
+    def test_bare_foreign_name_overrides(self):
+        assert to_yf_symbol("BIM") == "BIM.PA"
+        assert to_yf_symbol("FRE") == "FRE.DE"
+        assert to_yf_symbol("RDOR3") == "RDOR3.SA"
+        assert to_yf_symbol("CPH") == "CPH.TO"
+
+    def test_metadata_key_strips_exchange_suffix(self):
+        # All foreign listings — Bloomberg or already-yf suffix — key on base.
+        assert to_metadata_key("GETIB.SS") == "GETIB"
+        assert to_metadata_key("COLOB.DC") == "COLOB"
+        assert to_metadata_key("COH.AU") == "COH"
+        assert to_metadata_key("SHL.GY") == "SHL"
+        assert to_metadata_key("1SXP.DE") == "1SXP"
+        assert to_metadata_key("DIA.MI") == "DIA"
+        assert to_metadata_key("ONT.L") == "ONT"
+
+    def test_metadata_key_for_bare_names_is_self(self):
+        # Bare foreign names (no dot) are already the CM base key.
+        for t in ["BIM", "FRE", "RDOR3", "CPH"]:
+            assert to_metadata_key(t) == t
+
+    def test_process_ticker_uses_meta_key_for_join_and_membership(self):
+        """Display ticker drives identity; meta_key drives the metadata join
+        and position-set membership."""
+        idx = pd.bdate_range(end=date.today(), periods=60)
+        np.random.seed(7)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.004, len(idx) - 1))
+        close = pd.Series(list(base) + [float(base[-1] * 1.05)], index=idx)
+        metadata = {"GETIB": {"name": "Getinge AB", "sector": "MedTech",
+                              "subsector": "Cardiovascular", "core": "Y"}}
+        alert, cache_entry, _hi, _stats, skip = _process_ticker_full(
+            "GETIB.SS", close, close.copy(), None, None, "close", metadata,
+            portfolio_set={"GETIB"},
+            meta_key="GETIB",
+        )
+        assert skip is None and alert is not None
+        # Rendered identity is the display ticker…
+        assert alert["ticker"] == "GETIB.SS"
+        # …but the CM name/sector joined via the base key…
+        assert alert["name"] == "Getinge AB"
+        assert alert["sector"] == "MedTech"
+        # …and Portfolio membership matched on the base key.
+        assert alert["in_portfolio"] is True
