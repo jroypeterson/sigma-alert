@@ -2799,13 +2799,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "EXAS": {
-    "name": "Exact Sciences Corporation",
-    "sector": "MedTech",
-    "subsector": "Diagnostics",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "EXEL": {
     "name": "Exelixis Inc",
     "sector": "Biopharma",
@@ -3191,8 +3184,8 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "GMRE": {
-    "name": "Global Medical REIT Inc",
+  "XRN": {
+    "name": "Chiron Real Estate Inc",
     "sector": "Healthcare Services",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
@@ -3405,13 +3398,6 @@
     "name": "Hinge Health Inc",
     "sector": "Healthcare Services",
     "subsector": "Benefits",
-    "sub_subsector": "",
-    "core": "Y"
-  },
-  "HOLX": {
-    "name": "Hologic, Inc.",
-    "sector": "MedTech",
-    "subsector": "Diagnostics",
     "sub_subsector": "",
     "core": "Y"
   },
@@ -4549,7 +4535,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "MPW": {
+  "MPT": {
     "name": "Medical Properties Trust, Inc.",
     "sector": "Healthcare Services",
     "subsector": "Healthcare Real Estate",
@@ -7521,13 +7507,6 @@
     "name": "Novocure Limited",
     "sector": "MedTech",
     "subsector": "Diversified MedTech",
-    "sub_subsector": "",
-    "core": "Y"
-  },
-  "ACCD": {
-    "name": "Accolade, Inc.",
-    "sector": "Healthcare Services",
-    "subsector": "Benefits",
     "sub_subsector": "",
     "core": "Y"
   },
