@@ -2361,6 +2361,108 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-06-16",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ADI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "AMP.IM",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "BKNG",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CVSG",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "DECK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "EFX",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GMRS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HAL",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "JBL",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "KMB",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "LFST",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MOBI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MOVE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "RGEN",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ROG",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SFZS.SW",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SMCI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SNA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SNDK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TSN",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TWST",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "XRAY",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "XYZ",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
