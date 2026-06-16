@@ -1,5 +1,5 @@
 # Healthcare Services — Coverage Manager
-# Last updated: 2026-06-15
+# Last updated: 2026-06-16
 ACH
 ACHC
 ADUS
@@ -37,7 +37,6 @@ DHC
 DOC
 DOCS
 DVA
-EHAB
 EHC
 ELV
 ENSG
