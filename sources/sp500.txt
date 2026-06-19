@@ -1,5 +1,5 @@
 # S&P 500 Constituents
-# Last updated: 2026-06-01
+# Last updated: 2026-06-19
 # Check for reconstitution updates quarterly (March, June, September, December)
 # Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
 A
@@ -114,7 +114,6 @@ COP
 COR
 COST
 CPAY
-CPB
 CPRT
 CPT
 CRH
@@ -167,7 +166,6 @@ ELV
 EME
 EMR
 EOG
-EPAM
 EQIX
 EQR
 EQT
@@ -189,6 +187,7 @@ FAST
 FCX
 FDS
 FDX
+FDXF
 FE
 FFIV
 FICO
@@ -196,6 +195,7 @@ FIS
 FISV
 FITB
 FIX
+FLEX
 FOX
 FOXA
 FRT
@@ -319,6 +319,7 @@ MPWR
 MRK
 MRNA
 MRSH
+MRVL
 MS
 MSCI
 MSFT
@@ -375,7 +376,6 @@ PNC
 PNR
 PNW
 PODD
-POOL
 PPG
 PPL
 PRU
