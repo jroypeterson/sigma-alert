@@ -86,7 +86,6 @@
     "COP": "not_in_metadata",
     "COST": "not_in_metadata",
     "CPAY": "not_in_metadata",
-    "CPB": "not_in_metadata",
     "CPT": "not_in_metadata",
     "CRH": "not_in_metadata",
     "CSCO": "not_in_metadata",
@@ -126,7 +125,6 @@
     "EME": "not_in_metadata",
     "EMR": "not_in_metadata",
     "EOG": "not_in_metadata",
-    "EPAM": "not_in_metadata",
     "EQIX": "not_in_metadata",
     "EQR": "not_in_metadata",
     "EQT": "not_in_metadata",
@@ -152,6 +150,7 @@
     "FISV": "not_in_metadata",
     "FITB": "not_in_metadata",
     "FIX": "not_in_metadata",
+    "FLEX": "not_in_metadata",
     "FOX": "not_in_metadata",
     "FOXA": "not_in_metadata",
     "FRT": "not_in_metadata",
@@ -248,6 +247,7 @@
     "MPC": "not_in_metadata",
     "MPWR": "not_in_metadata",
     "MRSH": "not_in_metadata",
+    "MRVL": "not_in_metadata",
     "MS": "not_in_metadata",
     "MSCI": "not_in_metadata",
     "MSI": "not_in_metadata",
@@ -294,7 +294,6 @@
     "PNC": "not_in_metadata",
     "PNR": "not_in_metadata",
     "PNW": "not_in_metadata",
-    "POOL": "not_in_metadata",
     "PPG": "not_in_metadata",
     "PPL": "not_in_metadata",
     "PRU": "not_in_metadata",
@@ -394,5 +393,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-06-18T19:15:11.828006-04:00"
+  "updated": "2026-06-19T18:29:57.106108-04:00"
 }
