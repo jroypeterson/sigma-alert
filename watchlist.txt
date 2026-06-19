@@ -1,6 +1,6 @@
 # Sigma-Alert Watchlist
 # Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector ETFs
-# Last synced: 2026-06-16
+# Last synced: 2026-06-19
 
 # --- Healthcare Services (105 tickers) ---
 ACH
@@ -353,7 +353,6 @@ COIN
 COP
 COST
 CPAY
-CPB
 CPRT
 CPT
 CRH
@@ -398,7 +397,6 @@ EL
 EME
 EMR
 EOG
-EPAM
 EQIX
 EQR
 EQT
@@ -419,6 +417,7 @@ FAST
 FCX
 FDS
 FDX
+FDXF
 FE
 FFIV
 FICO
@@ -426,6 +425,7 @@ FIS
 FISV
 FITB
 FIX
+FLEX
 FOX
 FOXA
 FRT
@@ -538,6 +538,7 @@ MPWR
 MRK
 MRNA
 MRSH
+MRVL
 MS
 MSCI
 MSFT
@@ -592,7 +593,6 @@ PM
 PNC
 PNR
 PNW
-POOL
 PPG
 PPL
 PRU
