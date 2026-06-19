@@ -979,13 +979,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "APLS": {
-    "name": "Apellis Pharmaceuticals Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "APLT": {
     "name": "Applied Therapeutics, Inc.",
     "sector": "Biopharma",
@@ -1742,13 +1735,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CARM": {
-    "name": "Carisma Therapeutics Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "CASI": {
     "name": "CASI Pharmaceuticals Inc",
     "sector": "Biopharma",
@@ -1797,13 +1783,6 @@
     "subsector": "Life Science Software",
     "sub_subsector": "",
     "core": "Y"
-  },
-  "CFLT": {
-    "name": "Confluent, Inc.",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
   },
   "CGEM": {
     "name": "Cullinan Therapeutics Inc",
@@ -2344,13 +2323,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "DAWN": {
-    "name": "Day One Biopharmaceuticals Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "DAY": {
     "name": "NASDAQ US Dividend Achievers 50 Index",
     "sector": "SaaS",
@@ -2609,13 +2581,6 @@
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
-  },
-  "EHAB": {
-    "name": "Enhabit Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Post-Acute",
-    "sub_subsector": "",
-    "core": "Y"
   },
   "EHC": {
     "name": "Encompass Health Corp",
@@ -2938,13 +2903,6 @@
     "subsector": "Dialysis",
     "sub_subsector": "",
     "core": "Y"
-  },
-  "FOLD": {
-    "name": "Amicus Therapeutics, Inc.",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
   },
   "FRE": {
     "name": "Fresenius SE & Co KGaA",
@@ -5067,13 +5025,6 @@
     "sub_subsector": "NextGen Sequencing",
     "core": "Y"
   },
-  "ONTF": {
-    "name": "ON24 Inc",
-    "sector": "SaaS",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
-  },
   "OPCH": {
     "name": "Option Care Health Inc",
     "sector": "Healthcare Services",
@@ -5120,13 +5071,6 @@
     "name": "Oryzon Genomics S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "OS": {
-    "name": "OneStream Inc",
-    "sector": "SaaS",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
@@ -5655,13 +5599,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RAPT": {
-    "name": "RAPT Therapeutics Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "RARE": {
     "name": "Ultragenyx Pharmaceutical Inc",
     "sector": "Biopharma",
@@ -6040,13 +5977,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "SEMR": {
-    "name": "Semrush",
-    "sector": "SaaS",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
-  },
   "SEPN": {
     "name": "Septerna Inc",
     "sector": "Biopharma",
@@ -6196,13 +6126,6 @@
   },
   "SLN": {
     "name": "Silence Therapeutics PLC - ADR",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "SLNO": {
-    "name": "Soleno Therapeutics Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
@@ -6628,13 +6551,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "TERN": {
-    "name": "Terns Pharmaceuticals Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "TEVA": {
     "name": "Teva Pharmaceutical Industries Ltd",
     "sector": "Biopharma",
@@ -7055,13 +6971,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "VINC": {
-    "name": "Vincerx Pharma Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "VIRP": {
     "name": "Virbac SA",
     "sector": "Biopharma",
@@ -7176,13 +7085,6 @@
   },
   "VTVT": {
     "name": "vTv Therapeutics Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "VTYX": {
-    "name": "Ventyx Biosciences Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
