@@ -7,7 +7,12 @@
 #          is a price index, survives the yfinance batch download, and inherits
 #          the etf_set exemptions. It's an index level (~75,000), so its row
 #          shows the level + %change + z like the other index rows.
+# ^RUT   = Russell 2000 small-cap INDEX (caret index ticker like ^W5000/^DRG,
+#          not an ETF; added 2026-06-21 for small-cap breadth alongside the
+#          large/whole-market gauges). Survives the yfinance batch download and
+#          inherits the etf_set exemptions; renders as an index level (~2,300).
 SPYM
 DIA
 QQQ
 ^W5000
+^RUT

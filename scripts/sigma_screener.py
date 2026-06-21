@@ -254,10 +254,13 @@ _EXCHANGE_SUFFIXES = set(_BLOOMBERG_SUFFIX_MAP) | {
 #   - class shares, where Bloomberg glues the class letter onto the base
 #     (GETIB → GETI-B), and
 #   - bare foreign names carrying no exchange suffix in the watchlist.
-# Each verified to return live yfinance data whose name matches the CM
-# metadata entry (2026-06-13). Names NOT included (ASX/OSSFF/SHMZF) already
-# resolve as-is; MMED is left untouched (ambiguous — "MMED" on Nasdaq is a
-# different company than CM's metadata name).
+# The 2026-06-13 batch was each verified to return live yfinance data whose
+# name matches the CM metadata entry. Names NOT included (ASX/OSSFF/SHMZF)
+# already resolve as-is; MMED is left untouched (ambiguous — "MMED" on Nasdaq
+# is a different company than CM's metadata name). The 2026-06-21 additions
+# (CVSG→CVSG.L, SFZS.SW→SFZN.SW) are web-confirmed Yahoo Finance symbols
+# (quote pages exist) resolving the chronic insufficient_history skips; a live
+# yfinance round-trip should confirm them on the next close run.
 _YF_SYMBOL_OVERRIDES = {
     # Class shares
     "GETIB.SS": "GETI-B.ST",   # Getinge B
@@ -273,6 +276,9 @@ _YF_SYMBOL_OVERRIDES = {
     "YPSN": "YPSN.SW",    # Ypsomed (SIX)
     "RDOR3": "RDOR3.SA",  # Rede D'Or (B3, Brazil)
     "CPH": "CPH.TO",      # Cipher Pharmaceuticals (TSX)
+    "CVSG": "CVSG.L",     # CVS Group plc (LSE, UK animal-health / vet services)
+    # Wrong-symbol correction — CM's watchlist symbol does not exist on yfinance:
+    "SFZS.SW": "SFZN.SW",  # Siegfried Holding (SIX) — "SFZS" is a typo for SFZN
 }
 
 

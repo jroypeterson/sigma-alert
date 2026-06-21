@@ -1,0 +1,29 @@
+# Skip-report suppression list — consumed by scripts/weekly_skip_report.py.
+#
+# Tickers listed here are held OUT of the report's "Chronic skips" and
+# "Unresolved at week's end" sections. Use it for genuinely-new listings that
+# legitimately skip on `insufficient_history (<32 bars)` because they only just
+# IPO'd — so they stop showing as actionable "chronic" noise until they have
+# enough price history to screen normally (~32 trading bars, ~6.5 weeks post-IPO).
+#
+# Format: one ticker per line, optional `until=YYYY-MM-DD`, optional `# comment`.
+#   TICKER until=YYYY-MM-DD   # suppression EXPIRES on that date — after it, the
+#                              # ticker re-surfaces in the report if still skipping
+#                              # (so a new IPO that STILL can't price once it should
+#                              # have crossed 32 bars comes back as a real flag).
+#   TICKER                    # indefinite suppression (rare — prefer fixing the
+#                              # symbol via _YF_SYMBOL_OVERRIDES in sigma_screener.py).
+#
+# Suppressed tickers are NOT silently dropped: the report still counts them and
+# lists them compactly under a "Suppressed" line, so the suppression stays
+# visible (per the no-silent-failures convention). The ticker key must match the
+# watchlist/skip-log display form exactly (e.g. a foreign listing keeps its suffix).
+#
+# Prefer FIXING over suppressing: a wrong/foreign symbol that can be mapped to a
+# real yfinance symbol belongs in _YF_SYMBOL_OVERRIDES (it will then price and
+# drop out of the skip log on its own). Suppress only names that are correct but
+# simply too young to have 32 bars yet.
+
+# --- New listings accreting to 32 trading bars (added 2026-06-21) ---
+GMRS until=2026-07-20   # GMR Solutions — NYSE IPO 2026-05-14 (largest US EMS / HC services)
+MOBI until=2026-07-13   # Mobia Medical — Nasdaq IPO 2026-05-08 (medtech, stroke-recovery devices)

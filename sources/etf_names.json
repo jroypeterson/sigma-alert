@@ -3,6 +3,7 @@
   "DIA": "Dow Jones",
   "QQQ": "Nasdaq 100",
   "^W5000": "Wilshire 5000",
+  "^RUT": "Russell 2000",
   "XLE": "Energy",
   "XLB": "Materials",
   "XLU": "Utilities",

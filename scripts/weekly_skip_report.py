@@ -7,6 +7,9 @@ Slack Block Kit message summarizing the trailing 7 close-mode runs:
     attention: delisted, renamed, or permanently broken in yfinance).
   - Reason breakdown — aggregate counts by skip reason.
   - Unresolved at week's end — tickers in the most recent run's skipped list.
+  - Suppressed — known new listings still accreting price history, held out of
+    the chronic/unresolved lists via `sources/skip_report_suppress.txt` but
+    still surfaced compactly (never silently dropped).
   - Daily skip timeline — count of skips per trading day.
 
 Fires via `.github/workflows/sigma-weekly-skip-report.yml` on Friday evening,
@@ -32,6 +35,7 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 SKIP_LOG_PATH = ROOT / "cache" / "skip_log.json"
 WATCHLIST_PATH = ROOT / "watchlist.txt"
+SUPPRESS_PATH = ROOT / "sources" / "skip_report_suppress.txt"
 
 ET = ZoneInfo("America/New_York")
 WINDOW_DAYS = 7
@@ -69,6 +73,56 @@ def load_watchlist_size() -> int:
     return n
 
 
+def load_suppressions() -> dict[str, str | None]:
+    """Parse `sources/skip_report_suppress.txt` → {ticker: until_date|None}.
+
+    Each non-comment line is `TICKER [until=YYYY-MM-DD]` with an optional
+    trailing `# comment`. `until` is the inclusive last date the suppression
+    applies; a malformed/missing date means indefinite suppression (None).
+    Missing file → no suppressions.
+    """
+    out: dict[str, str | None] = {}
+    if not SUPPRESS_PATH.exists():
+        return out
+    try:
+        with open(SUPPRESS_PATH) as f:
+            lines = f.readlines()
+    except OSError as e:
+        print(f"[WARN] Could not read skip_report_suppress.txt: {e}")
+        return out
+    for raw in lines:
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        ticker = parts[0]
+        until: str | None = None
+        for tok in parts[1:]:
+            if tok.startswith("until="):
+                until = tok[len("until="):].strip() or None
+        out[ticker] = until
+    return out
+
+
+def active_suppressions(
+    suppressions: dict[str, str | None], today: str
+) -> set[str]:
+    """Tickers whose suppression is still in force as of `today` (YYYY-MM-DD).
+
+    Indefinite (until=None) entries are always active; dated entries are active
+    while `today <= until`. Expired entries drop out so a still-failing name
+    re-surfaces as a real flag. A malformed `until` (no `-`) is treated as
+    indefinite rather than silently expiring.
+    """
+    active: set[str] = set()
+    for ticker, until in suppressions.items():
+        if until is None or "-" not in until:
+            active.add(ticker)
+        elif today <= until:
+            active.add(ticker)
+    return active
+
+
 def filter_window(runs: list[dict], window_days: int = WINDOW_DAYS) -> list[dict]:
     """Return only close-mode runs from the trailing window, sorted by date."""
     cutoff = (now_et().date() - timedelta(days=window_days)).strftime("%Y-%m-%d")
@@ -80,14 +134,26 @@ def filter_window(runs: list[dict], window_days: int = WINDOW_DAYS) -> list[dict
     return out
 
 
-def compute_stats(window_runs: list[dict], watchlist_size: int) -> dict:
-    """Derive the stats we render. Keeps the Slack formatter dumb."""
+def compute_stats(
+    window_runs: list[dict],
+    watchlist_size: int,
+    suppressed: set[str] | None = None,
+) -> dict:
+    """Derive the stats we render. Keeps the Slack formatter dumb.
+
+    `suppressed` tickers are held out of the `chronic` and `unresolved` lists
+    (new listings still accreting price history); the ones that actually
+    appeared in the window are surfaced separately in `suppressed_hits` so the
+    suppression stays visible. Reason breakdown + timeline still count every
+    event (the screener genuinely skipped them)."""
+    suppressed = suppressed or set()
     if not window_runs:
         return {
             "run_count": 0,
             "chronic": [],
             "reason_breakdown": Counter(),
             "unresolved": [],
+            "suppressed_hits": [],
             "daily_timeline": [],
             "total_skip_events": 0,
             "avg_skip_rate_pct": None,
@@ -115,7 +181,7 @@ def compute_stats(window_runs: list[dict], watchlist_size: int) -> dict:
             reasons_by_ticker[ticker].add(reason)
             reason_counter[reason] += 1
 
-    # Chronic = skipped in every run in the window.
+    # Chronic = skipped in every run in the window (suppressed names excluded).
     run_count = len(window_runs)
     chronic = sorted(
         [
@@ -125,18 +191,33 @@ def compute_stats(window_runs: list[dict], watchlist_size: int) -> dict:
                 "count": skip_count_by_ticker[t],
             }
             for t, n in skip_count_by_ticker.items()
-            if n == run_count
+            if n == run_count and t not in suppressed
         ],
         key=lambda x: x["ticker"],
     )
 
-    # Most recent run's skipped list = "still broken as of today".
+    # Most recent run's skipped list = "still broken as of today" (excl. suppressed).
     latest = window_runs[-1]
     unresolved = sorted(
         [
             {"ticker": e.get("ticker", ""), "reason": e.get("reason", "unknown")}
             for e in (latest.get("skipped") or [])
-            if e.get("ticker")
+            if e.get("ticker") and e.get("ticker") not in suppressed
+        ],
+        key=lambda x: x["ticker"],
+    )
+
+    # Suppressed names that actually appeared this window — surfaced compactly so
+    # the suppression is never silent. Only list ones we actually held back.
+    suppressed_hits = sorted(
+        [
+            {
+                "ticker": t,
+                "reasons": sorted(reasons_by_ticker[t]),
+                "count": skip_count_by_ticker[t],
+            }
+            for t in suppressed
+            if t in skip_count_by_ticker
         ],
         key=lambda x: x["ticker"],
     )
@@ -153,6 +234,7 @@ def compute_stats(window_runs: list[dict], watchlist_size: int) -> dict:
         "chronic": chronic,
         "reason_breakdown": reason_counter,
         "unresolved": unresolved,
+        "suppressed_hits": suppressed_hits,
         "daily_timeline": daily_counts,
         "total_skip_events": total_events,
         "avg_skip_rate_pct": avg_skip_rate,
@@ -285,6 +367,26 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
             },
         })
 
+    # Suppressed — new listings held out of the chronic/unresolved lists, shown
+    # compactly so the suppression is visible rather than silent.
+    suppressed_hits = stats.get("suppressed_hits") or []
+    if suppressed_hits:
+        chips = ", ".join(f"`{s['ticker']}`" for s in suppressed_hits)
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f":mute: *Suppressed* ({len(suppressed_hits)}) — held out "
+                        f"of chronic/unresolved as known new listings still "
+                        f"accreting history: {chips}. "
+                        "Edit `sources/skip_report_suppress.txt` to adjust."
+                    ),
+                }
+            ],
+        })
+
     # Daily timeline — compact single-line.
     if stats["daily_timeline"]:
         timeline = "  ".join(
@@ -330,11 +432,15 @@ def main() -> int:
     if payload_raw:
         runs = filter_window(payload_raw.get("runs") or [])
 
-    stats = compute_stats(runs, watchlist_size)
+    today = now_et().date().strftime("%Y-%m-%d")
+    suppressed = active_suppressions(load_suppressions(), today)
+
+    stats = compute_stats(runs, watchlist_size, suppressed)
     print(
         f"[INFO] Window: {stats['window_start']} → {stats['window_end']} "
         f"| runs={stats['run_count']} | total_events={stats['total_skip_events']} "
-        f"| chronic={len(stats['chronic'])} | unresolved={len(stats['unresolved'])}"
+        f"| chronic={len(stats['chronic'])} | unresolved={len(stats['unresolved'])} "
+        f"| suppressed={len(stats.get('suppressed_hits') or [])}"
     )
 
     payload = format_slack_payload(stats, watchlist_size)
