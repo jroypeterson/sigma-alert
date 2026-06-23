@@ -1,5 +1,5 @@
 # Healthcare Services — Coverage Manager
-# Last updated: 2026-06-16
+# Last updated: 2026-06-23
 ACH
 ACHC
 ADUS
@@ -28,7 +28,7 @@ COR
 CRL
 CTRE
 CVS
-CVSG
+CVSG.L
 CYH
 DCGO
 DGX
@@ -87,11 +87,12 @@ RDOR3
 SBRA
 SCI
 SDGR
+Secare.SS
 SEM
 SGRY
 SILA
+SRTA
 STRW
-Secare.SS
 TALK
 TDOC
 THC

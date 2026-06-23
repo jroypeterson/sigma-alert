@@ -1,5 +1,5 @@
 # MedTech — Coverage Manager
-# Last updated: 2026-06-15
+# Last updated: 2026-06-23
 1SXP.DE
 4543.T
 6869.T
@@ -14,6 +14,7 @@ AFX.DE
 ALC
 ALGN
 ALMR
+Ambush.DC
 AMP.IM
 AORT
 ASX
@@ -22,7 +23,6 @@ ATR
 ATRC
 AVTR
 AZTA
-Ambush.DC
 BAX
 BBNX
 BDX
@@ -108,7 +108,7 @@ RMD
 ROG
 RVTY
 RXST
-SFZS.sW
+SFZN.SW
 SGHT
 SHC
 SHL.GY
