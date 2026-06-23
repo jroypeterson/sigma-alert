@@ -327,6 +327,7 @@
     "SO": "not_in_metadata",
     "SPG": "not_in_metadata",
     "SRE": "not_in_metadata",
+    "SRTA": "not_in_metadata",
     "STLD": "not_in_metadata",
     "STT": "not_in_metadata",
     "STX": "not_in_metadata",
@@ -393,5 +394,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-06-22T18:59:22.492020-04:00"
+  "updated": "2026-06-23T18:43:07.411223-04:00"
 }

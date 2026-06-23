@@ -1905,6 +1905,24 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-06-23",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "FDXF",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GMRS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MOBI",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
