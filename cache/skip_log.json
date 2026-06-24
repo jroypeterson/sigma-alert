@@ -1929,10 +1929,6 @@
       "mode": "close",
       "skipped": [
         {
-          "ticker": "EVRG",
-          "reason": "insufficient_history"
-        },
-        {
           "ticker": "FDXF",
           "reason": "insufficient_history"
         },
@@ -1941,11 +1937,7 @@
           "reason": "insufficient_history"
         },
         {
-          "ticker": "WDAY",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "WST",
+          "ticker": "Q",
           "reason": "insufficient_history"
         }
       ]
