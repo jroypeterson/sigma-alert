@@ -27,3 +27,13 @@
 # --- New listings accreting to 32 trading bars (added 2026-06-21) ---
 GMRS until=2026-07-20   # GMR Solutions — NYSE IPO 2026-05-14 (largest US EMS / HC services)
 MOBI until=2026-07-13   # Mobia Medical — Nasdaq IPO 2026-05-08 (medtech, stroke-recovery devices)
+
+# --- New listings accreting to 32 trading bars (added 2026-06-29) ---
+# FDXF = FedEx Freight Corp — the FedEx LTL spinoff that began regular-way NYSE
+# trading mid-June 2026 (first chronic skip 2026-06-19, ~its first close bars).
+# Genuinely-new US listing, not a dead/foreign symbol (CM metadata: "FedEx
+# Freight Corporation", Industrials/LTL; present in sources/sp500.txt from the
+# quarterly reconstitution), so it legitimately has <32 bars. Suppress until it
+# should have crossed 32 trading bars (~early Aug 2026); it re-surfaces as a
+# real flag if still failing after that.
+FDXF until=2026-08-08   # FedEx Freight Corp — NYSE LTL spinoff, regular-way ~2026-06-19

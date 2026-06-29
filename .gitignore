@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 *.tmp.*
 .env
+# Derived/runtime artifact — the interactive return-map HTML is regenerated on
+# every screener run (and on demand via scripts/return_map.py) from the
+# committed cache/returns_snapshot.json, so it isn't tracked.
+readable/

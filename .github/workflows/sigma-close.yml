@@ -44,6 +44,11 @@ jobs:
           # skip_log.json is rewritten every close run (trimmed to 30-day window).
           # Consumed by Coverage Manager's weekly report for skip-stats analysis.
           git add -A cache/skip_log.json
+          # returns_snapshot.json — the day's index/sector/macro returns block,
+          # persisted so scripts/return_map.py can rebuild the interactive
+          # periodic-table-of-returns (readable/return_map.html) offline without
+          # refetching any market data. Written every full run; may be absent.
+          git add -A cache/returns_snapshot.json
           # --allow-empty is NOT used — if nothing changed, no commit is made
           git diff --cached --quiet || git commit -m "Update distribution cache [skip ci]"
           git push

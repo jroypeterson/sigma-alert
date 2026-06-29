@@ -793,9 +793,9 @@ class TestGlobalEquityRendering:
             self._row("XLE", "Energy", 90.0, 1.0, z=1.0),
         ]
         text = self._text(rows, index_etf_set={"SPYM"})
-        assert "_Indices_" in text and "_Global Equity_" in text and "_Sectors_" in text
+        assert "_US Indices_" in text and "_Global Equity_" in text and "_Sectors_" in text
         # US indices first, then global equity, then sectors.
-        assert text.index("_Indices_") < text.index("_Global Equity_") < text.index("_Sectors_")
+        assert text.index("_US Indices_") < text.index("_Global Equity_") < text.index("_Sectors_")
         # EEM belongs to Global Equity, not the catch-all _Sectors_ group.
         assert text.index("`EEM`") > text.index("_Global Equity_")
         assert text.index("`EEM`") < text.index("_Sectors_")
@@ -879,7 +879,9 @@ class TestCreditRendering:
         text = self._text(cd)
         assert text.index("`HY`") < text.index("`IG`")
 
-    def test_credit_after_macro_before_indices(self):
+    def test_us_indices_lead_then_macro_then_credit(self):
+        # Per #20 the returns section LEADS with US index price returns, then
+        # the macro / rates / credit backdrop follows.
         cd = {"HY": {"label": "HY", "yield_level": 7.0, "yield_bp_chg": 1.0,
                      "oas_bp": 300, "oas_bp_chg": 1}}
         macro_row = {"ticker": "^TNX", "name": "10Y", "z_score": 0.5,
@@ -893,7 +895,7 @@ class TestCreditRendering:
         )
         text = "\n".join(b["text"]["text"] for b in payload["blocks"]
                          if b.get("type") == "section")
-        assert text.index("_Macro_") < text.index("_Credit_") < text.index("_Indices_")
+        assert text.index("_US Indices_") < text.index("_Macro_") < text.index("_Credit_")
 
 
 class TestTreasuryCurveRendering:

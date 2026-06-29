@@ -1989,7 +1989,16 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
             rendered_any = False
+            # US indices LEAD the section (US index price returns first), per
+            # issue #20 — the broad-market read is the headline, the macro /
+            # rates / credit backdrop follows.
+            if index_rows:
+                lines.append("_US Indices_")
+                lines.extend(_format_etf_line(s) for s in index_rows)
+                rendered_any = True
             if macro_rows:
+                if rendered_any:
+                    lines.append("")  # blank spacer between groups
                 lines.append("_Macro_")
                 lines.extend(_format_macro_line(s) for s in macro_rows)
                 rendered_any = True
@@ -2004,12 +2013,6 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                     lines.append("")  # blank spacer between groups
                 lines.append("_Credit_")
                 lines.extend(_format_credit_line(k, credit_data[k]) for k in credit_rows)
-                rendered_any = True
-            if index_rows:
-                if rendered_any:
-                    lines.append("")  # blank spacer between groups
-                lines.append("_Indices_")
-                lines.extend(_format_etf_line(s) for s in index_rows)
                 rendered_any = True
             if global_equity_rows:
                 if rendered_any:
@@ -2317,6 +2320,31 @@ def main():
         etf_period_returns=etf_period_returns,
     )
     send_slack(payload)
+
+    # Persist the returns snapshot + rebuild the interactive return-map HTML
+    # (BlackRock-style periodic table of returns). Reuses the returns already
+    # computed above — no extra market-data fetch. Warn-and-proceed: a failure
+    # here must never break the alert pipeline.
+    try:
+        import return_map
+        snapshot = return_map.assemble_snapshot(
+            etf_returns, etf_period_returns,
+            index_set=index_etf_set,
+            global_equity_set=global_equity_etf_set,
+            sector_set=sector_etf_set,
+            healthcare_set=healthcare_etf_set,
+            tech_set=tech_etf_set,
+            commodity_set=commodity_etf_set,
+            macro_set=macro_set,
+            macro_style=MACRO_STYLE,
+            mode=args.mode,
+            ref_date=stats.get("ref_date", ""),
+        )
+        snap_path = return_map.write_snapshot(snapshot)
+        html_path = return_map.write_html(snapshot)
+        print(f"[INFO] Return map updated: {snap_path.name} + {html_path}")
+    except Exception as e:  # noqa: BLE001 — non-fatal by design
+        print(f"[WARN] Return-map generation failed (non-fatal): {e}")
 
 
 if __name__ == "__main__":
