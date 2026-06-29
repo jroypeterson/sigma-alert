@@ -6000,13 +6000,6 @@
   },
   "SFZN": {
     "name": "Siegfried Holding AG",
-    "sector": "Biopharma",
-    "subsector": "Specialty & Generic Pharma",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "SFZS": {
-    "name": "Siegfried Holding AG",
     "sector": "MedTech",
     "subsector": "Life Science Tools",
     "sub_subsector": "CDMO",
@@ -7649,6 +7642,13 @@
     "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
+  },
+  "SRTA": {
+    "name": "Strata Critical Medical, Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "Medical Logistics",
+    "sub_subsector": "",
+    "core": "Y"
   },
   "XLE": {
     "name": "Energy Select Sector SPDR",
