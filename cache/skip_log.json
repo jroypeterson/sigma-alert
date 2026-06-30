@@ -1381,6 +1381,16 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-06-30",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "FDXF",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
