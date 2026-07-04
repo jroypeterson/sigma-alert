@@ -1,6 +1,7 @@
 # Global / international equity index ETFs — render under a _Global Equity_
-# sub-header in the "Index, Sector & Macro Returns" Slack section, directly
-# below the US _Indices_ group. Regular total-return ETFs: go through the
+# sub-header in the "Index, Sector & Macro Returns" Slack section, below the
+# _Credit_ group (the _US Indices_ group leads the section, then the macro /
+# rates / credit backdrop). Regular total-return ETFs: go through the
 # normal _format_etf_line() path with prior-year/YTD returns.
 # Added 2026-06-03. Order = world aggregate -> regions -> countries.
 # NB: the country ETFs (EWJ/EWY/FXI/INDA) are USD-denominated, so each bundles

@@ -63,6 +63,9 @@ def build_blocks() -> dict:
     credit = ", ".join(
         f"`{k}` ({s.CREDIT_SERIES[k]['label']})" for k in s.CREDIT_ORDER
     )
+    curve = ", ".join(
+        f"`{k}` (FRED {s.TREASURY_CURVE_SERIES[k]})" for k in s.TREASURY_CURVE_ORDER
+    )
 
     blocks = [
         {"type": "header",
@@ -90,9 +93,10 @@ def build_blocks() -> dict:
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Index, Sector & Macro Returns* (every digest, at the bottom)\n"
+            f"• *US Indices* — {', '.join(_named(index, names))}\n"
             f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
+            f"• *Treasury Curve* — {curve} _(prior close; level + day bp + YTD bp; colored bond-style: yield up = 🟥)_\n"
             f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_\n"
-            f"• *Indices* — {', '.join(_named(index, names))}\n"
             f"• *Global Equity* — {', '.join(_named(global_eq, names))} _(country ETFs are USD, so they bundle local-equity + FX)_\n"
             f"• *Sectors* — SPDR Select Sector ETFs ({', '.join('`'+t+'`' for t in sector)})\n"
             f"• *Healthcare* — {', '.join(_named(healthcare, names))}\n"

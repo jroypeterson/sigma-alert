@@ -369,7 +369,8 @@ def load_global_equity_etfs() -> set[str]:
     FXI/INDA) from sources/global_equity_etfs.txt.
 
     Regular total-return ETFs that render under a `_Global Equity_` sub-header
-    directly below the US `_Indices_` group, via the normal `_format_etf_line`
+    below the `_Credit_` group (the `_US Indices_` group leads the section,
+    then the macro/rates/credit backdrop), via the normal `_format_etf_line`
     (prior-year/YTD returns). The country ETFs are USD-denominated, so each
     bundles the local-equity move and the FX move vs the dollar.
     """
@@ -1809,9 +1810,10 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         if hi_lo_lines:
             _append_section_chunked(blocks, hi_lo_lines[0], hi_lo_lines[1:])
 
-    # Index & sector ETF returns section. Indices (SPYM/DIA/QQQ) render
-    # at the top, then sector ETFs underneath. Both groups sorted by
-    # z-score descending so the strongest move within each group leads.
+    # Index & sector ETF returns section. US Indices (SPYM/DIA/QQQ/^W5000/
+    # ^RUT) lead, then the macro/rates/credit backdrop, then the remaining
+    # ETF groups. Each equity group sorted by z-score descending so the
+    # strongest move within each group leads.
     if etf_returns or credit_data or curve_data:
         _etf_returns = etf_returns or []
         idx_set = index_etf_set or set()
