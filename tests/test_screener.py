@@ -1406,3 +1406,22 @@ class TestSymbolNormalization:
         assert alert["sector"] == "MedTech"
         # …and Portfolio membership matched on the base key.
         assert alert["in_portfolio"] is True
+
+
+def test_degraded_run_banner_fires_below_half_screened():
+    """A run where most tickers returned no data must say so loudly at the top
+    (2026-07-07: open screened 64/742, midday 0/742 — hollow digests posted
+    with no warning and JP noticed XLV missing from _Sectors_)."""
+    payload = sigma_screener.format_slack_message(
+        [], "midday", 742, {"screened": 3, "skipped": 700, "ref_date": "2026-07-08"})
+    texts = [b.get("text", {}).get("text", "")
+             for b in payload["blocks"] if b.get("type") == "section"]
+    assert any("DEGRADED RUN" in t for t in texts)
+
+
+def test_degraded_run_banner_absent_on_healthy_run():
+    payload = sigma_screener.format_slack_message(
+        [], "close", 742, {"screened": 700, "skipped": 2, "ref_date": "2026-07-08"})
+    texts = [b.get("text", {}).get("text", "")
+             for b in payload["blocks"] if b.get("type") == "section"]
+    assert not any("DEGRADED RUN" in t for t in texts)

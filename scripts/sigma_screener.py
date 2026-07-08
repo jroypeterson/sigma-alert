@@ -922,23 +922,31 @@ def validate_bar_date(bar_index: pd.DatetimeIndex, mode: str) -> bool:
 def batch_download(tickers: list[str], period_start: str, period_end: str) -> pd.DataFrame | None:
     """Download OHLC data for all tickers in a single yfinance call.
 
+    Retries with backoff: Yahoo intermittently throttles shared CI egress IPs
+    (the 2026-07-07 open/midday runs screened 64/742 and 0/742 because the
+    batch came back empty/partial), and a minute's patience usually recovers.
+
     Note: yfinance auto_adjust=True is the default — Close prices are
     adjusted for splits and dividends.
     """
-    try:
-        data = yf.download(
-            tickers,
-            start=period_start,
-            end=period_end,
-            progress=False,
-            threads=True,
-        )
-        if data.empty:
-            return None
-        return data
-    except Exception as e:
-        print(f"[WARN] Batch download failed: {e}")
-        return None
+    for attempt in range(3):
+        if attempt:
+            delay = (15, 45)[attempt - 1]
+            print(f"[WARN] Batch download empty/failed; retry {attempt}/2 in {delay}s")
+            time.sleep(delay)
+        try:
+            data = yf.download(
+                tickers,
+                start=period_start,
+                end=period_end,
+                progress=False,
+                threads=True,
+            )
+            if not data.empty:
+                return data
+        except Exception as e:
+            print(f"[WARN] Batch download failed: {e}")
+    return None
 
 
 def fallback_download_single(ticker: str, period_start: str, period_end: str) -> pd.DataFrame | None:
@@ -1628,6 +1636,21 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             },
         },
     ]
+
+    # Degraded-run banner (no-silent-failures): when most tickers returned no
+    # data (yfinance throttling CI egress IPs), the alert tiers AND the
+    # index/sector returns groups below are silently thin — e.g. the 2026-07-07
+    # open post rendered _Sectors_ with 2 of 11 ETFs and no XLV. Say so loudly
+    # at the top instead of letting a hollow digest read as a quiet day.
+    _screened = stats.get("screened", 0)
+    if total_tickers and (_screened / total_tickers) < 0.5:
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": (
+            f":warning: *DEGRADED RUN — market data returned for only "
+            f"{_screened}/{total_tickers} tickers.* Alert tiers and the "
+            f"index/sector returns below are incomplete (missing rows, not "
+            f"quiet markets). Likely transient Yahoo throttling; the next "
+            f"scheduled run usually recovers."
+        )}})
 
     # Prior-year + YTD returns, keyed by ticker. Covers both the index/sector
     # ETFs and the alert tickers (main() folds the alert names into the same
