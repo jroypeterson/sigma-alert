@@ -929,10 +929,34 @@ def batch_download(tickers: list[str], period_start: str, period_end: str) -> pd
     Note: yfinance auto_adjust=True is the default — Close prices are
     adjusted for splits and dividends.
     """
+    def _coverage(data) -> float:
+        """Fraction of requested tickers with at least one Close bar."""
+        if data is None or data.empty:
+            return 0.0
+        try:
+            close = data["Close"]
+        except KeyError:
+            return 0.0
+        if len(tickers) == 1 or not hasattr(close, "columns"):
+            return 1.0 if close.notna().any() else 0.0
+        covered = sum(
+            1 for t in tickers
+            if t in close.columns and close[t].notna().any()
+        )
+        return covered / max(len(tickers), 1)
+
+    # A PARTIAL batch is the real-world failure mode (07-07 returned data for
+    # 64/742 — non-empty, so an emptiness check alone never retries). Accept
+    # only when most tickers actually came back; otherwise retry and keep the
+    # best attempt so downstream still gets whatever Yahoo would give us.
+    MIN_COVERAGE = 0.60
+    best = None
+    best_cov = 0.0
     for attempt in range(3):
         if attempt:
             delay = (15, 45)[attempt - 1]
-            print(f"[WARN] Batch download empty/failed; retry {attempt}/2 in {delay}s")
+            print(f"[WARN] Batch download failed/partial (coverage {best_cov:.0%}); "
+                  f"retry {attempt}/2 in {delay}s")
             time.sleep(delay)
         try:
             data = yf.download(
@@ -942,10 +966,17 @@ def batch_download(tickers: list[str], period_start: str, period_end: str) -> pd
                 progress=False,
                 threads=True,
             )
-            if not data.empty:
-                return data
         except Exception as e:
             print(f"[WARN] Batch download failed: {e}")
+            continue
+        cov = _coverage(data)
+        if cov >= MIN_COVERAGE:
+            return data
+        if cov > best_cov:
+            best, best_cov = data, cov
+    if best is not None:
+        print(f"[WARN] Batch download degraded after retries: coverage {best_cov:.0%}")
+        return best
     return None
 
 

@@ -1425,3 +1425,38 @@ def test_degraded_run_banner_absent_on_healthy_run():
     texts = [b.get("text", {}).get("text", "")
              for b in payload["blocks"] if b.get("type") == "section"]
     assert not any("DEGRADED RUN" in t for t in texts)
+
+
+def test_batch_download_retries_on_partial_coverage():
+    """A non-empty but mostly-missing batch (the 07-07 64/742 mode) must retry,
+    and the best attempt is returned if coverage never clears the bar."""
+    idx = pd.date_range("2026-07-01", periods=5)
+    tickers = ["AAA", "BBB", "CCC", "DDD"]
+
+    def _frame(covered):
+        cols = pd.MultiIndex.from_product([["Close"], tickers])
+        df = pd.DataFrame(np.nan, index=idx, columns=cols)
+        for t in covered:
+            df[("Close", t)] = 1.0
+        return df
+
+    partial = _frame(["AAA"])          # 25% coverage
+    full = _frame(tickers)             # 100%
+    calls = {"n": 0}
+
+    def fake_download(*args, **kwargs):
+        calls["n"] += 1
+        return partial if calls["n"] == 1 else full
+
+    with patch.object(sigma_screener.yf, "download", side_effect=fake_download), \
+         patch.object(sigma_screener.time, "sleep"):
+        out = sigma_screener.batch_download(tickers, "2026-07-01", "2026-07-08")
+    assert calls["n"] == 2                      # retried past the partial batch
+    assert out[("Close", "BBB")].notna().any()  # got the full frame
+
+    calls["n"] = 0
+    with patch.object(sigma_screener.yf, "download", return_value=partial), \
+         patch.object(sigma_screener.time, "sleep"):
+        out2 = sigma_screener.batch_download(tickers, "2026-07-01", "2026-07-08")
+    assert calls["n"] == 0 or out2 is not None  # best partial attempt still returned
+    assert out2[("Close", "AAA")].notna().any()
