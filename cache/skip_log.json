@@ -871,6 +871,28 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-07-08",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "FDXF",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MASI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MODV",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
