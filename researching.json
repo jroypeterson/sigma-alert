@@ -299,6 +299,21 @@
     "sub_subsector": "",
     "core": ""
   },
+  "MICC": {
+    "position": "Researching",
+    "position_date": "2026-07-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "The Magnum Ice Cream Company N.V.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "MMED": {
     "position": "Researching",
     "position_date": "2026-04-17",
@@ -403,6 +418,36 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y"
+  },
+  "TSM": {
+    "position": "Researching",
+    "position_date": "2026-07-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Taiwan Semiconductor Manufacturing Company Limited",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "UBER": {
+    "position": "Researching",
+    "position_date": "2026-07-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Uber Technologies, Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
   },
   "UPS": {
     "position": "Researching",

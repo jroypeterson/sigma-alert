@@ -7650,6 +7650,27 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "TSM": {
+    "name": "Taiwan Semiconductor Manufacturing Company Limited",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "UBER": {
+    "name": "Uber Technologies, Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "MICC": {
+    "name": "The Magnum Ice Cream Company N.V.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",

@@ -369,6 +369,16 @@
     "subsector": "Space Tech / Instrumentation",
     "sub_subsector": ""
   },
+  "MICC": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-11",
+    "notes": "",
+    "name": "The Magnum Ice Cream Company N.V.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "MMED": {
     "buy_price": null,
     "target_price": null,
@@ -499,12 +509,32 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "TSM": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-11",
+    "notes": "",
+    "name": "Taiwan Semiconductor Manufacturing Company Limited",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
   "U": {
     "buy_price": null,
     "target_price": null,
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Unity Software Inc",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": ""
+  },
+  "UBER": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-11",
+    "notes": "",
+    "name": "Uber Technologies, Inc.",
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
