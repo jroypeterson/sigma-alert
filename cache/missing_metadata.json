@@ -360,7 +360,6 @@
     "TXN": "not_in_metadata",
     "TXT": "not_in_metadata",
     "UAL": "not_in_metadata",
-    "UBER": "not_in_metadata",
     "UDR": "not_in_metadata",
     "ULTA": "not_in_metadata",
     "UNP": "not_in_metadata",
@@ -393,5 +392,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-07-10T18:30:14.978997-04:00"
+  "updated": "2026-07-13T17:45:58.053151-04:00"
 }
