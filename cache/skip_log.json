@@ -387,10 +387,6 @@
       "mode": "close",
       "skipped": [
         {
-          "ticker": "HAL",
-          "reason": "insufficient_history"
-        },
-        {
           "ticker": "HONA",
           "reason": "insufficient_history"
         },
