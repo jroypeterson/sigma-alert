@@ -29,10 +29,11 @@ GMRS until=2026-07-20   # GMR Solutions — NYSE IPO 2026-05-14 (largest US EMS 
 MOBI until=2026-07-13   # Mobia Medical — Nasdaq IPO 2026-05-08 (medtech, stroke-recovery devices)
 HONA until=2026-08-01   # Honeywell Aerospace Inc. — 2026 Honeywell spin-off, first bar 2026-06-15
                         # (19 bars as of 2026-07-13); genuinely new listing, crosses 32 bars ~end Jul.
-# NOTE (2026-07-13): MASI/SEM/SILA are NOT suppressed on purpose — they are ESTABLISHED names whose
-# yfinance history is truncated to 1-3 bars (upstream data glitch, first-trade-date wrongly ~2026-06-10),
-# so they SHOULD stay visible as unresolved flags (a real coverage gap), not be hidden here. See the
-# autonomous-session batch for JP. MODV appears delisted (0 bars) — belongs in delisted tracking.
+# NOTE (2026-07-14, corrected): MASI/SEM/SILA/MODV were NOT a "yfinance glitch" (a wrong 2026-07-13 read)
+# — all four are DELISTINGS, EDGAR-confirmed (Form 15-12G): MASI (Masimo, acquired, 06-22), SEM (Select
+# Medical, 07-13), SILA (Sila Realty, 07-13), MODV (ModivCare, gone dark). Removed from Coverage Manager's
+# universe 2026-07-14 (CM 03abd26 → delisted_tickers.csv), so they drop from this watchlist on the next CM
+# build — NOT suppressed here (they should disappear, not be hidden). No skip-report action needed.
 
 # --- New listings accreting to 32 trading bars (added 2026-06-29) ---
 # FDXF = FedEx Freight Corp — the FedEx LTL spinoff that began regular-way NYSE
