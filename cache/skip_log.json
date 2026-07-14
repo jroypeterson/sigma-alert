@@ -381,6 +381,36 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-07-14",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "HAL",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MASI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MODV",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SEM",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SILA",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
