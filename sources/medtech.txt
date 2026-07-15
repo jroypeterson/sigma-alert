@@ -1,5 +1,5 @@
 # MedTech — Coverage Manager
-# Last updated: 2026-06-23
+# Last updated: 2026-07-15
 1SXP.DE
 4543.T
 6869.T
@@ -75,7 +75,6 @@ KIDS
 LIVN
 LNTH
 LONN.CH
-MASI
 MDT
 MED
 MMED
