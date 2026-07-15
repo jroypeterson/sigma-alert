@@ -407,6 +407,16 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-07-15",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
