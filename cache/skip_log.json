@@ -389,6 +389,10 @@
       "mode": "close",
       "skipped": [
         {
+          "ticker": "CL=F",
+          "reason": "insufficient_history"
+        },
+        {
           "ticker": "HONA",
           "reason": "insufficient_history"
         }
