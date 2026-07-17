@@ -1,28 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-06-16",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "CVSG",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "GMRS",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MOBI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SFZS.SW",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-06-17",
       "mode": "close",
       "skipped": [
@@ -398,6 +376,16 @@
     },
     {
       "date": "2026-07-16",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        }
+      ]
+    },
+    {
+      "date": "2026-07-17",
       "mode": "close",
       "skipped": [
         {
