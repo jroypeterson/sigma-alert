@@ -1410,6 +1410,142 @@ class TestSymbolNormalization:
         assert alert["in_portfolio"] is True
 
 
+from sigma_screener import (  # noqa: E402
+    foreign_collision_bases,
+    disambiguate_collision_metadata,
+)
+
+
+class TestForeignBaseCollision:
+    """F5: a foreign listing whose CM bare-base key collides with a same-base
+    US listing / ETF must not overwrite the other's metadata. CM keys both
+    `AMP.IM` (Amplifon, MedTech/Core) and the US `AMP` (Ameriprise) under the
+    bare base "AMP"; likewise `DIA.MI` (DiaSorin, MedTech/Core) and the SPDR
+    DJIA `DIA` ETF under "DIA". Collapsing the foreign leg to its base makes the
+    two listings clobber each other → US AMP inherits MedTech/Core (false 1σ)
+    and the DIA ETF override wipes DiaSorin into zero buckets."""
+
+    def test_collision_bases_detects_amp_and_dia(self):
+        tickers = ["AAPL", "AMP", "AMP.IM", "DIA", "DIA.MI", "GETIB.SS"]
+        assert foreign_collision_bases(tickers) == {"AMP", "DIA"}
+
+    def test_no_collision_for_lone_foreign_or_lone_us(self):
+        # A foreign listing with no same-base US ticker is NOT a collision…
+        assert foreign_collision_bases(["GETIB.SS", "COH.AU", "BIM"]) == set()
+        # …and a US/ETF ticker with no foreign same-base isn't either.
+        assert foreign_collision_bases(["AMP", "DIA", "AAPL"]) == set()
+
+    def test_metadata_key_disambiguates_only_on_collision(self):
+        cb = {"AMP", "DIA"}
+        # Colliding foreign legs key by their full dotted symbol…
+        assert to_metadata_key("AMP.IM", cb) == "AMP.IM"
+        assert to_metadata_key("DIA.MI", cb) == "DIA.MI"
+        # …the bare US/ETF legs are unchanged…
+        assert to_metadata_key("AMP", cb) == "AMP"
+        assert to_metadata_key("DIA", cb) == "DIA"
+        # …non-colliding foreign names still collapse to their base…
+        assert to_metadata_key("GETIB.SS", cb) == "GETIB"
+        # …and with no collision set, the old base-collapse behaviour holds.
+        assert to_metadata_key("AMP.IM") == "AMP"
+        assert to_metadata_key("DIA.MI") == "DIA"
+
+    def test_us_amp_does_not_inherit_amplifon_metadata(self):
+        metadata_raw = {"AMP": {"name": "Amplifon S.p.A.", "sector": "MedTech",
+                                "subsector": "Hearing Aid", "core": "Y"}}
+        metadata = {k: dict(v) for k, v in metadata_raw.items()}
+        cb = disambiguate_collision_metadata(metadata, metadata_raw,
+                                             ["AMP", "AMP.IM"])
+        assert cb == {"AMP"}
+        # Foreign leg keeps Amplifon's MedTech/Core under its dotted key…
+        amp_im = metadata[to_metadata_key("AMP.IM", cb)]
+        assert amp_im["name"] == "Amplifon S.p.A."
+        assert amp_im["sector"] == "MedTech"
+        assert amp_im["core"] == "Y"
+        # …and the bare "AMP" is freed so the US ticker cannot inherit the
+        # foreign MedTech/Core (it falls back to sp500_names downstream).
+        assert "AMP" not in metadata
+        us = metadata.get(to_metadata_key("AMP", cb), {})
+        assert us.get("core") != "Y"
+        assert us.get("sector", "") != "MedTech"
+
+    def test_diasorin_survives_etf_name_override(self):
+        metadata_raw = {"DIA": {"name": "DiaSorin S.p.A.", "sector": "MedTech",
+                                "subsector": "Diagnostics", "core": "Y"}}
+        metadata = {k: dict(v) for k, v in metadata_raw.items()}
+        cb = disambiguate_collision_metadata(metadata, metadata_raw,
+                                             ["DIA", "DIA.MI"])
+        # Simulate the etf_names.json override that runs afterwards in main().
+        metadata["DIA"] = {"name": "Dow Jones", "sector": "", "subsector": ""}
+        # DiaSorin's MedTech/Core is preserved under DIA.MI (not wiped into
+        # zero buckets), while the ETF row correctly reads the ETF name.
+        dia_mi = metadata[to_metadata_key("DIA.MI", cb)]
+        assert dia_mi["name"] == "DiaSorin S.p.A."
+        assert dia_mi["sector"] == "MedTech"
+        assert dia_mi["core"] == "Y"
+        assert metadata[to_metadata_key("DIA", cb)]["name"] == "Dow Jones"
+
+    def test_lone_foreign_metadata_left_on_base(self):
+        # Regression guard: no US collision → no re-keying, base join preserved.
+        metadata_raw = {"GETIB": {"name": "Getinge AB", "sector": "MedTech",
+                                  "subsector": "Cardiovascular", "core": "Y"}}
+        metadata = {k: dict(v) for k, v in metadata_raw.items()}
+        cb = disambiguate_collision_metadata(metadata, metadata_raw,
+                                             ["GETIB.SS"])
+        assert cb == set()
+        assert metadata["GETIB"]["name"] == "Getinge AB"
+        assert "GETIB.SS" not in metadata
+        assert to_metadata_key("GETIB.SS", cb) == "GETIB"
+
+    def test_us_amp_not_one_sigma_eligible_after_disambiguation(self):
+        """End-to-end via _process_ticker_full: after disambiguation the US AMP
+        joins Ameriprise (no Core, no sector) so a between-1σ-and-2σ move does
+        NOT fire a 1σ alert, while AMP.IM (Amplifon, Core=Y) on the same move
+        does. Before the fix US AMP inherited Amplifon's Core=Y and fired."""
+        metadata_raw = {"AMP": {"name": "Amplifon S.p.A.", "sector": "MedTech",
+                                "subsector": "Hearing Aid", "core": "Y"}}
+        metadata = {k: dict(v) for k, v in metadata_raw.items()}
+        tickers = ["AMP", "AMP.IM"]
+        cb = disambiguate_collision_metadata(metadata, metadata_raw, tickers)
+        # sp500_names fallback fills the freed bare "AMP" with the US name.
+        metadata["AMP"] = {"name": "Ameriprise Financial", "sector": "",
+                           "subsector": ""}
+
+        # Build a price path with a controlled ~1.4σ final up-move (between the
+        # 1σ and 2σ thresholds) so only Core/position names should fire.
+        idx = pd.bdate_range(end=date.today(), periods=80)
+        rets = np.full(len(idx) - 1, 0.0)
+        prices = [100.0]
+        for r in rets:
+            prices.append(prices[-1] * (1 + r))
+        # sigma of a constant-return series is 0 → craft a small spread instead.
+        np.random.seed(3)
+        rets = np.random.normal(0, 0.01, len(idx) - 1)
+        prices = [100.0]
+        for r in rets:
+            prices.append(prices[-1] * (1 + r))
+        sigma = float(np.std(rets, ddof=1))
+        mu = float(np.mean(rets))
+        # Set the final bar to land at ~1.4σ.
+        target_ret = mu + 1.4 * sigma
+        prices[-1] = prices[-2] * (1 + target_ret)
+        close = pd.Series(prices, index=idx)
+
+        def _run(display, meta_key):
+            return _process_ticker_full(
+                display, close, close.copy(), None, None, "close", metadata,
+                portfolio_set=set(), researching_set=set(),
+                meta_key=meta_key,
+            )[0]
+
+        us_alert = _run("AMP", to_metadata_key("AMP", cb))
+        it_alert = _run("AMP.IM", to_metadata_key("AMP.IM", cb))
+        # The Italian Amplifon (Core=Y) fires a 1σ alert…
+        assert it_alert is not None
+        assert it_alert["name"] == "Amplifon S.p.A."
+        # …the US Ameriprise (no Core) does not.
+        assert us_alert is None
+
+
 def test_degraded_run_banner_fires_below_half_screened():
     """A run where most tickers returned no data must say so loudly at the top
     (2026-07-07: open screened 64/742, midday 0/742 — hollow digests posted

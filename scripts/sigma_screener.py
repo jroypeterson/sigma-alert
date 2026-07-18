@@ -294,17 +294,85 @@ def to_yf_symbol(display: str) -> str:
     return display  # already a yfinance-form suffix (.DE/.MI/.SW/.L/.SA/.T/.HK)
 
 
-def to_metadata_key(display: str) -> str:
+def to_metadata_key(display: str, collision_bases: set[str] | None = None) -> str:
     """Map a watchlist ticker to the base symbol Coverage Manager keys
     ticker_metadata.json + the position files by. A foreign exchange listing
     is keyed by its bare base (GETIB.SS → GETIB); US tickers, dash-form class
-    shares (BF-B), and caret indices are returned unchanged."""
+    shares (BF-B), and caret indices are returned unchanged.
+
+    `collision_bases` disambiguates the case where a foreign listing's bare
+    base collides with a same-base US listing or ETF that is ALSO in the
+    universe (e.g. `AMP.IM` Amplifon vs US `AMP` Ameriprise; `DIA.MI` DiaSorin
+    vs the SPDR DJIA `DIA` ETF). CM keys both by the bare base, so collapsing
+    `AMP.IM`→`AMP` makes the two listings overwrite each other's metadata. When
+    the base is a known collision, the foreign listing is keyed by its full
+    dotted display symbol instead, so its metadata is looked up under a key the
+    US/ETF ticker never claims. `disambiguate_collision_metadata()` re-keys the
+    metadata dict to match. Pass the set from `foreign_collision_bases()`."""
     if "." not in display or display.startswith("^"):
         return display
     base, _, suffix = display.rpartition(".")
     if suffix in _EXCHANGE_SUFFIXES:
+        if collision_bases and base in collision_bases:
+            return display
         return base
     return display
+
+
+def foreign_collision_bases(tickers) -> set[str]:
+    """Return the set of bare base symbols that are claimed by BOTH a foreign
+    (dotted) listing AND a same-base US listing / ETF within `tickers`.
+
+    Coverage Manager keys `ticker_metadata.json` (and the position JSONs) by
+    the bare base symbol, so a foreign listing like `AMP.IM` (Amplifon) and the
+    US `AMP` (Ameriprise) — or `DIA.MI` (DiaSorin) and the `DIA` ETF — both
+    collapse to the same key and clobber each other's metadata. Those bases are
+    returned here so `to_metadata_key` can key the foreign leg by its full
+    dotted symbol instead. A base with only a foreign listing (the normal case,
+    e.g. `GETIB.SS` with no US `GETIB`) is NOT a collision and is unaffected."""
+    bare: set[str] = set()
+    foreign_bases: set[str] = set()
+    for t in tickers or []:
+        if "." in t and not t.startswith("^"):
+            base, _, suffix = t.rpartition(".")
+            if suffix in _EXCHANGE_SUFFIXES:
+                foreign_bases.add(base)
+                continue
+        bare.add(t)
+    return bare & foreign_bases
+
+
+def disambiguate_collision_metadata(metadata: dict, metadata_raw: dict,
+                                    tickers) -> set[str]:
+    """Re-key `metadata` in place so a foreign listing whose bare base collides
+    with a same-base US listing / ETF keeps its own Coverage Manager metadata
+    under its full dotted display symbol, and the bare-base entry is freed for
+    the US/ETF ticker.
+
+    For each collision base B (see `foreign_collision_bases`), the foreign leg's
+    CM metadata (sourced from the untouched `metadata_raw`, so this works
+    regardless of any later `sp500_names`/`etf_names` overrides applied to
+    `metadata`) is copied to `metadata[<dotted display>]`, and `metadata[B]` is
+    dropped. Downstream, the bare US symbol falls back to `sp500_names.json`
+    (its correct name, no sector/subsector → no false Core 1σ) and the ETF base
+    is repopulated authoritatively by the `etf_names.json` override.
+
+    Returns the collision-base set (also usable as `collision_bases` for
+    `to_metadata_key`)."""
+    bases = foreign_collision_bases(tickers)
+    if not bases:
+        return bases
+    metadata_raw = metadata_raw or {}
+    for t in tickers or []:
+        if "." in t and not t.startswith("^"):
+            base, _, suffix = t.rpartition(".")
+            if suffix in _EXCHANGE_SUFFIXES and base in bases:
+                if base in metadata_raw:
+                    metadata[t] = dict(metadata_raw[base])
+                metadata.pop(base, None)
+    print(f"[INFO] Disambiguated {len(bases)} foreign/US base-symbol "
+          f"collision(s): {sorted(bases)}")
+    return bases
 
 
 def load_sp500_set() -> set[str]:
@@ -1138,6 +1206,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
     alerts = []
     etf_returns = []
     _etfs = etf_set or set()
+    _collisions = foreign_collision_bases(tickers)
     stats = {"screened": 0, "skipped": 0, "stale": 0}
     prices = download_todays_prices(tickers)
     ticker_cache = cache.get("tickers", {})
@@ -1180,7 +1249,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
             ytd_return_pct = (today_open - prior_year_end_close) / prior_year_end_close * 100
 
         z = compute_z_score(today_return, mu, sigma)
-        mkey = to_metadata_key(ticker)
+        mkey = to_metadata_key(ticker, _collisions)
         meta = (metadata or {}).get(mkey, {})
         sector = meta.get("sector", "")
         subsector = meta.get("subsector", "")
@@ -1493,6 +1562,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     etf_returns = []
     skip_events: list[dict] = []
     _etfs = etf_set or set()
+    _collisions = foreign_collision_bases(tickers)
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
 
@@ -1534,7 +1604,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     following_set=following_set,
                     ready_to_buy_set=ready_to_buy_set,
                     ready_to_short_set=ready_to_short_set,
-                    meta_key=to_metadata_key(ticker),
+                    meta_key=to_metadata_key(ticker, _collisions),
                     require_current_bar=True,
                 )
 
@@ -1590,7 +1660,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 following_set=following_set,
                 ready_to_buy_set=ready_to_buy_set,
                 ready_to_short_set=ready_to_short_set,
-                meta_key=to_metadata_key(ticker),
+                meta_key=to_metadata_key(ticker, _collisions),
                 require_current_bar=True,
             )
 
@@ -2256,6 +2326,19 @@ def main():
     # Wikipedia-sourced fallback file. Keep `metadata_raw` unmerged so
     # write_missing_metadata_flag still reports true CM gaps.
     metadata = {k: dict(v) for k, v in metadata_raw.items()}
+
+    # Disambiguate foreign/US base-symbol collisions (F5). CM keys foreign
+    # coverage by the bare base symbol (AMP.IM → "AMP", DIA.MI → "DIA"), which
+    # collides with a same-base US listing / ETF also in the watchlist (US
+    # Ameriprise "AMP", SPDR DJIA "DIA"). Left unhandled, the two listings
+    # overwrite each other's metadata: US AMP inherits Amplifon's MedTech/Core
+    # (false 1σ eligibility + wrong name), and the DIA ETF override wipes
+    # DiaSorin's MedTech/Core so DiaSorin renders into zero buckets. Re-key each
+    # foreign leg under its full dotted symbol (from the untouched metadata_raw)
+    # and free the bare base for the US/ETF ticker. Runs before the sp500_names
+    # + etf_names merges so the freed bare base is repopulated correctly below.
+    collision_bases = disambiguate_collision_metadata(metadata, metadata_raw, tickers)
+
     sp500_names = load_sp500_names()
     if sp500_names:
         filled = 0
