@@ -1533,3 +1533,142 @@ class TestLoadMetadataWarns:
         result = load_metadata()
         assert result == {}
         assert "[WARN]" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Batched-findings regressions (codex review 2026-07-18, owner-approved)
+# ---------------------------------------------------------------------------
+
+class TestDistributionLookbackCap:
+    """μ/σ must come from the trailing LOOKBACK_DAYS (252) daily returns, not
+    the full ~271-return 400-calendar-day download window (F3 / CLAUDE.md)."""
+
+    def test_long_history_is_capped_to_lookback(self):
+        # 300 prices -> 299 returns -> 298 trailing (excl. today) -> capped 252.
+        np.random.seed(11)
+        prices = pd.Series(100 * np.cumprod(1 + np.random.normal(0, 0.01, 300)))
+        _mu, _sigma, n = compute_distribution(prices)
+        assert n == sigma_screener.LOOKBACK_DAYS == 252  # NOT 298
+
+    def test_short_history_unaffected_by_cap(self):
+        # Below the cap the window is unchanged (100 -> 98 trailing).
+        np.random.seed(11)
+        prices = pd.Series(100 * np.cumprod(1 + np.random.normal(0, 0.01, 100)))
+        _mu, _sigma, n = compute_distribution(prices)
+        assert n == 98
+
+
+class TestStaleBarPerTickerAlignment:
+    """A ticker with no today-bar in an otherwise-fresh batch must be skipped,
+    not dropna()'d back to yesterday and z-scored as 'today' (spurious 2σ)."""
+
+    def test_stale_bar_skipped_when_required(self):
+        n = 40
+        # Series ends YESTERDAY -> stale for a run whose "today" is today_et().
+        last = pd.Timestamp(sigma_screener.today_et()) - pd.Timedelta(days=1)
+        idx = pd.date_range(end=last, periods=n, freq="D")
+        np.random.seed(1)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.004, n))
+        base[-1] = base[-2] * 1.15  # a big move that would be a false 2σ "today"
+        close = pd.Series(base, index=idx)
+
+        alert, cache, _hi, _stats, skip = _process_ticker_full(
+            "STALE", close, close.copy(), None, None, "close",
+            require_current_bar=True,
+        )
+        assert skip == "stale_bar"
+        assert alert is None and cache is None
+
+    def test_default_path_preserves_old_behavior(self):
+        # Without the flag (existing callers / plain-index fixtures), a stale
+        # date-indexed series is still scored — proves back-compat is intact.
+        n = 40
+        last = pd.Timestamp(sigma_screener.today_et()) - pd.Timedelta(days=1)
+        idx = pd.date_range(end=last, periods=n, freq="D")
+        np.random.seed(1)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.004, n))
+        close = pd.Series(base, index=idx)
+        _alert, cache, _hi, _stats, skip = _process_ticker_full(
+            "STALE", close, close.copy(), None, None, "close",
+        )
+        assert skip is None and cache is not None
+
+    def test_screen_full_skips_stale_ticker_but_screens_fresh(self):
+        """End-to-end repro: a batch where FRESH has today's close and STALE's
+        today close is NaN. Before the fix STALE was screened + alerted on
+        yesterday's move; now it's skipped with reason `stale_bar`."""
+        n = 40
+        last = pd.Timestamp(sigma_screener.today_et())
+        idx = pd.date_range(end=last, periods=n, freq="D")  # last bar == today
+        np.random.seed(5)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.004, n))
+
+        fresh = base.copy()
+        fresh[-1] = fresh[-2] * 1.15          # FRESH: real +15% today
+
+        stale = base.copy()
+        stale[-2] = stale[-3] * 1.15          # STALE: +15% *yesterday*
+        stale[-1] = np.nan                    # ... and NO close today
+
+        tickers = ["FRESH", "STALE"]
+        cols = pd.MultiIndex.from_product([["Open", "High", "Low", "Close"], tickers])
+        df = pd.DataFrame(index=idx, columns=cols, dtype=float)
+        for t, arr in [("FRESH", fresh), ("STALE", stale)]:
+            df[("Close", t)] = arr
+            df[("Open", t)] = arr
+            df[("High", t)] = arr * 1.001
+            df[("Low", t)] = arr * 0.999
+
+        with patch.object(sigma_screener, "batch_download", return_value=df):
+            alerts, _cache, stats, _hi, _etf, skips = sigma_screener.screen_full(
+                tickers, "close", metadata={},
+            )
+
+        skip_map = {s["ticker"]: s["reason"] for s in skips}
+        assert skip_map.get("STALE") == "stale_bar"
+        assert "STALE" not in {a["ticker"] for a in alerts}
+        assert stats["screened"] == 1                     # only FRESH
+        assert "FRESH" in {a["ticker"] for a in alerts}   # FRESH still alerts
+
+
+class TestPositionNamesAlwaysScreened:
+    """Coverage Manager Position-list names outside watchlist.txt must still be
+    screened (F6: SPOT/TSM/WOOF etc. were silently never scanned)."""
+
+    def test_out_of_watchlist_positions_reach_the_screener(self, monkeypatch):
+        captured = {}
+
+        class _Stop(Exception):
+            pass
+
+        def fake_screen_full(tickers, mode, **kwargs):
+            captured["tickers"] = list(tickers)
+            raise _Stop  # abort main() right after the universe is built
+
+        # Minimal, network-free stubs for main()'s universe assembly.
+        monkeypatch.setattr(sigma_screener, "load_watchlist", lambda: ["AAPL", "MSFT"])
+        monkeypatch.setattr(sigma_screener, "load_metadata", lambda: {})
+        monkeypatch.setattr(sigma_screener, "load_sp500_set", lambda: set())
+        monkeypatch.setattr(sigma_screener, "load_sp500_names", lambda: {})
+        monkeypatch.setattr(sigma_screener, "load_portfolio", lambda: {"SPOT"})
+        monkeypatch.setattr(sigma_screener, "load_researching", lambda: {"TSM"})
+        monkeypatch.setattr(sigma_screener, "load_following_for_interest", lambda: {"WOOF"})
+        monkeypatch.setattr(sigma_screener, "load_ready_to_buy", lambda: {"CROX"})
+        monkeypatch.setattr(sigma_screener, "load_ready_to_short", lambda: set())
+        for fn in ("load_index_etfs", "load_global_equity_etfs", "load_sector_etfs",
+                   "load_healthcare_etfs", "load_tech_etfs", "load_commodity_etfs",
+                   "load_macro"):
+            monkeypatch.setattr(sigma_screener, fn, lambda: set())
+        monkeypatch.setattr(sigma_screener, "load_etf_names", lambda: {})
+        monkeypatch.setattr(sigma_screener, "screen_full", fake_screen_full)
+        monkeypatch.setattr(sys, "argv", ["sigma_screener.py", "--mode", "close"])
+
+        with pytest.raises(_Stop):
+            sigma_screener.main()
+
+        universe = captured["tickers"]
+        # The out-of-watchlist Position names are now screened...
+        for name in ("SPOT", "TSM", "WOOF", "CROX"):
+            assert name in universe
+        # ...and the original watchlist order is preserved up front.
+        assert universe[:2] == ["AAPL", "MSFT"]

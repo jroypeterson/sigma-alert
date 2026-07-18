@@ -1023,12 +1023,17 @@ def fallback_download_single(ticker: str, period_start: str, period_end: str) ->
 def compute_distribution(close_series: pd.Series) -> tuple[float, float, int]:
     """Compute mean and std of daily returns from a close price series.
 
-    Uses the prior 251 days of returns (excluding the most recent day)
-    so that today's move is measured against a clean trailing distribution.
+    Uses the trailing ``LOOKBACK_DAYS`` (252, ~1 trading year) of daily
+    returns, excluding the most recent (today's) return, so that today's move
+    is measured against a clean, bounded trailing distribution. The 400-calendar-day
+    download window yields ~271 usable returns; without the cap μ/σ would drift
+    off the documented "trailing 252 daily returns" (CLAUDE.md) and pull in
+    stale volatility regimes that shrink z-scores.
     """
     daily_returns = close_series.pct_change().dropna()
-    # Exclude the last return (today's) — distribution is trailing only
-    trailing = daily_returns.iloc[:-1]
+    # Exclude the last return (today's) — distribution is trailing only — then
+    # cap to the trailing LOOKBACK_DAYS window (matches the documented spec).
+    trailing = daily_returns.iloc[:-1].tail(LOOKBACK_DAYS)
     if len(trailing) < 30:
         # Decision: require at least 30 data points for a meaningful distribution.
         # Stocks with insufficient history are skipped rather than producing
@@ -1076,14 +1081,26 @@ def download_todays_prices(tickers: list[str]) -> dict:
             if not validate_bar_date(data.index, "open"):
                 print("[WARN] Stale batch data, skipping all tickers in cached path")
                 return prices
+            today = today_et()
             for ticker in tickers:
                 yf_sym = to_yf_symbol(ticker)
                 try:
                     close_col = data["Close"][yf_sym].dropna()
                     open_col = data["Open"][yf_sym].dropna()
+                    # Per-ticker date alignment: the shared batch index having
+                    # today's bar does NOT mean THIS ticker does. If today's
+                    # open is missing, skip rather than score yesterday's open
+                    # as today (and prev_close would slip to two-days-ago).
+                    if len(open_col) == 0 or open_col.index[-1].date() != today:
+                        print(f"[WARN] No today bar for {ticker} in cached-open batch, skipping")
+                        continue
                     if len(close_col) >= 2 and len(open_col) >= 1:
-                        prev_close = float(close_col.iloc[-2])
                         today_open = float(open_col.iloc[-1])
+                        # prev_close = last close strictly before today, so a
+                        # missing today-close can't push us to two-days-ago.
+                        before_today = close_col[close_col.index.date < today]
+                        prev_close = (float(before_today.iloc[-1])
+                                      if len(before_today) else float(close_col.iloc[-2]))
                         prices[ticker] = {"prev_close": prev_close, "today_open": today_open}
                 except (KeyError, IndexError):
                     continue
@@ -1245,7 +1262,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          following_set: set[str] | None = None,
                          ready_to_buy_set: set[str] | None = None,
                          ready_to_short_set: set[str] | None = None,
-                         meta_key: str | None = None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
+                         meta_key: str | None = None,
+                         require_current_bar: bool = False) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
 
     `ticker` is the display identity (stamped on alerts/cache/stats — the
@@ -1253,6 +1271,15 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     for ticker_metadata.json + the position sets; it differs from `ticker`
     only for foreign listings (GETIB.SS display → GETIB meta key). Defaults
     to `ticker` for US names, so existing callers/tests are unaffected.
+
+    `require_current_bar` (set True by `screen_full`) enforces PER-TICKER date
+    alignment: the shared batch index carrying today's bar does NOT guarantee
+    THIS ticker has today's bar — a ticker with no non-null value today gets
+    `dropna()`'d back to yesterday and would otherwise be z-scored on a stale
+    bar (yesterday's move labelled "today" → a spurious 2σ). When enabled and
+    the mode-relevant series is date-indexed and its latest bar is not today,
+    the ticker is skipped with reason `stale_bar` instead of scored. Left False
+    for plain-index test fixtures / callers that already validated freshness.
 
     Returns (alert_or_none, cache_entry_or_none, hi_lo_or_none, ticker_stats_or_none, skip_reason_or_none).
     ticker_stats is always populated when computation succeeds (used for sector ETF returns).
@@ -1262,6 +1289,21 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if len(close) < 32:
         print(f"[WARN] {ticker}: insufficient data ({len(close)} days), skipping")
         return None, None, None, None, "insufficient_history"
+
+    if require_current_bar:
+        # For open mode today's price comes from the open series; for
+        # close/midday it comes from the close series. Validate whichever one
+        # actually drives `today_price` below. Only enforced when the series is
+        # date-indexed (real market data) — plain-index fixtures pass through.
+        price_series = open_prices if mode == "open" else close
+        try:
+            latest_bar = price_series.index[-1].date()
+        except (AttributeError, IndexError, TypeError):
+            latest_bar = None
+        if latest_bar is not None and latest_bar != today_et():
+            print(f"[WARN] {ticker}: latest {mode} bar is {latest_bar}, "
+                  f"expected {today_et()} — skipping (stale bar)")
+            return None, None, None, None, "stale_bar"
 
     mu, sigma, sample_size = compute_distribution(close)
     # An unusable distribution is either NaN (too little history) OR a
@@ -1318,6 +1360,17 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     prev_close = float(close.iloc[-2])
     if mode == "open":
         today_price = float(open_prices.iloc[-1])
+        # prev_close must be the last close STRICTLY before today. When today's
+        # (partial) close is present, iloc[-2] is yesterday — correct. But if
+        # today's close is absent/NaN (dropna'd), iloc[-2] would be two-days-ago.
+        # Select by date when the series is date-indexed to stay anchored on
+        # yesterday's close regardless.
+        try:
+            before_today = close[close.index.date < today_et()]
+            if len(before_today):
+                prev_close = float(before_today.iloc[-1])
+        except (AttributeError, TypeError):
+            pass
     else:
         today_price = float(close.iloc[-1])
 
@@ -1422,8 +1475,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
     skip_events is a list of {ticker, reason} dicts for Coverage Manager's
     weekly report. Reasons: insufficient_history, distribution_nan,
-    fallback_insufficient, fallback_exception. (Stale events are tracked
-    separately in stats["stale"].)
+    stale_bar (this ticker had no today-bar in an otherwise-fresh batch),
+    fallback_insufficient, fallback_exception. (Whole-batch stale aborts are
+    tracked separately in stats["stale"].)
 
     Note on end date: yf.download(end=...) is exclusive — to include today's
     bar we must pass tomorrow's date as the end boundary.
@@ -1481,6 +1535,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     ready_to_buy_set=ready_to_buy_set,
                     ready_to_short_set=ready_to_short_set,
                     meta_key=to_metadata_key(ticker),
+                    require_current_bar=True,
                 )
 
                 if cache_entry is None:
@@ -1536,6 +1591,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 ready_to_buy_set=ready_to_buy_set,
                 ready_to_short_set=ready_to_short_set,
                 meta_key=to_metadata_key(ticker),
+                require_current_bar=True,
             )
 
             if cache_entry is None:
@@ -2281,6 +2337,22 @@ def main():
     if missing_etfs:
         print(f"[INFO] Adding {len(missing_etfs)} ETF(s) absent from watchlist: {missing_etfs}")
         tickers = tickers + missing_etfs
+
+    # Make sure every Coverage Manager Position-list name is screened even when
+    # it's absent from watchlist.txt. `sync_watchlist.py` only merges
+    # `sources/*.txt`, so held / researched / followed / trigger-ready names CM
+    # pushes via the position JSONs (e.g. SPOT, TSM, WOOF, CROX) would otherwise
+    # silently receive NO 1σ/2σ scan and NO skip event. Union them in the same
+    # way ETFs are backfilled above so they're always in the universe (they're
+    # already 1σ-eligible via _is_one_sigma_eligible). New names not yet in the
+    # distribution cache get scored on the next full/close run that caches them.
+    position_universe = (portfolio_set | researching_set | following_set
+                         | ready_to_buy_set | ready_to_short_set)
+    missing_positions = [t for t in sorted(position_universe) if t not in tickers]
+    if missing_positions:
+        print(f"[INFO] Adding {len(missing_positions)} Position-list ticker(s) absent "
+              f"from watchlist: {missing_positions}")
+        tickers = tickers + missing_positions
 
     print(f"[INFO] Mode: {args.mode} | Tickers: {len(tickers)} | Time: {now_et().isoformat()}")
 
