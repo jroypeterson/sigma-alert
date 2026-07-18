@@ -748,13 +748,23 @@ def load_core_watchlist() -> set[str]:
 
 
 def load_metadata() -> dict:
-    """Load ticker metadata (company name, sector) if available."""
+    """Load ticker metadata (company name, sector) if available.
+
+    A missing or unreadable file is not fatal, but it must never be silent:
+    with no metadata there is no Core 1σ eligibility, no company names, and
+    no sectors, so unmatched 2σ alerts get dropped by the render path. Warn
+    loudly and proceed (per the no-silent-failures invariant).
+    """
     if not METADATA_PATH.exists():
+        print(f"[WARN] ticker_metadata.json not found at {METADATA_PATH} — "
+              "no Core 1σ eligibility, company names, or sectors this run")
         return {}
     try:
         with open(METADATA_PATH) as f:
             return json.load(f)
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read ticker_metadata.json ({e}) — "
+              "no Core 1σ eligibility, company names, or sectors this run")
         return {}
 
 
@@ -774,6 +784,19 @@ def save_cache(cache: dict) -> None:
     CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_PATH, "w") as f:
         json.dump(cache, f, indent=2)
+
+
+def _cache_has_tickers(cache_data: dict | None) -> bool:
+    """True if a screen produced at least one ticker's distribution.
+
+    A stale or failed batch download aborts `screen_full` early and returns a
+    cache dict with an empty `tickers` map (only the `date` key). Persisting
+    that empty-but-fresh-dated cache would clobber the prior good cache, and
+    the next morning's cached-open run would then treat it as fresh and skip
+    the entire universe ("not in cache"). main() uses this guard to keep the
+    previous cache instead of overwriting it with nothing.
+    """
+    return bool((cache_data or {}).get("tickers"))
 
 
 def write_missing_metadata_flag(tickers: list[str], metadata: dict,
@@ -1241,8 +1264,13 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
         return None, None, None, None, "insufficient_history"
 
     mu, sigma, sample_size = compute_distribution(close)
-    if np.isnan(mu):
-        print(f"[WARN] {ticker}: could not compute distribution, skipping")
+    # An unusable distribution is either NaN (too little history) OR a
+    # degenerate zero sigma (30+ identical prior closes). A zero sigma cannot
+    # produce a real z-score — compute_z_score returns 0.0, which would
+    # silently swallow a genuine move (no alert AND no skip record). Treat it
+    # as a skip so the name surfaces in the skip log instead of vanishing.
+    if np.isnan(mu) or np.isnan(sigma) or sigma == 0:
+        print(f"[WARN] {ticker}: unusable distribution (mu={mu}, sigma={sigma}), skipping")
         return None, None, None, None, "distribution_nan"
 
     # Compute 52-week high/low from the downloaded history (always, when available).
@@ -2303,8 +2331,13 @@ def main():
             ready_to_short_set=ready_to_short_set,
             etf_set=etf_set,
         )
-        save_cache(cache_data)
-        print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
+        if _cache_has_tickers(cache_data):
+            save_cache(cache_data)
+            print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
+        else:
+            print("[WARN] Screen produced an empty cache (stale/failed batch) — "
+                  "keeping the previous distribution cache rather than "
+                  "overwriting it with an empty one")
         # Use the pre-fallback metadata so Coverage Manager still sees true gaps.
         # ETFs are exempt — their display names live in this repo
         # (sources/etf_names.json), not in CM's universe.

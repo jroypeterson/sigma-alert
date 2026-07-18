@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import sigma_screener
 from sigma_screener import (
+    _cache_has_tickers,
     _is_one_sigma_eligible,
     _process_ticker_full,
     check_52w_high_low,
@@ -23,6 +24,7 @@ from sigma_screener import (
     format_slack_message,
     is_cache_fresh,
     load_core_watchlist,
+    load_metadata,
     load_portfolio,
     load_researching,
     validate_bar_date,
@@ -1460,3 +1462,74 @@ def test_batch_download_retries_on_partial_coverage():
         out2 = sigma_screener.batch_download(tickers, "2026-07-01", "2026-07-08")
     assert calls["n"] == 0 or out2 is not None  # best partial attempt still returned
     assert out2[("Close", "AAA")].notna().any()
+
+
+# ---------------------------------------------------------------------------
+# Adversarial-hardening regressions (codex review 2026-07-18)
+# ---------------------------------------------------------------------------
+
+class TestZeroSigmaSkip:
+    """A degenerate zero-sigma distribution (30+ identical prior closes) must
+    be skipped and logged, not silently swallowed into a z=0 non-alert."""
+
+    def test_flat_history_then_jump_is_skipped(self):
+        # 33 identical closes -> 32 zero returns -> 31 trailing zeros -> sigma=0.
+        # Last bar jumps +10% (a real move that must NOT vanish silently).
+        close = pd.Series([100.0] * 33 + [110.0])
+        open_prices = close.copy()
+        alert, cache_entry, hi_lo, stats, skip = _process_ticker_full(
+            "FLAT", close, open_prices, None, None, "close",
+        )
+        assert skip == "distribution_nan"
+        assert alert is None
+        assert cache_entry is None  # a zero-sigma entry is not cached
+
+    def test_normal_volatility_still_screens(self):
+        # Sanity: a normal series is unaffected by the zero-sigma guard.
+        np.random.seed(7)
+        base = 100 * np.cumprod(1 + np.random.normal(0, 0.01, 40))
+        close = pd.Series(list(base) + [float(base[-1] * 1.10)])
+        alert, cache_entry, _hi_lo, _stats, skip = _process_ticker_full(
+            "OK", close, close.copy(), None, None, "close",
+        )
+        assert skip is None
+        assert cache_entry is not None
+        assert cache_entry["sigma"] > 0
+
+
+class TestCacheHasTickers:
+    """main() must not overwrite a good distribution cache with the empty
+    (fresh-dated) cache that a stale/failed batch produces."""
+
+    def test_empty_cache_is_not_persistable(self):
+        assert _cache_has_tickers({"date": "2026-07-18", "tickers": {}}) is False
+
+    def test_none_is_not_persistable(self):
+        assert _cache_has_tickers(None) is False
+
+    def test_missing_tickers_key_is_not_persistable(self):
+        assert _cache_has_tickers({"date": "2026-07-18"}) is False
+
+    def test_populated_cache_is_persistable(self):
+        assert _cache_has_tickers(
+            {"date": "2026-07-18", "tickers": {"AAA": {"mu": 0.0, "sigma": 0.01}}}
+        ) is True
+
+
+class TestLoadMetadataWarns:
+    """A missing or corrupt ticker_metadata.json must warn loudly (no silent
+    loss of Core 1-sigma eligibility / names / sectors), never crash."""
+
+    def test_missing_file_warns_and_returns_empty(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(sigma_screener, "METADATA_PATH", tmp_path / "nope.json")
+        result = load_metadata()
+        assert result == {}
+        assert "[WARN]" in capsys.readouterr().out
+
+    def test_corrupt_file_warns_and_returns_empty(self, tmp_path, monkeypatch, capsys):
+        bad = tmp_path / "ticker_metadata.json"
+        bad.write_text("{not valid json")
+        monkeypatch.setattr(sigma_screener, "METADATA_PATH", bad)
+        result = load_metadata()
+        assert result == {}
+        assert "[WARN]" in capsys.readouterr().out
