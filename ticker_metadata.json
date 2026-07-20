@@ -4227,13 +4227,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "MASI": {
-    "name": "Masimo Corporation",
-    "sector": "MedTech",
-    "subsector": "Hospital Supply & Equipment",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "MAZE": {
     "name": "Maze Therapeutics Inc",
     "sector": "Biopharma",
@@ -4457,13 +4450,6 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
-  },
-  "MODV": {
-    "name": "ModivCare Inc.",
-    "sector": "Healthcare Services",
-    "subsector": "Post-Acute",
-    "sub_subsector": "",
-    "core": "Y"
   },
   "MOH": {
     "name": "Molina Healthcare Inc",
@@ -5970,13 +5956,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SEM": {
-    "name": "Select Medical Holdings Corp",
-    "sector": "Healthcare Services",
-    "subsector": "Post-Acute",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "SEPN": {
     "name": "Septerna Inc",
     "sector": "Biopharma",
@@ -6079,13 +6058,6 @@
     "name": "GenSight Biologics S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "SILA": {
-    "name": "Sila Realty Trust Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
   },

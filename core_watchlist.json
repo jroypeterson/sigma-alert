@@ -99,6 +99,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "BSX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-13",
+    "notes": "",
+    "name": "Boston Scientific Corp",
+    "sector": "MedTech",
+    "subsector": "Cardiovascular",
+    "sub_subsector": ""
+  },
   "CI": {
     "buy_price": null,
     "target_price": null,
@@ -269,6 +279,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "IDXX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "IDEXX Laboratories Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Animal Health",
+    "sub_subsector": ""
+  },
   "KKR": {
     "buy_price": null,
     "target_price": null,
@@ -389,6 +409,16 @@
     "subsector": "Diabetes",
     "sub_subsector": ""
   },
+  "MNKD": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-15",
+    "notes": "",
+    "name": "MannKind Corp",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": ""
+  },
   "MSFT": {
     "buy_price": null,
     "target_price": null,
@@ -469,6 +499,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "SGRY": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-14",
+    "notes": "Is that FCF Yield a good stock price anchor at 10% or is something weird happening there?",
+    "name": "Surgery Partners Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Outpatient",
+    "sub_subsector": ""
+  },
   "SPGI": {
     "buy_price": null,
     "target_price": null,
@@ -505,16 +545,6 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Tesla, Inc.",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "TSM": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-07-11",
-    "notes": "",
-    "name": "Taiwan Semiconductor Manufacturing Company Limited",
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""

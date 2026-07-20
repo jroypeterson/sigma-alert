@@ -1,19 +1,4 @@
 {
-  "IDXX": {
-    "position": "Ready to Buy",
-    "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "",
-    "name": "IDEXX Laboratories Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Animal Health",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "WELL": {
     "position": "Ready to Buy",
     "position_date": "2026-04-11",

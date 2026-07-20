@@ -104,6 +104,21 @@
     "sub_subsector": "",
     "core": ""
   },
+  "BSX": {
+    "position": "Portfolio",
+    "position_date": "2026-07-13",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Boston Scientific Corp",
+    "sector": "MedTech",
+    "subsector": "Cardiovascular",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "CI": {
     "position": "Portfolio",
     "position_date": "2026-04-11",
@@ -133,6 +148,21 @@
     "subsector": "",
     "sub_subsector": "",
     "core": ""
+  },
+  "DOCS": {
+    "position": "Portfolio",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Doximity, Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
+    "sub_subsector": "",
+    "core": "Y"
   },
   "EHC": {
     "position": "Portfolio",
@@ -206,6 +236,21 @@
     "name": "Fresenius Medical Care AG",
     "sector": "Healthcare Services",
     "subsector": "Dialysis",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "IDXX": {
+    "position": "Portfolio",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "IDEXX Laboratories Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": "Y"
   },

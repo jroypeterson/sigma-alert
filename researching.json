@@ -149,21 +149,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "DOCS": {
-    "position": "Researching",
-    "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "",
-    "name": "Doximity, Inc.",
-    "sector": "Healthcare Services",
-    "subsector": "HIT",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "FICO": {
     "position": "Researching",
     "position_date": "2026-05-03",
@@ -329,6 +314,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "MNKD": {
+    "position": "Researching",
+    "position_date": "2026-07-15",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "MannKind Corp",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": ""
+  },
   "MSFT": {
     "position": "Researching",
     "position_date": "2026-05-03",
@@ -389,6 +389,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "SGRY": {
+    "position": "Researching",
+    "position_date": "2026-07-14",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "Is that FCF Yield a good stock price anchor at 10% or is something weird happening there?",
+    "name": "Surgery Partners Inc",
+    "sector": "Healthcare Services",
+    "subsector": "Outpatient",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "SPGI": {
     "position": "Researching",
     "position_date": "2026-05-03",
@@ -418,21 +433,6 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y"
-  },
-  "TSM": {
-    "position": "Researching",
-    "position_date": "2026-07-11",
-    "buy_price": null,
-    "sell_price": null,
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "",
-    "name": "Taiwan Semiconductor Manufacturing Company Limited",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
   },
   "UBER": {
     "position": "Researching",

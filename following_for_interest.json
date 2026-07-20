@@ -179,6 +179,21 @@
     "sub_subsector": "",
     "core": ""
   },
+  "TSM": {
+    "position": "Following for Interest",
+    "position_date": "2026-07-13",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Taiwan Semiconductor Manufacturing Company Limited",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "WMT": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
