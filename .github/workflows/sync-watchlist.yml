@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+        with:
+          # Full history so the rebase in the commit-back step below can work;
+          # a shallow clone makes `git pull --rebase` unreliable.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -34,5 +38,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add watchlist.txt
-          git diff --cached --quiet || git commit -m "Sync watchlist with source files [skip ci]"
+          if git diff --cached --quiet; then
+            echo "watchlist.txt unchanged - nothing to push"
+            exit 0
+          fi
+          git commit -m "Sync watchlist with source files [skip ci]"
+          # master can move while this job runs -- a plain `git push` then fails
+          # non-fast-forward and turns the run red for no real reason. That is
+          # exactly what happened on 2026-07-20: this workflow started on one
+          # push, took 14m, and four more commits landed before it finished.
+          # Rebase onto whatever arrived, then push. A genuine conflict still
+          # fails loudly rather than being papered over.
+          git pull --rebase origin master || {
+            git rebase --abort || true
+            echo "::error::rebase onto origin/master failed - resolve manually"
+            exit 1
+          }
           git push

@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+        with:
+          # Full history so the rebase in the commit-back step below can work;
+          # a shallow clone makes `git pull --rebase` unreliable.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -41,5 +45,16 @@ jobs:
       - name: Commit watchlist if changed
         run: |
           git add watchlist.txt
-          git diff --cached --quiet || git commit -m "Sync watchlist after S&P 500 refresh [skip ci]"
+          if git diff --cached --quiet; then
+            echo "watchlist.txt unchanged - nothing to push"
+            exit 0
+          fi
+          git commit -m "Sync watchlist after S&P 500 refresh [skip ci]"
+          # Same race guard as sync-watchlist.yml: master can move while this
+          # job runs, and a plain push then fails non-fast-forward.
+          git pull --rebase origin master || {
+            git rebase --abort || true
+            echo "::error::rebase onto origin/master failed - resolve manually"
+            exit 1
+          }
           git push
