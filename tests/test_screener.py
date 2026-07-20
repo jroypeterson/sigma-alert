@@ -2035,3 +2035,47 @@ class TestPersistedNullBeatsFallback:
         }))
         assert "SENTINEL-LABEL" in html, \
             "a pre-2026-07-20 snapshot must still get labelled"
+
+
+class TestOverviewValidatorFieldsSections:
+    """A section may carry `fields[]` instead of `text`, with its own limits
+    (10 fields, 2000 chars each). Checking only `text.text` let an oversized
+    fields[] section pass the gate and fail as an opaque Slack invalid_blocks
+    (codex 2026-07-20). A false pass in a posting gate is worse than no gate."""
+
+    def _v(self, blocks):
+        import post_overview
+        return post_overview.validate_blocks({"blocks": blocks})
+
+    def test_oversized_field_is_caught(self):
+        probs = self._v([{"type": "section",
+                          "fields": [{"type": "mrkdwn", "text": "x" * 3001}]}])
+        assert probs and "field" in probs[0]
+
+    def test_field_limit_is_2000_not_3000(self):
+        """The section text limit is 3000 but a FIELD's is 2000."""
+        assert self._v([{"type": "section",
+                         "fields": [{"type": "mrkdwn", "text": "x" * 2500}]}])
+        assert not self._v([{"type": "section",
+                             "fields": [{"type": "mrkdwn", "text": "x" * 1999}]}])
+
+    def test_too_many_fields_is_caught(self):
+        probs = self._v([{"type": "section",
+                          "fields": [{"type": "mrkdwn", "text": "ok"}] * 11}])
+        assert probs and "11 fields" in probs[0]
+
+    def test_fields_on_a_non_section_is_caught(self):
+        probs = self._v([{"type": "context", "elements": [], "fields": [{"text": "x"}]}])
+        assert probs and "only a section" in probs[0]
+
+    def test_section_with_neither_text_nor_fields_is_caught(self):
+        probs = self._v([{"type": "section"}])
+        assert probs and "neither" in probs[0]
+
+    def test_a_valid_fields_section_passes(self):
+        assert self._v([{"type": "section",
+                         "fields": [{"type": "mrkdwn", "text": "fine"}]}]) == []
+
+    def test_the_real_card_still_validates(self):
+        import post_overview
+        assert post_overview.validate_blocks(post_overview.build_blocks()) == []

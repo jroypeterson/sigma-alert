@@ -153,6 +153,13 @@ def build_blocks() -> dict:
 
 SLACK_MAX_BLOCKS = 50
 SLACK_MAX_SECTION_CHARS = 3000
+# A section may carry `fields[]` INSTEAD of `text`, with its own limits:
+# at most 10 fields, each capped at 2000 chars (not 3000). Checking only
+# `text.text` let a 3001-char fields[] section pass validation and then fail as
+# an opaque Slack invalid_blocks (codex 2026-07-20). A false pass in a posting
+# gate is worse than no gate, because it's trusted.
+SLACK_MAX_FIELD_CHARS = 2000
+SLACK_MAX_SECTION_FIELDS = 10
 
 
 def validate_blocks(payload: dict) -> list[str]:
@@ -186,6 +193,29 @@ def validate_blocks(payload: dict) -> list[str]:
         if len(text) > SLACK_MAX_SECTION_CHARS:
             problems.append(f"block {i} ({b.get('type')}) is {len(text)} chars, "
                             f"over the {SLACK_MAX_SECTION_CHARS} limit")
+
+        # A section's alternative `fields[]` payload, which has its own limits.
+        fields = b.get("fields")
+        if fields is not None:
+            if b.get("type") != "section":
+                problems.append(f"block {i} ({b.get('type')}) has `fields`, "
+                                f"which only a section block may carry")
+            if not isinstance(fields, list):
+                problems.append(f"block {i} `fields` must be a list")
+                fields = []
+            if len(fields) > SLACK_MAX_SECTION_FIELDS:
+                problems.append(f"block {i} has {len(fields)} fields, over the "
+                                f"{SLACK_MAX_SECTION_FIELDS} limit")
+            for j, fld in enumerate(fields):
+                ftext = fld.get("text", "") or "" if isinstance(fld, dict) else ""
+                worst = max(worst, len(ftext))
+                if len(ftext) > SLACK_MAX_FIELD_CHARS:
+                    problems.append(
+                        f"block {i} field {j} is {len(ftext)} chars, over the "
+                        f"{SLACK_MAX_FIELD_CHARS} field limit")
+        elif b.get("type") == "section" and not isinstance(b.get("text"), dict):
+            # A section with neither text nor fields is rejected by Slack.
+            problems.append(f"block {i} (section) has neither `text` nor `fields`")
 
     headroom = SLACK_MAX_SECTION_CHARS - worst
     print(f"[overview] {len(blocks)} blocks (max {SLACK_MAX_BLOCKS}) · "

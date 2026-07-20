@@ -221,8 +221,11 @@ def build_html(snapshot) -> str:
               f"tooltips will show names without weighting labels")
         weighting_fallback = {}
 
+    # Same membership test as _tooltip_name: an asset that persisted an explicit
+    # null isn't stale, it's deliberately unlabelled. `.get() is None` would
+    # conflate the two and over-report.
     stale = [a["ticker"] for a in assets
-             if a.get("weighting") is None and a["ticker"] in weighting_fallback]
+             if "weighting" not in a and a["ticker"] in weighting_fallback]
     if stale:
         print(f"[INFO] return_map: {len(stale)} asset(s) predate the persisted "
               f"weighting field; labelled from etf_weighting.json instead "
