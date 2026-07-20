@@ -1952,3 +1952,53 @@ class TestIhfTracked:
 
     def test_ihf_has_a_display_name(self):
         assert sigma_screener.load_etf_names().get("IHF") == "Healthcare Providers"
+
+
+class TestReturnMapWeightingFallback:
+    """A snapshot written before the persisted `weighting` field must still
+    render weighting labels. Persisted-only lookup silently dropped the label
+    for every asset in the committed snapshot (codex 2026-07-20) — and because
+    the "(Equal Wt)"/"(Cap Wt)" name suffixes were removed in the same change,
+    a fresh snapshot missing the field would show XBI and IBB as two
+    indistinguishable "Biotech" cells."""
+
+    def _snapshot(self, assets):
+        return {"generated_at": "2026-07-17T21:00:00Z", "ref_date": "2026-07-17",
+                "mode": "close", "assets": assets}
+
+    def _asset(self, ticker, name, **kw):
+        a = {"ticker": ticker, "name": name, "group": "US Indices",
+             "day": 0.1, "ytd": 1.0, "prior_year": 2.0}
+        a.update(kw)
+        return a
+
+    def test_legacy_snapshot_gets_labels_from_the_weighting_file(self):
+        import return_map
+        html = return_map.build_html(self._snapshot([
+            self._asset("SPYM", "S&P 500"),      # no `weighting` key at all
+            self._asset("DIA", "Dow Jones"),
+        ]))
+        assert "market-cap weighted" in html
+        assert "price-weighted" in html
+
+    def test_persisted_weighting_wins_over_the_fallback(self):
+        import return_map
+        html = return_map.build_html(self._snapshot([
+            self._asset("SPYM", "S&P 500", weighting="SENTINEL-WEIGHTING"),
+        ]))
+        assert "SENTINEL-WEIGHTING" in html
+
+    def test_deliberately_unlabelled_asset_stays_unlabelled(self):
+        """GLD has an explicit null — it must not acquire a label via fallback."""
+        import return_map
+        html = return_map.build_html(self._snapshot([
+            self._asset("GLD", "Gold"),
+        ]))
+        assert "Gold &mdash;" not in html and "Gold —" not in html
+
+    def test_unknown_ticker_renders_bare_name_without_crashing(self):
+        import return_map
+        html = return_map.build_html(self._snapshot([
+            self._asset("ZZZZ", "Some New Thing"),
+        ]))
+        assert "Some New Thing" in html

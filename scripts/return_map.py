@@ -209,6 +209,26 @@ def build_html(snapshot) -> str:
     ref_date = snapshot.get("ref_date", "")
     mode = snapshot.get("mode", "")
 
+    # Fallback weighting source for snapshots that predate the persisted field.
+    # Import lazily so return_map stays usable standalone if the screener module
+    # can't be imported (it pulls pandas/yfinance); an empty dict just means the
+    # tooltips degrade to bare names, which is the old behaviour.
+    try:
+        from sigma_screener import load_etf_weighting
+        weighting_fallback = load_etf_weighting()
+    except Exception as e:  # noqa: BLE001 — never let the map fail to render
+        print(f"[WARN] return_map: could not load etf_weighting.json ({e}); "
+              f"tooltips will show names without weighting labels")
+        weighting_fallback = {}
+
+    stale = [a["ticker"] for a in assets
+             if a.get("weighting") is None and a["ticker"] in weighting_fallback]
+    if stale:
+        print(f"[INFO] return_map: {len(stale)} asset(s) predate the persisted "
+              f"weighting field; labelled from etf_weighting.json instead "
+              f"(regenerate the snapshot to embed them): {', '.join(sorted(stale)[:8])}"
+              + (" ..." if len(stale) > 8 else ""))
+
     # Period labels: use the data's prior-year label (e.g. "2025") when present.
     prior_year_label = "Prior Year"
     for a in assets:
@@ -234,10 +254,18 @@ def build_html(snapshot) -> str:
         def _tooltip_name(a):
             """Name + weighting, matching the Slack row's parenthetical.
 
-            Older snapshots (written before 2026-07-19) have no `weighting` key
-            and simply fall back to the bare name.
+            Snapshots written before 2026-07-20 carry no `weighting` key, so a
+            persisted-only lookup would silently render the whole committed
+            snapshot unlabeled (codex 2026-07-20) — and since the "(Equal Wt)"/
+            "(Cap Wt)" suffixes were removed from the display names in the same
+            change, a fresh snapshot missing the field would show XBI and IBB as
+            two indistinguishable "Biotech" cells. So fall back to the same
+            etf_weighting.json the Slack rows use: the map is then correct
+            regardless of how old the snapshot is.
             """
             wt = a.get("weighting")
+            if wt is None:
+                wt = weighting_fallback.get(a["ticker"])
             return f'{a["name"]} — {wt}' if wt else a["name"]
 
         missing = [a for a in assets if a.get(key) is None]
