@@ -2002,3 +2002,36 @@ class TestReturnMapWeightingFallback:
             self._asset("ZZZZ", "Some New Thing"),
         ]))
         assert "Some New Thing" in html
+
+
+class TestPersistedNullBeatsFallback:
+    """An explicit persisted null is a deliberate "this has no meaningful
+    weighting" (GLD, BTC-USD, a bond yield). The stale-snapshot fallback must
+    not re-label it — `"weighting" in a` distinguishes "persisted as none" from
+    "key absent because the snapshot predates the field" (codex 2026-07-20)."""
+
+    def _snap(self, asset):
+        return {"generated_at": "", "ref_date": "", "mode": "close",
+                "assets": [asset]}
+
+    def test_explicit_null_is_not_relabelled_by_the_fallback(self, monkeypatch):
+        import sigma_screener, return_map
+        monkeypatch.setattr(sigma_screener, "load_etf_weighting",
+                            lambda: {"GLD": "SENTINEL-LABEL"})
+        html = return_map.build_html(self._snap({
+            "ticker": "GLD", "name": "Gold", "group": "Commodities",
+            "weighting": None, "day": 1.0, "ytd": 2.0, "prior_year": 3.0,
+        }))
+        assert "SENTINEL-LABEL" not in html, \
+            "a deliberately-unlabelled asset must not acquire a label"
+
+    def test_absent_key_still_takes_the_fallback(self, monkeypatch):
+        import sigma_screener, return_map
+        monkeypatch.setattr(sigma_screener, "load_etf_weighting",
+                            lambda: {"GLD": "SENTINEL-LABEL"})
+        html = return_map.build_html(self._snap({
+            "ticker": "GLD", "name": "Gold", "group": "Commodities",
+            "day": 1.0, "ytd": 2.0, "prior_year": 3.0,   # no `weighting` key
+        }))
+        assert "SENTINEL-LABEL" in html, \
+            "a pre-2026-07-20 snapshot must still get labelled"

@@ -262,10 +262,15 @@ def build_html(snapshot) -> str:
             two indistinguishable "Biotech" cells. So fall back to the same
             etf_weighting.json the Slack rows use: the map is then correct
             regardless of how old the snapshot is.
+
+            Membership test, not `.get() is None`: an asset that PERSISTED an
+            explicit null (a deliberate non-label like GLD/BTC-USD) must keep
+            it, while an asset with no key at all is a pre-2026-07-20 snapshot
+            that never had the field. Both read as None from `.get()`, so
+            collapsing them would let the fallback re-label something the
+            snapshot deliberately left blank.
             """
-            wt = a.get("weighting")
-            if wt is None:
-                wt = weighting_fallback.get(a["ticker"])
+            wt = a["weighting"] if "weighting" in a else weighting_fallback.get(a["ticker"])
             return f'{a["name"]} — {wt}' if wt else a["name"]
 
         missing = [a for a in assets if a.get(key) is None]
