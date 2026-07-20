@@ -1,10 +1,22 @@
 # Healthcare sub-sector ETFs — render under "_Healthcare_" in the Index &
 # Sector Returns Slack section, below the SPDR Select Sector funds.
 # Last updated: 2026-05-31
-# XBI = SPDR S&P Biotech (equal-weighted)
-# IBB = iShares Biotechnology (cap-weighted)
-# IHI = iShares U.S. Medical Devices
-# XHS = SPDR S&P Health Care Services
+# NB (2026-07-19): the equal-vs-cap distinction that used to live in the display
+# names ("Biotech (Equal Wt)" / "Biotech (Cap Wt)") now lives as DATA in
+# sources/etf_weighting.json and is rendered as a parenthetical on EVERY
+# returns-block row, so the names here are plain again. Add a weighting entry
+# for any ticker added below — the screener [WARN]s at startup on a gap.
+# XBI = SPDR S&P Biotech (S&P Biotechnology Select Industry, modified EQUAL wt)
+# IBB = iShares Biotechnology (NASDAQ Biotechnology, modified cap wt)
+# IHI = iShares U.S. Medical Devices (cap-weighted, capped)
+# XHS = SPDR S&P Health Care Services (Select Industry = modified EQUAL wt)
+# IHF = iShares U.S. Healthcare Providers (Dow Jones U.S. Select Health Care
+#       Providers Index — float-adjusted cap weighted, capped). Added 2026-07-19
+#       at JP's request: managed care + providers + distributors is the core of
+#       the HC-services book, and neither XLV (whole sector) nor XHS (equal-wt,
+#       small/mid-tilted) shows how the large managed-care complex actually
+#       traded. Sits next to XHS so the cap-weighted vs equal-weighted read of
+#       the same industry is available side by side.
 # Display labels (etf_names.json) emphasize COMPOSITION so the three pharma rows
 # are distinguishable at a glance: large-cap-concentrated vs US-diversified.
 # PPH = VanEck Pharmaceutical (concentrated 25-name MVIS index = the 25 biggest;
@@ -26,6 +38,7 @@ XBI
 IBB
 IHI
 XHS
+IHF
 PPH
 IHE
 ^DRG

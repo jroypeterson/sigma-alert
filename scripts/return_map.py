@@ -87,6 +87,7 @@ def assemble_snapshot(
     commodity_set=None,
     macro_set=None,
     macro_style=None,
+    weighting=None,
     mode="",
     ref_date="",
     generated_at=None,
@@ -98,6 +99,11 @@ def assemble_snapshot(
 
     Macro rows styled as a yield (e.g. ^TNX) are dropped — a "% return" on a
     yield level is misleading and not comparable to the equity rows.
+
+    ``weighting`` is the ``sources/etf_weighting.json`` map. It is persisted per
+    asset so the cell tooltip can name the methodology — required since XBI/IBB
+    (and XHS/IHF) share a display name and are told apart ONLY by their
+    weighting. Defaults to loading the file.
     """
     index_set = index_set or set()
     global_equity_set = global_equity_set or set()
@@ -107,6 +113,13 @@ def assemble_snapshot(
     commodity_set = commodity_set or set()
     macro_set = macro_set or set()
     macro_style = macro_style or {}
+    if weighting is None:
+        try:
+            import sigma_screener
+            weighting = sigma_screener.load_etf_weighting()
+        except Exception as e:  # warn-and-proceed — never break the pipeline
+            print(f"[WARN] return_map: could not load ETF weighting: {e}")
+            weighting = {}
     period_map = period_map or {}
 
     def group_of(ticker):
@@ -139,6 +152,7 @@ def assemble_snapshot(
         assets.append({
             "ticker": ticker,
             "name": row.get("name") or ticker,
+            "weighting": weighting.get(ticker),
             "group": group,
             "today_pct": _num(row.get("return_pct")),
             "ytd_pct": _num(period.get("ytd_return_pct")),
@@ -217,6 +231,15 @@ def build_html(snapshot) -> str:
             key=lambda a: a[key], reverse=True,
         )
         # Assets missing this period render at the bottom in stable order.
+        def _tooltip_name(a):
+            """Name + weighting, matching the Slack row's parenthetical.
+
+            Older snapshots (written before 2026-07-19) have no `weighting` key
+            and simply fall back to the bare name.
+            """
+            wt = a.get("weighting")
+            return f'{a["name"]} — {wt}' if wt else a["name"]
+
         missing = [a for a in assets if a.get(key) is None]
         cells = []
         for a in ranked + missing:
@@ -225,7 +248,7 @@ def build_html(snapshot) -> str:
             cells.append(
                 f'<div class="cell" style="background:{color}" '
                 f'data-group="{html.escape(a["group"])}" '
-                f'title="{html.escape(a["name"])} ({html.escape(a["ticker"])}) '
+                f'title="{html.escape(_tooltip_name(a))} ({html.escape(a["ticker"])}) '
                 f'&#10;{html.escape(column_labels[key])}: {_fmt_pct(val).replace("&mdash;","n/a")}">'
                 f'<span class="tk">{html.escape(a["ticker"])}</span>'
                 f'<span class="vp">{_fmt_pct(val)}</span>'
@@ -372,7 +395,8 @@ def _sample_snapshot():
              "today_pct": -0.5, "ytd_pct": -1.2, "prior_year_pct": 3.4, "prior_year_label": "2025"},
             {"ticker": "XLK", "name": "Technology", "group": "Sectors",
              "today_pct": 1.1, "ytd_pct": 11.0, "prior_year_pct": 30.2, "prior_year_label": "2025"},
-            {"ticker": "XBI", "name": "Biotech (Equal Wt)", "group": "Healthcare",
+            {"ticker": "XBI", "name": "Biotech", "weighting": "equal-weighted",
+             "group": "Healthcare",
              "today_pct": -1.4, "ytd_pct": -4.6, "prior_year_pct": -8.0, "prior_year_label": "2025"},
             {"ticker": "SMH", "name": "Semis", "group": "Tech Themes",
              "today_pct": 1.7, "ytd_pct": 14.2, "prior_year_pct": 37.0, "prior_year_label": "2025"},

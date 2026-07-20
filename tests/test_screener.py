@@ -705,7 +705,9 @@ class TestTechThemesRendering:
     def test_tech_group_renders_with_holdings_name(self):
         text = self._text([self._row("SMH", "Semis: NVDA, TSM, AVGO", 250.0, 1.5)])
         assert "_Tech Themes_" in text
-        assert "`SMH` (Semis: NVDA, TSM, AVGO)" in text
+        # Name + weighting share one parenthetical, em-dash joined (the name
+        # itself contains commas, so a comma join would read as a 4th holding).
+        assert "`SMH` (Semis: NVDA, TSM, AVGO — market-cap weighted)" in text
 
     def test_tech_separate_from_sectors_and_after_healthcare(self):
         rows = [
@@ -786,7 +788,7 @@ class TestGlobalEquityRendering:
     def test_global_equity_group_renders(self):
         text = self._text([self._row("ACWI", "MSCI All-Country World", 120.0, 0.5)])
         assert "_Global Equity_" in text
-        assert "`ACWI` (MSCI All-Country World)" in text
+        assert "`ACWI` (MSCI All-Country World — market-cap weighted)" in text
 
     def test_global_equity_after_indices_before_sectors_not_in_sectors(self):
         rows = [
@@ -1808,3 +1810,145 @@ class TestPositionNamesAlwaysScreened:
             assert name in universe
         # ...and the original watchlist order is preserved up front.
         assert universe[:2] == ["AAPL", "MSFT"]
+
+
+# ---------------------------------------------------------------------------
+# Index/ETF weighting methodology labels (2026-07-19)
+# ---------------------------------------------------------------------------
+
+class TestEtfWeighting:
+    """The weighting parenthetical on returns-block rows.
+
+    Weighting is DATA (`sources/etf_weighting.json`), never hardcoded in the
+    render function, so a new ticker has one obvious place to declare it and
+    the validator can flag it when it doesn't.
+    """
+
+    def _row(self, ticker, name, z=0.5):
+        return {
+            "ticker": ticker, "name": name, "z_score": z,
+            "return_pct": 1.0, "price": 100.0,
+            "high_52w": None, "low_52w": None,
+        }
+
+    def _text(self, etf_returns, weighting, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=etf_returns, etf_weighting=weighting, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    # --- loader -----------------------------------------------------------
+
+    def test_real_file_loads_and_covers_every_returns_block_ticker(self):
+        """The shipped file must label (or explicitly null) every tracked
+        ticker — this is the regression guard that keeps a newly added ETF
+        from silently rendering unlabeled."""
+        weighting = sigma_screener.load_etf_weighting()
+        universe = (
+            sigma_screener.load_index_etfs()
+            | sigma_screener.load_global_equity_etfs()
+            | sigma_screener.load_sector_etfs()
+            | sigma_screener.load_healthcare_etfs()
+            | sigma_screener.load_tech_etfs()
+            | sigma_screener.load_commodity_etfs()
+            | sigma_screener.load_macro()
+        )
+        assert sigma_screener.warn_missing_weighting(universe, weighting) == []
+
+    def test_loader_ignores_underscore_doc_keys(self):
+        weighting = sigma_screener.load_etf_weighting()
+        assert not any(k.startswith("_") for k in weighting)
+
+    def test_null_is_preserved_as_none_not_dropped(self):
+        """An explicit null means 'deliberately unlabeled'. It must survive as a
+        key so the validator can tell it apart from a missing entry."""
+        weighting = sigma_screener.load_etf_weighting()
+        assert "GLD" in weighting and weighting["GLD"] is None
+
+    def test_known_methodologies(self):
+        weighting = sigma_screener.load_etf_weighting()
+        assert weighting["SPYM"] == "market-cap weighted"
+        assert weighting["IHF"] == "market-cap weighted"
+        assert weighting["XBI"] == "equal-weighted"
+        assert weighting["XHS"] == "equal-weighted"
+        assert weighting["MAGS"] == "equal-weighted"
+        # price-weighted is a real third category — the Dow must not be
+        # forced into the equal/cap binary.
+        assert weighting["DIA"] == "price-weighted"
+
+    # --- validator --------------------------------------------------------
+
+    def test_validator_flags_a_ticker_with_no_entry(self, capsys):
+        gaps = sigma_screener.warn_missing_weighting(
+            {"SPYM", "NEWETF"}, {"SPYM": "market-cap weighted"})
+        assert gaps == ["NEWETF"]
+        assert "NEWETF" in capsys.readouterr().out
+
+    def test_validator_does_not_flag_an_explicit_null(self):
+        assert sigma_screener.warn_missing_weighting({"GLD"}, {"GLD": None}) == []
+
+    # --- rendering --------------------------------------------------------
+
+    def test_label_appended_to_name(self):
+        text = self._text(
+            [self._row("SPYM", "S&P 500")], {"SPYM": "market-cap weighted"},
+            index_etf_set={"SPYM"})
+        assert "`SPYM` (S&P 500 — market-cap weighted)" in text
+
+    def test_none_weighting_renders_bare_name(self):
+        text = self._text(
+            [self._row("GLD", "Gold")], {"GLD": None},
+            commodity_etf_set={"GLD"})
+        assert "`GLD` (Gold)" in text
+        assert "weighted" not in text
+
+    def test_missing_entry_renders_bare_name_rather_than_failing(self):
+        """Warn-and-proceed: an unlabeled row still posts."""
+        text = self._text(
+            [self._row("NEWETF", "Something New")], {},
+            commodity_etf_set={"NEWETF"})
+        assert "`NEWETF` (Something New)" in text
+
+    def test_same_industry_pair_is_distinguishable_by_weighting_alone(self):
+        """XBI/IBB (and XHS/IHF) now share a display name — the weighting label
+        is what tells them apart, which is the point of the change."""
+        text = self._text(
+            [self._row("XBI", "Biotech", z=1.0), self._row("IBB", "Biotech", z=0.5)],
+            {"XBI": "equal-weighted", "IBB": "market-cap weighted"},
+            healthcare_etf_set={"XBI", "IBB"})
+        assert "`XBI` (Biotech — equal-weighted)" in text
+        assert "`IBB` (Biotech — market-cap weighted)" in text
+
+    def test_macro_rows_use_the_same_label_path(self):
+        text = self._text(
+            [{"ticker": "DX-Y.NYB", "name": "US Dollar Index", "z_score": 0.2,
+              "return_pct": 0.1, "price": 99.5, "high_52w": None, "low_52w": None}],
+            {"DX-Y.NYB": None}, macro_etf_set={"DX-Y.NYB"})
+        assert "`DX-Y.NYB` (US Dollar Index)" in text
+
+    def test_defaults_to_loading_the_file_when_not_threaded_through(self):
+        """No caller can render an unlabeled block by forgetting the kwarg."""
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-04-10"}, None, set(),
+            etf_returns=[self._row("SPYM", "S&P 500")],
+            index_etf_set={"SPYM"},
+        )
+        text = "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+        assert "market-cap weighted" in text
+
+
+class TestIhfTracked:
+    """IHF (iShares U.S. Healthcare Providers) added 2026-07-19."""
+
+    def test_ihf_in_healthcare_group(self):
+        assert "IHF" in sigma_screener.load_healthcare_etfs()
+
+    def test_ihf_has_a_display_name(self):
+        assert sigma_screener.load_etf_names().get("IHF") == "Healthcare Providers"

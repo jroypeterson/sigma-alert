@@ -30,13 +30,34 @@ except ImportError:  # pragma: no cover - requests is a hard dep at runtime
     requests = None
 
 
-def _named(tickers, names):
-    """Render `TICKER (friendly name)` chips for a group, source-order preserved."""
+def _named(tickers, names, weighting=None):
+    """Render `TICKER (friendly name, weighting)` chips, source-order preserved.
+
+    Mirrors the screener's returns-block rows exactly (same `etf_names.json` +
+    `etf_weighting.json` data), so the pinned card can't drift from the digest.
+    A `None` weighting (spot asset / yield / currency basket) renders the bare
+    name, same as the digest. Em-dash join for the same reason the screener uses
+    one: several display names already contain commas.
+    """
+    weighting = weighting or {}
     out = []
     for t in tickers:
-        n = names.get(t)
-        out.append(f"`{t}` ({n})" if n else f"`{t}`")
+        bits = [b for b in (names.get(t), weighting.get(t)) if b]
+        out.append(f"`{t}` ({' — '.join(bits)})" if bits else f"`{t}`")
     return out
+
+
+def _shared_weighting(tickers, weighting):
+    """Return the single weighting shared by every ticker in a group, else "".
+
+    Lets a homogeneous group (the 11 SPDR sectors are all cap-weighted) be
+    summarized once instead of repeating the label 11 times. Derived from the
+    data, so it degrades to "" the moment the group stops being homogeneous.
+    """
+    labels = {(weighting or {}).get(t) for t in tickers}
+    if len(labels) == 1:
+        return next(iter(labels)) or ""
+    return ""
 
 
 def _ordered(path):
@@ -53,6 +74,7 @@ def _ordered(path):
 
 def build_blocks() -> dict:
     names = s.load_etf_names()
+    weighting = s.load_etf_weighting()
     macro = _ordered(s.MACRO_PATH)
     index = _ordered(s.INDEX_ETFS_PATH)
     global_eq = _ordered(s.GLOBAL_EQUITY_ETFS_PATH)
@@ -63,6 +85,10 @@ def build_blocks() -> dict:
     credit = ", ".join(
         f"`{k}` ({s.CREDIT_SERIES[k]['label']})" for k in s.CREDIT_ORDER
     )
+    # The 11 SPDR sectors are homogeneous, so the weighting is stated once for
+    # the group rather than repeated per chip (derived, not hardcoded).
+    _shared = _shared_weighting(sector, weighting)
+    _sector_wt = f", all {_shared}" if _shared else ""
     curve = ", ".join(
         f"`{k}` (FRED {s.TREASURY_CURVE_SERIES[k]})" for k in s.TREASURY_CURVE_ORDER
     )
@@ -93,15 +119,22 @@ def build_blocks() -> dict:
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Index, Sector & Macro Returns* (every digest, at the bottom)\n"
-            f"• *US Indices* — {', '.join(_named(index, names))}\n"
-            f"• *Macro* — {', '.join(_named(macro, names))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
+            "_Each index/ETF row names its *weighting methodology* — "
+            "`market-cap weighted`, `equal-weighted`, or `price-weighted` (the Dow) — "
+            "so the rows are comparable. Same-industry pairs are the point: "
+            "`XBI` vs `IBB` (biotech) and `XHS` vs `IHF` (health care services / "
+            "providers) each pair an equal- or small/mid-tilted read against a "
+            "cap-weighted one. Rows with no label (spot gold/bitcoin, the 10Y "
+            "yield, the dollar basket) have no meaningful weighting._\n"
+            f"• *US Indices* — {', '.join(_named(index, names, weighting))}\n"
+            f"• *Macro* — {', '.join(_named(macro, names, weighting))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
             f"• *Treasury Curve* — {curve} _(prior close; level + day bp + YTD bp; colored bond-style: yield up = 🟥)_\n"
             f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_\n"
-            f"• *Global Equity* — {', '.join(_named(global_eq, names))} _(country ETFs are USD, so they bundle local-equity + FX)_\n"
-            f"• *Sectors* — SPDR Select Sector ETFs ({', '.join('`'+t+'`' for t in sector)})\n"
-            f"• *Healthcare* — {', '.join(_named(healthcare, names))}\n"
-            f"• *Tech Themes* — {', '.join(_named(tech, names))}\n"
-            f"• *Commodities* — {', '.join(_named(commodity, names))}"
+            f"• *Global Equity* — {', '.join(_named(global_eq, names, weighting))} _(country ETFs are USD, so they bundle local-equity + FX)_\n"
+            f"• *Sectors* — SPDR Select Sector ETFs{_sector_wt} ({', '.join('`'+t+'`' for t in sector)})\n"
+            f"• *Healthcare* — {', '.join(_named(healthcare, names, weighting))}\n"
+            f"• *Tech Themes* — {', '.join(_named(tech, names, weighting))}\n"
+            f"• *Commodities* — {', '.join(_named(commodity, names, weighting))}"
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Reading an alert line*\n"

@@ -8,3 +8,8 @@ __pycache__/
 # every screener run (and on demand via scripts/return_map.py) from the
 # committed cache/returns_snapshot.json, so it isn't tracked.
 readable/
+
+# Codex review output — kept on disk as proof-of-run, but untracked.
+# If tracked/untracked, each review appears in the next review's working-tree
+# diff and pollutes it with hundreds of KB of prior review text (2026-07-20).
+codex_feedback/

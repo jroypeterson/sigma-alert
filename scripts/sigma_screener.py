@@ -49,6 +49,7 @@ TECH_ETFS_PATH = ROOT / "sources" / "tech_etfs.txt"
 COMMODITY_ETFS_PATH = ROOT / "sources" / "commodity_etfs.txt"
 MACRO_PATH = ROOT / "sources" / "macro.txt"
 ETF_NAMES_PATH = ROOT / "sources" / "etf_names.json"
+ETF_WEIGHTING_PATH = ROOT / "sources" / "etf_weighting.json"
 # Personal trading state pushed by Coverage Manager's weekly sigma_export step.
 # Owned by Coverage Manager — do NOT edit by hand in this repo.
 #
@@ -703,6 +704,59 @@ def load_etf_names() -> dict:
     if not isinstance(data, dict):
         return {}
     return {t.upper(): str(n) for t, n in data.items() if n}
+
+
+def load_etf_weighting() -> dict:
+    """Load `{TICKER: weighting label or None}` from sources/etf_weighting.json.
+
+    The weighting methodology (market-cap / equal / price weighted) is stored as
+    DATA next to the ticker definition rather than hardcoded in the render
+    function, so a newly added index/ETF has one obvious place to declare it and
+    `warn_missing_weighting()` can flag it if it doesn't.
+
+    An explicit JSON `null` means "deliberately unlabeled" — the instrument has
+    no meaningful weighting (a single spot asset like GLD/BTC, a bond yield, a
+    fixed-weight currency basket) or its methodology couldn't be established
+    confidently. It is preserved as a `None` value (NOT dropped) so the validator
+    can tell an intentional non-label apart from a missing entry.
+
+    Keys beginning with `_` are documentation and are ignored.
+    """
+    if not ETF_WEIGHTING_PATH.exists():
+        print("[WARN] sources/etf_weighting.json missing — returns-block rows "
+              "will render without weighting labels")
+        return {}
+    try:
+        with open(ETF_WEIGHTING_PATH) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[WARN] Could not read etf_weighting.json: {e}")
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        t.upper(): (str(w) if w else None)
+        for t, w in data.items()
+        if not t.startswith("_")
+    }
+
+
+def warn_missing_weighting(returns_tickers, weighting: dict) -> list[str]:
+    """Print a [WARN] for every returns-block ticker with no weighting entry.
+
+    Per the no-silent-failures convention: a ticker added to one of the
+    returns-block source files but not to `sources/etf_weighting.json` would
+    otherwise render an unlabeled row that looks identical to a deliberately
+    unlabeled one. Warn-and-proceed — an unlabeled row is still worth posting,
+    it just shouldn't be silent. Returns the sorted list of gaps (for tests).
+    """
+    gaps = sorted(t for t in returns_tickers if t not in weighting)
+    if gaps:
+        print(f"[WARN] {len(gaps)} returns-block ticker(s) missing a weighting "
+              f"entry in sources/etf_weighting.json: {gaps}. They will render "
+              f"without a weighting parenthetical — add a label, or an explicit "
+              f"null if weighting is not meaningful for them.")
+    return gaps
 
 
 # Subcategory layout within each sigma tier. Order = render order.
@@ -1805,8 +1859,17 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          macro_etf_set: set[str] | None = None,
                          credit_data: dict | None = None,
                          curve_data: dict | None = None,
-                         etf_period_returns: dict | None = None) -> dict:
-    """Build Slack message payload using Block Kit for clean formatting."""
+                         etf_period_returns: dict | None = None,
+                         etf_weighting: dict | None = None) -> dict:
+    """Build Slack message payload using Block Kit for clean formatting.
+
+    `etf_weighting` is the `{TICKER: label|None}` map from
+    `sources/etf_weighting.json` (see `load_etf_weighting`). It appends the
+    index/ETF weighting methodology to each returns-block row's parenthetical so
+    the cross-index comparisons are interpretable. Defaults to loading the file
+    itself when not supplied, so no caller can render an unlabeled block by
+    forgetting to thread it through.
+    """
     current = now_et()
     date_str = current.strftime("%Y-%m-%d")
     time_str = current.strftime("%I:%M %p %Z")
@@ -1843,6 +1906,25 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # year-before-last's year-end close \u2014 older than the 400-day screen window).
     period_map = etf_period_returns or {}
     prior_year_label = str(current.year - 1)
+    # Index/ETF weighting methodology, appended to each returns-block row's
+    # parenthetical (e.g. `XBI` (Biotech, equal-weighted) vs `IBB` (Biotech,
+    # market-cap weighted)). Data lives in sources/etf_weighting.json, never
+    # hardcoded here — see load_etf_weighting().
+    weighting_map = etf_weighting if etf_weighting is not None else load_etf_weighting()
+
+    def _weighted_label(ticker: str, name: str) -> str:
+        """Combine display name + weighting into one parenthetical body.
+
+        Returns "" when there is neither, so the caller can drop the parens.
+        A `None` weighting (deliberately unlabeled — a spot asset, a yield, a
+        currency basket) yields the bare name, unchanged.
+
+        Joined with an em-dash, NOT a comma: several display names already carry
+        internal commas (`Semis: NVDA, TSM, AVGO`), which would make a
+        comma-joined parenthetical read as one more holding.
+        """
+        bits = [b for b in (name, weighting_map.get(ticker)) if b]
+        return " — ".join(bits)
 
     def _format_alert_line(a):
         marker = "\U0001F7E9" if a["direction"] == "up" else "\U0001F7E5"
@@ -2079,7 +2161,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             rp = s["return_pct"]
             z = s["z_score"]
             level = s.get("price")
-            name = s.get("name") or t
+            name = _weighted_label(t, s.get("name") or t)
             if style == "yield":
                 # A bond yield RISE is a price decline, so color it like a loss
                 # (red), the inverse of an equity return. Mirrors the inversion
@@ -2166,8 +2248,10 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         def _format_etf_line(s):
             marker = "\U0001F7E9" if s["return_pct"] > 0 else "\U0001F7E5"
             sign = "+" if s["return_pct"] > 0 else ""
-            short = short_company_name(s.get("name", ""))
-            name_part = f" ({short})" if short else ""
+            # Weighting is appended AFTER short_company_name() so the suffix
+            # stripper only ever sees the company/index name, not the label.
+            label = _weighted_label(s["ticker"], short_company_name(s.get("name", "")))
+            name_part = f" ({label})" if label else ""
             price = s.get("price")
             price_part = f"  |  ${price:.2f}" if price is not None else ""
             lo, hi = s.get("low_52w"), s.get("high_52w")
@@ -2413,6 +2497,20 @@ def main():
             metadata[ticker] = {"name": name, "sector": "", "subsector": ""}
         print(f"[INFO] Applied {len(etf_names)} ETF names from etf_names.json")
 
+    # Weighting methodology (market-cap / equal / price weighted) for the
+    # returns-block rows. Kept in its own file rather than merged into metadata:
+    # it's a display annotation for the returns block only, and metadata rows are
+    # CM-shaped ({name, sector, subsector}) and feed the alert/1σ paths too.
+    # Validate against the full returns-block universe so a ticker added to a
+    # source file without a weighting entry is surfaced, not silently unlabeled.
+    etf_weighting = load_etf_weighting()
+    warn_missing_weighting(etf_set, etf_weighting)
+    if etf_weighting:
+        _labeled = sum(1 for v in etf_weighting.values() if v)
+        print(f"[INFO] Loaded weighting for {_labeled} returns-block ticker(s) "
+              f"({len(etf_weighting) - _labeled} deliberately unlabeled) from "
+              f"etf_weighting.json")
+
     # Make sure ETFs are always screened even if a watchlist sync (e.g. from
     # Coverage Manager) drops them. Preserves watchlist order; appends any
     # ETF not already present.
@@ -2562,6 +2660,7 @@ def main():
         credit_data=credit_data,
         curve_data=curve_data,
         etf_period_returns=etf_period_returns,
+        etf_weighting=etf_weighting,
     )
     send_slack(payload)
 
@@ -2581,6 +2680,7 @@ def main():
             commodity_set=commodity_etf_set,
             macro_set=macro_set,
             macro_style=MACRO_STYLE,
+            weighting=etf_weighting,
             mode=args.mode,
             ref_date=stats.get("ref_date", ""),
         )
