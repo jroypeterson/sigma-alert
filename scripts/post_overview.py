@@ -151,6 +151,53 @@ def build_blocks() -> dict:
     return {"blocks": blocks}
 
 
+SLACK_MAX_BLOCKS = 50
+SLACK_MAX_SECTION_CHARS = 3000
+
+
+def validate_blocks(payload: dict) -> list[str]:
+    """Pre-flight the payload against Slack's structural limits.
+
+    Without this, an oversized card fails as an opaque HTTP 400 from Slack at
+    the moment you try to pin it. The weighting labels added 2026-07-20 pushed
+    the largest block to ~2689 of 3000 chars, so the margin is real but thin —
+    a handful of new tickers would break it. Reports headroom either way.
+    """
+    problems: list[str] = []
+    blocks = payload.get("blocks", [])
+    if len(blocks) > SLACK_MAX_BLOCKS:
+        problems.append(f"{len(blocks)} blocks exceeds Slack's limit of {SLACK_MAX_BLOCKS}")
+
+    worst = 0
+    for i, b in enumerate(blocks):
+        text = ""
+        if isinstance(b.get("text"), dict):
+            text = b["text"].get("text", "") or ""
+        # A context block's payload lives in elements[]; a bare `text` field
+        # there is the documented invalid_blocks 400.
+        if b.get("type") == "context":
+            if "text" in b:
+                problems.append(f"block {i} (context) has a bare `text` field — "
+                                f"Slack requires elements[]")
+            for e in b.get("elements") or []:
+                if isinstance(e, dict):
+                    text += e.get("text", "") or ""
+        worst = max(worst, len(text))
+        if len(text) > SLACK_MAX_SECTION_CHARS:
+            problems.append(f"block {i} ({b.get('type')}) is {len(text)} chars, "
+                            f"over the {SLACK_MAX_SECTION_CHARS} limit")
+
+    headroom = SLACK_MAX_SECTION_CHARS - worst
+    print(f"[overview] {len(blocks)} blocks (max {SLACK_MAX_BLOCKS}) · "
+          f"largest {worst}/{SLACK_MAX_SECTION_CHARS} chars "
+          f"({headroom} to spare)")
+    if not problems and headroom < 400:
+        print(f"[WARN] only {headroom} chars of headroom in the largest block — "
+              f"adding a few more tickers will break this card. Split the group "
+              f"across two section blocks before that happens.")
+    return problems
+
+
 def post(payload: dict) -> bool:
     webhook = os.environ.get("SLACK_WEBHOOK")
     if not webhook:
@@ -171,6 +218,16 @@ def main():
                     help="actually post to Slack (default: print the payload only)")
     args = ap.parse_args()
     payload = build_blocks()
+    # Gate BOTH paths, so a dry run tells you the card is broken rather than
+    # letting you discover it from a Slack 400 when you try to pin it.
+    problems = validate_blocks(payload)
+    if problems:
+        print("[ERROR] Block Kit validation failed:")
+        for p in problems:
+            print(f"  - {p}")
+        if args.post:
+            print("[ERROR] Refusing to post an invalid card.")
+            sys.exit(1)
     if args.post:
         post(payload)
     else:
