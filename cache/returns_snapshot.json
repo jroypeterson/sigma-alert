@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-20T17:56:20-04:00",
+  "generated_at": "2026-07-20T18:29:01-04:00",
   "mode": "close",
   "ref_date": "2026-07-20",
   "assets": [
@@ -19,8 +19,8 @@
       "weighting": "price-weighted",
       "group": "US Indices",
       "today_pct": -0.551063752739234,
-      "ytd_pct": 8.614198078193533,
-      "prior_year_pct": 14.705999158010336,
+      "ytd_pct": 8.614205029138315,
+      "prior_year_pct": 14.705983396875286,
       "prior_year_label": "2025"
     },
     {
@@ -70,7 +70,7 @@
       "group": "Sectors",
       "today_pct": -0.50918652105338,
       "ytd_pct": 6.6834457498095805,
-      "prior_year_pct": 16.024359120512187,
+      "prior_year_pct": 16.0243713110386,
       "prior_year_label": "2025"
     },
     {
@@ -110,7 +110,7 @@
       "group": "Sectors",
       "today_pct": 0.13556396187109296,
       "ytd_pct": -5.332360329200456,
-      "prior_year_pct": 23.078444350843412,
+      "prior_year_pct": 23.07845422536087,
       "prior_year_label": "2025"
     },
     {
@@ -160,7 +160,7 @@
       "group": "Global Equity",
       "today_pct": -0.33548662739415325,
       "ytd_pct": 9.89018038421398,
-      "prior_year_pct": 22.413181317524526,
+      "prior_year_pct": 22.41318945019376,
       "prior_year_label": "2025"
     },
     {
@@ -178,8 +178,8 @@
       "name": "Bitcoin",
       "weighting": null,
       "group": "Commodities",
-      "today_pct": 0.8789406048459119,
-      "ytd_pct": -25.457976114909837,
+      "today_pct": 0.769205872695151,
+      "ytd_pct": -25.518461083837078,
       "prior_year_pct": -6.3367499689353695,
       "prior_year_label": "2025"
     },
@@ -188,8 +188,8 @@
       "name": "WTI Crude Oil",
       "weighting": null,
       "group": "Macro",
-      "today_pct": -0.08485840300277586,
-      "ytd_pct": 43.53883803068606,
+      "today_pct": 0.09698367453810439,
+      "ytd_pct": 43.80007371626996,
       "prior_year_pct": -19.938654222484715,
       "prior_year_label": "2025"
     },
@@ -208,8 +208,8 @@
       "name": "US Dollar Index",
       "weighting": null,
       "group": "Macro",
-      "today_pct": 0.24218689419199754,
-      "ytd_pct": 2.7625193335442777,
+      "today_pct": 0.24714694721231387,
+      "ytd_pct": 2.766587101944797,
       "prior_year_pct": -9.411004964064348,
       "prior_year_label": "2025"
     },
@@ -280,7 +280,7 @@
       "group": "Healthcare",
       "today_pct": -1.7021478820830727,
       "ytd_pct": 10.619476233756503,
-      "prior_year_pct": 27.980227073191998,
+      "prior_year_pct": 27.980241894576807,
       "prior_year_label": "2025"
     },
     {
@@ -309,8 +309,8 @@
       "weighting": "market-cap weighted",
       "group": "Healthcare",
       "today_pct": -0.3177971523931164,
-      "ytd_pct": 18.254572056297572,
-      "prior_year_pct": 0.9170478628448464,
+      "ytd_pct": 18.25456260796747,
+      "prior_year_pct": 0.9170559259382297,
       "prior_year_label": "2025"
     },
     {
@@ -320,7 +320,7 @@
       "group": "Healthcare",
       "today_pct": 0.13859337130811342,
       "ytd_pct": -18.43006698897445,
-      "prior_year_pct": 6.883072213290312,
+      "prior_year_pct": 6.883079241249463,
       "prior_year_label": "2025"
     },
     {
@@ -350,7 +350,7 @@
       "group": "Healthcare",
       "today_pct": -1.935657247997544,
       "ytd_pct": 6.057310170156088,
-      "prior_year_pct": 21.996734780352366,
+      "prior_year_pct": 21.996723620322705,
       "prior_year_label": "2025"
     },
     {
@@ -379,8 +379,8 @@
       "weighting": "market-cap weighted",
       "group": "Global Equity",
       "today_pct": -1.0159091699831584,
-      "ytd_pct": 6.805658225172086,
-      "prior_year_pct": 35.837377237569505,
+      "ytd_pct": 6.805668150127252,
+      "prior_year_pct": 35.83737318802963,
       "prior_year_label": "2025"
     },
     {
@@ -390,7 +390,7 @@
       "group": "Healthcare",
       "today_pct": -2.1522054866160154,
       "ytd_pct": 23.91386261350415,
-      "prior_year_pct": 35.89314394806659,
+      "prior_year_pct": 35.89315551453418,
       "prior_year_label": "2025"
     },
     {
@@ -400,7 +400,7 @@
       "group": "Healthcare",
       "today_pct": -0.9648652260221404,
       "ytd_pct": 25.92400364197653,
-      "prior_year_pct": 18.83515086727509,
+      "prior_year_pct": 18.835140777179625,
       "prior_year_label": "2025"
     },
     {
