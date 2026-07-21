@@ -465,6 +465,40 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-07-21",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "CCRN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "OSSFF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SHMZF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "^W5000",
+          "reason": "stale_bar"
+        }
+      ]
     }
   ]
 }
