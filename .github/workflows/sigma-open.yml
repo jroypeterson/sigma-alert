@@ -28,4 +28,17 @@ jobs:
       - name: Run sigma screener (open mode)
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
         run: python scripts/sigma_screener.py --mode open
+
+      - name: Health fallback on failure
+        if: failure()
+        env:
+          SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # HEALTH_REPORTING.md 4.6: the in-process heartbeat is skipped when
+          # the screener crashes or exits early - this backstop posts the
+          # error heartbeat so a dead run is never silent in #status-reports.
+          [ -n "$SLACK_STATUS_REPORTS_WEBHOOK" ] || exit 0
+          curl -sS -X POST -H 'Content-Type: application/json' --data "{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\":x: *sigma-alert - error*  |  health/v1: run crashed before the in-process heartbeat - <${RUN_URL}|Actions log>\"}}],\"text\":\"sigma-alert error (crashed run)\"}" "$SLACK_STATUS_REPORTS_WEBHOOK"

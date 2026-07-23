@@ -2386,6 +2386,54 @@ def send_slack(payload: dict) -> None:
         print(json.dumps(payload, indent=2))
 
 
+def build_health_payload(mode, screened, total, n_alerts, skipped):
+    """(status, Block Kit payload) for the per-run health/v1 heartbeat.
+
+    Status per HEALTH_REPORTING.md 4.2 (abnormal-counts): ok asserts the
+    COUNTERS are normal, not merely that no exception was raised. Coverage
+    below 50% uses the same threshold as the in-digest DEGRADED banner
+    (one definition of degraded, not two); zero screened = nothing usable.
+    """
+    frac = (screened / total) if total else 0.0
+    if screened == 0:
+        status = "error"
+    elif frac < 0.5:
+        status = "partial"
+    else:
+        status = "ok"
+    icon = {"ok": ":white_check_mark:", "partial": ":warning:", "error": ":x:"}[status]
+    today = datetime.now().strftime("%Y-%m-%d")
+    dot, dash = "·", "—"
+    text = (f"{icon} *sigma-alert {dash} {status}*  {dot}  health/v1\n"
+            f"cycle: {today} {mode}\n"
+            f"*Counters:* {screened}/{total} tickers screened {dot} "
+            f"{n_alerts} alerts {dot} {skipped} skipped")
+    if status != "ok":
+        text += (f"\n*Warnings:* market data returned for only {screened}/{total} "
+                 f"tickers {dash} alert tiers are incomplete (Yahoo throttling?), "
+                 f"not a quiet market")
+    payload = {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
+               "text": f"sigma-alert {status} {dot} {today} {mode} {dot} {screened}/{total}"}
+    return status, payload
+
+
+def post_health_heartbeat(mode, stats, total, n_alerts):
+    """Per-run heartbeat to #status-reports (never raises; absent webhook =
+    print-and-skip, mirroring the weekly skip report's local behaviour).
+    Env: SLACK_STATUS_REPORTS_WEBHOOK (same secret the weekly report uses)."""
+    status, payload = build_health_payload(
+        mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0))
+    webhook = os.environ.get("SLACK_STATUS_REPORTS_WEBHOOK")
+    if not webhook:
+        print(f"[INFO] SLACK_STATUS_REPORTS_WEBHOOK not set; heartbeat ({status}) not posted")
+        return
+    try:
+        requests.post(webhook, json=payload, timeout=10).raise_for_status()
+        print(f"[OK] health heartbeat posted ({status})")
+    except requests.RequestException as e:
+        print(f"[WARN] health heartbeat failed (non-fatal): {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Stock sigma screener")
     parser.add_argument("--mode", choices=["open", "midday", "close"], required=True)
@@ -2689,6 +2737,11 @@ def main():
         print(f"[INFO] Return map updated: {snap_path.name} + {html_path}")
     except Exception as e:  # noqa: BLE001 — non-fatal by design
         print(f"[WARN] Return-map generation failed (non-fatal): {e}")
+
+    # Per-run health/v1 heartbeat to #status-reports (added 2026-07-23 per
+    # the fleet heartbeat audit: sigma-alert was the highest-frequency
+    # scheduled job with NO per-run health signal).
+    post_health_heartbeat(args.mode, stats, len(tickers), len(alerts))
 
 
 if __name__ == "__main__":

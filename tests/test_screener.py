@@ -2079,3 +2079,42 @@ class TestOverviewValidatorFieldsSections:
     def test_the_real_card_still_validates(self):
         import post_overview
         assert post_overview.validate_blocks(post_overview.build_blocks()) == []
+
+
+# --- per-run health heartbeat (HEALTH_REPORTING.md 4.2, added 2026-07-23) ---
+
+def test_health_status_ok_partial_error_thresholds():
+    from sigma_screener import build_health_payload
+    assert build_health_payload("open", 1000, 1094, 12, 94)[0] == "ok"
+    assert build_health_payload("open", 547, 1094, 0, 547)[0] == "ok"      # exactly 50%
+    assert build_health_payload("open", 400, 1094, 3, 694)[0] == "partial"  # the DEGRADED-banner case
+    assert build_health_payload("open", 0, 1094, 0, 1094)[0] == "error"     # nothing screened
+
+
+def test_health_payload_is_blockkit_and_self_explaining():
+    from sigma_screener import build_health_payload
+    st, payload = build_health_payload("close", 400, 1094, 3, 694)
+    text = payload["blocks"][0]["text"]["text"]
+    assert payload["blocks"][0]["text"]["type"] == "mrkdwn"
+    assert "health/v1" in text and "400/1094" in text
+    assert "not a quiet market" in text          # degraded zero must self-explain
+    assert payload["text"]                        # fallback text present
+
+
+def test_health_ok_run_has_no_warning_noise():
+    from sigma_screener import build_health_payload
+    _, payload = build_health_payload("open", 1090, 1094, 8, 4)
+    assert "Warnings" not in payload["blocks"][0]["text"]["text"]
+
+
+def test_post_health_heartbeat_never_raises(monkeypatch, capsys):
+    import sigma_screener as sc
+    monkeypatch.delenv("SLACK_STATUS_REPORTS_WEBHOOK", raising=False)
+    sc.post_health_heartbeat("open", {"screened": 10, "skipped": 0}, 1094, 1)
+    assert "not posted" in capsys.readouterr().out
+    monkeypatch.setenv("SLACK_STATUS_REPORTS_WEBHOOK", "http://wh")
+    class _Boom:
+        def raise_for_status(self): raise sc.requests.RequestException("boom")
+    monkeypatch.setattr(sc.requests, "post", lambda *a, **k: _Boom())
+    sc.post_health_heartbeat("open", {"screened": 10, "skipped": 0}, 1094, 1)
+    assert "non-fatal" in capsys.readouterr().out
