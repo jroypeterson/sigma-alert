@@ -149,6 +149,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "LULU": {
+    "position": "Following for Interest",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "Sold at Fidelity by 2026-07-24 (was Portfolio since 2026-04-11)",
+    "name": "Lululemon Athletica Inc.",
+    "sector": "Consumer",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "PETS": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",

@@ -289,6 +289,16 @@
     "subsector": "Animal Health",
     "sub_subsector": ""
   },
+  "ISRG": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-24",
+    "notes": "",
+    "name": "Intuitive Surgical Inc",
+    "sector": "MedTech",
+    "subsector": "Surgery",
+    "sub_subsector": "Surgical Robotics"
+  },
   "KKR": {
     "buy_price": null,
     "target_price": null,
@@ -337,16 +347,6 @@
     "name": "Eli Lilly And Co",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
-    "sub_subsector": ""
-  },
-  "LULU": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "Lululemon Athletica Inc.",
-    "sector": "Consumer",
-    "subsector": "",
     "sub_subsector": ""
   },
   "MA": {
@@ -489,6 +489,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "ROIV": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-24",
+    "notes": "Former-employer grant shares (E*Trade)",
+    "name": "Roivant Sciences Ltd",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": ""
+  },
   "RPD": {
     "buy_price": null,
     "target_price": null,
@@ -507,6 +517,16 @@
     "name": "Surgery Partners Inc",
     "sector": "Healthcare Services",
     "subsector": "Outpatient",
+    "sub_subsector": ""
+  },
+  "SPCX": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-24",
+    "notes": "SpaceX Class A (Fidelity)",
+    "name": "Space Exploration Technologies Corp.",
+    "sector": "Tech",
+    "subsector": "Aerospace & Space",
     "sub_subsector": ""
   },
   "SPGI": {
@@ -597,6 +617,16 @@
     "name": "Visa Inc",
     "sector": "Financials",
     "subsector": "",
+    "sub_subsector": ""
+  },
+  "VEEV": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-24",
+    "notes": "",
+    "name": "Veeva Systems Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
     "sub_subsector": ""
   },
   "VLTO": {

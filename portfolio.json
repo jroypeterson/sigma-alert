@@ -254,6 +254,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "ISRG": {
+    "position": "Portfolio",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": 350.1277,
+    "shares": 3,
+    "notes": "",
+    "name": "Intuitive Surgical Inc",
+    "sector": "MedTech",
+    "subsector": "Surgery",
+    "sub_subsector": "Surgical Robotics",
+    "core": "Y"
+  },
   "KRC": {
     "position": "Portfolio",
     "position_date": "2026-04-11",
@@ -281,21 +296,6 @@
     "name": "Eli Lilly And Co",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "LULU": {
-    "position": "Portfolio",
-    "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "",
-    "name": "Lululemon Athletica Inc.",
-    "sector": "Consumer",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
@@ -344,6 +344,21 @@
     "sub_subsector": "",
     "core": ""
   },
+  "ROIV": {
+    "position": "Portfolio",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": 5.0,
+    "shares": 3400,
+    "notes": "Former-employer grant shares (E*Trade)",
+    "name": "Roivant Sciences Ltd",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": ""
+  },
   "RPD": {
     "position": "Portfolio",
     "position_date": "2026-04-11",
@@ -358,6 +373,21 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y"
+  },
+  "SPCX": {
+    "position": "Portfolio",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": 135.0,
+    "shares": 100,
+    "notes": "SpaceX Class A (Fidelity)",
+    "name": "Space Exploration Technologies Corp.",
+    "sector": "Tech",
+    "subsector": "Aerospace & Space",
+    "sub_subsector": "",
+    "core": ""
   },
   "SPOT": {
     "position": "Portfolio",
@@ -431,6 +461,21 @@
     "name": "Visa Inc",
     "sector": "Financials",
     "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "VEEV": {
+    "position": "Portfolio",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": 197.64,
+    "shares": 6,
+    "notes": "",
+    "name": "Veeva Systems Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
     "sub_subsector": "",
     "core": "Y"
   },
