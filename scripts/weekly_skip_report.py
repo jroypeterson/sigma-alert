@@ -27,6 +27,13 @@ import os
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from math import ceil
+
+# A ticker is "chronic" when it was skipped in at least this fraction of the
+# window's runs, with a floor of two runs so a single-run window can never
+# manufacture one. Deliberately below 1.0 — see the comment in compute_stats.
+_CHRONIC_RUN_RATIO = 0.8
+_CHRONIC_MIN_RUNS = 2
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -181,17 +188,29 @@ def compute_stats(
             reasons_by_ticker[ticker].add(reason)
             reason_counter[reason] += 1
 
-    # Chronic = skipped in every run in the window (suppressed names excluded).
+    # Chronic = skipped in MOST runs in the window (suppressed names excluded).
+    #
+    # This was `n == run_count` — every run — until 2026-07-25, which made the
+    # signal fragile in exactly the case it exists to catch. When the
+    # `stale_bar` guard shipped mid-window on 2026-07-18, 28 tickers went
+    # unscreened on 5 of the window's 6 runs and the digest still reported
+    # "Chronic skips: none". One clean run — a new guard landing, a partial
+    # run, a single lucky fetch — was enough to hide a permanent skip. A ratio
+    # tolerates that noise; the rendered `n/run_count` keeps it honest.
     run_count = len(window_runs)
+    chronic_threshold = max(
+        _CHRONIC_MIN_RUNS, ceil(_CHRONIC_RUN_RATIO * run_count)
+    )
     chronic = sorted(
         [
             {
                 "ticker": t,
                 "reasons": sorted(reasons_by_ticker[t]),
                 "count": skip_count_by_ticker[t],
+                "run_count": run_count,
             }
             for t, n in skip_count_by_ticker.items()
-            if n == run_count and t not in suppressed
+            if n >= chronic_threshold and t not in suppressed
         ],
         key=lambda x: x["ticker"],
     )
@@ -317,10 +336,14 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
     # Chronic skips — tickers skipped in every run.
     chronic = stats["chronic"]
     if chronic:
-        lines = [":red_circle: *Chronic skips* — skipped on every run this week"]
+        lines = [":red_circle: *Chronic skips* — skipped on most runs this week"]
         for c in chronic:
             reasons = ", ".join(c["reasons"])
-            lines.append(f"• `{c['ticker']}` — {reasons}")
+            ratio = (
+                f" ({c['count']}/{c['run_count']} runs)"
+                if c.get("run_count") else ""
+            )
+            lines.append(f"• `{c['ticker']}` — {reasons}{ratio}")
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "\n".join(lines)},
