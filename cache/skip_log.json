@@ -1,52 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-06-24",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "GMRS",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "Q",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-06-25",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "GMRS",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-06-26",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "GMRS",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-06-29",
       "mode": "close",
       "skipped": [
@@ -899,6 +853,44 @@
         {
           "ticker": "YPSN",
           "reason": "stale_bar"
+        },
+        {
+          "ticker": "^W5000",
+          "reason": "stale_bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-07-27",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "CCRN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HONA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "OSSFF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SHMZF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SPCX",
+          "reason": "insufficient_history"
         },
         {
           "ticker": "^W5000",
