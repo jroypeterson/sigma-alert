@@ -7594,6 +7594,27 @@
     "sub_subsector": "",
     "core": ""
   },
+  "SKHY": {
+    "name": "SK hynix Inc.",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Memory",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "BSP": {
+    "name": "Bending Spoons S.p.A.",
+    "sector": "Tech",
+    "subsector": "Software / Digital Roll-up",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "PBLS": {
+    "name": "Parabilis Medicines, Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
