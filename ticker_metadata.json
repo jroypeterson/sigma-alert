@@ -7671,6 +7671,20 @@
     "sub_subsector": "",
     "core": ""
   },
+  "SNDK": {
+    "name": "Sandisk Corporation",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Memory",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "FPS": {
+    "name": "Forgent Power Solutions, Inc.",
+    "sector": "Industrials",
+    "subsector": "Electrical Equipment",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
