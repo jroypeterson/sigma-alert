@@ -322,7 +322,6 @@
     "SLB": "not_in_metadata",
     "SMCI": "not_in_metadata",
     "SNA": "not_in_metadata",
-    "SNDK": "not_in_metadata",
     "SNPS": "not_in_metadata",
     "SO": "not_in_metadata",
     "SPG": "not_in_metadata",
@@ -392,5 +391,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-07-27T18:32:34.307632-04:00"
+  "updated": "2026-07-28T17:56:28.929684-04:00"
 }
