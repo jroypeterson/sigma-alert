@@ -429,6 +429,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "MWH": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-07-28",
+    "notes": "Largest US utility-scale solar + storage EPC/O&M; $8.2B backlog. Added from the 06-26 coverage recommendation.",
+    "name": "SOLV Energy, Inc.",
+    "sector": "Energy",
+    "subsector": "Renewables (Solar/Storage EPC)",
+    "sub_subsector": ""
+  },
   "NFLX": {
     "buy_price": null,
     "target_price": null,

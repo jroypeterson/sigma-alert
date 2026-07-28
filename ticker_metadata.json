@@ -7615,6 +7615,62 @@
     "sub_subsector": "",
     "core": ""
   },
+  "2475": {
+    "name": "Luxshare Precision Industry Co., Ltd.",
+    "sector": "Tech",
+    "subsector": "Consumer Electronics EMS",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CSQR": {
+    "name": "Csquare Inc.",
+    "sector": "Tech",
+    "subsector": "Data Center / Digital Infrastructure",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "STDN": {
+    "name": "Standard Nuclear Inc.",
+    "sector": "Energy",
+    "subsector": "Nuclear Fuel (TRISO)",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "MBGL": {
+    "name": "Mobility Global Inc",
+    "sector": "Tech",
+    "subsector": "Information Services / Auto Data",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "RKLB": {
+    "name": "Rocket Lab USA, Inc.",
+    "sector": "Tech",
+    "subsector": "Aerospace & Space",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "MANE": {
+    "name": "Veradermics, Incorporated",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "KARD": {
+    "name": "Kardigan, Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "MWH": {
+    "name": "SOLV Energy, Inc.",
+    "sector": "Energy",
+    "subsector": "Renewables (Solar/Storage EPC)",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
