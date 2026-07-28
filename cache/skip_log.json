@@ -987,7 +987,31 @@
       "mode": "close",
       "skipped": [
         {
+          "ticker": "1SXP.DE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AFX.DE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMBUSH.DC",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMP.IM",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "BIM",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "CCRN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "COLOB.DC",
           "reason": "stale_bar"
         },
         {
@@ -995,15 +1019,59 @@
           "reason": "insufficient_history"
         },
         {
+          "ticker": "DAE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "DIA.MI",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "ERF.FP",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "FI",
           "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FRE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "GETIB.SS",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "GN.DC",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "GXI",
+          "reason": "stale_bar"
         },
         {
           "ticker": "HONA",
           "reason": "insufficient_history"
         },
         {
+          "ticker": "LONN.CH",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "OSSFF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECARE.SS",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SFZN.SW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SHL.GY",
           "reason": "stale_bar"
         },
         {
@@ -1011,8 +1079,24 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "SOON",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "SPCX",
           "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SRT.DE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "STMN.SW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "YPSN",
+          "reason": "stale_bar"
         },
         {
           "ticker": "^W5000",
