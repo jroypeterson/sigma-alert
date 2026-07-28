@@ -1119,13 +1119,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ASRT": {
-    "name": "Assertio Holdings Inc",
-    "sector": "Biopharma",
-    "subsector": "Specialty & Generic Pharma",
-    "sub_subsector": "",
-    "core": ""
-  },
   "ASX": {
     "name": "ASE Technology Holding Co., Ltd.",
     "sector": "MedTech",
@@ -1924,13 +1917,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "CNTA": {
-    "name": "Centessa Pharmaceuticals PLC - ADR",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "CNTX": {
     "name": "Context Therapeutics Inc",
     "sector": "Biopharma",
@@ -2701,13 +2687,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ESPR": {
-    "name": "Esperion Therapeutics Inc",
-    "sector": "Biopharma",
-    "subsector": "Specialty & Generic Pharma",
-    "sub_subsector": "",
-    "core": ""
-  },
   "ESTA": {
     "name": "Establishment Labs Holdings Inc.",
     "sector": "MedTech",
@@ -3100,8 +3079,8 @@
     "sub_subsector": "",
     "core": ""
   },
-  "GLPG": {
-    "name": "Galapagos NV - ADR",
+  "LKFT": {
+    "name": "Lakefront Biotherapeutics NV - ADR",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
@@ -3368,13 +3347,6 @@
   },
   "HOOK": {
     "name": "Hookipa Pharma Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "HOTH": {
-    "name": "Hoth Therapeutics Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
@@ -3884,13 +3856,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "KALV": {
-    "name": "Kalvista Pharmaceuticals Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
   "KIDS": {
     "name": "OrthoPediatrics Corp.",
     "sector": "MedTech",
@@ -4140,13 +4105,6 @@
     "name": "Larimar Therapeutics Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "LSB": {
-    "name": "LakeShore Biopharma Co., Ltd",
-    "sector": "Biopharma",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
@@ -5482,13 +5440,6 @@
   },
   "PULM": {
     "name": "Pulmatrix Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "PXMD": {
-    "name": "Kuvatris Therapeutics Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
