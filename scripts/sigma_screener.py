@@ -296,20 +296,30 @@ def to_yf_symbol(display: str) -> str:
 
 
 def to_metadata_key(display: str, collision_bases: set[str] | None = None) -> str:
-    """Map a watchlist ticker to the base symbol Coverage Manager keys
-    ticker_metadata.json + the position files by. A foreign exchange listing
-    is keyed by its bare base (GETIB.SS → GETIB); US tickers, dash-form class
-    shares (BF-B), and caret indices are returned unchanged.
+    """Map a watchlist ticker to the key Coverage Manager publishes metadata by.
 
-    `collision_bases` disambiguates the case where a foreign listing's bare
-    base collides with a same-base US listing or ETF that is ALSO in the
-    universe (e.g. `AMP.IM` Amplifon vs US `AMP` Ameriprise; `DIA.MI` DiaSorin
-    vs the SPDR DJIA `DIA` ETF). CM keys both by the bare base, so collapsing
-    `AMP.IM`→`AMP` makes the two listings overwrite each other's metadata. When
-    the base is a known collision, the foreign listing is keyed by its full
-    dotted display symbol instead, so its metadata is looked up under a key the
-    US/ETF ticker never claims. `disambiguate_collision_metadata()` re-keys the
-    metadata dict to match. Pass the set from `foreign_collision_bases()`."""
+    **Coverage Manager exports schema v4 (2026-07-30) keys by the RAW ticker**, so
+    for a foreign listing the display symbol IS the metadata key and this is the
+    identity function. Under v3 the key was suffix-stripped (`GETIB.SS` → `GETIB`),
+    which is what the rest of this docstring describes and what
+    `lookup_metadata()` still falls back to.
+
+    Why CM changed it: stripping collapsed `ROG` (Rogers Corporation) and `ROG.SW`
+    (Roche) onto one key and silently dropped one company, and it broke
+    `metadata[row["Ticker"]]` for 183 of CM's 1,096 rows. This module was the only
+    consumer that compensated — which is why the compensation now has to retire.
+
+    **Prefer `lookup_metadata()` for reads.** It tries the raw key first and falls
+    back to the stripped base, so a run against either schema resolves. This
+    function is kept for the places that need a *label* rather than a lookup.
+
+    Legacy (v3) behaviour, retained as the fallback: a foreign exchange listing
+    was keyed by its bare base; US tickers, dash-form class shares (BF-B) and
+    caret indices unchanged. `collision_bases` disambiguated a foreign base
+    colliding with a same-base US listing or ETF (`AMP.IM` vs US `AMP`; `DIA.MI`
+    vs the SPDR DJIA `DIA` ETF) by keying the foreign leg under its dotted symbol.
+    Under v4 that collision cannot occur, so the machinery is inert but harmless.
+    """
     if "." not in display or display.startswith("^"):
         return display
     base, _, suffix = display.rpartition(".")
@@ -318,6 +328,28 @@ def to_metadata_key(display: str, collision_bases: set[str] | None = None) -> st
             return display
         return base
     return display
+
+
+def lookup_metadata(metadata: dict, display: str,
+                    collision_bases: set[str] | None = None):
+    """Resolve a watchlist ticker's metadata under EITHER CM schema.
+
+    v4 keys by the raw ticker, v3 by the suffix-stripped base. Trying raw first
+    and falling back means this repo works on both sides of CM republishing,
+    instead of depending on two repos deploying in a particular order — the
+    failure mode that makes cross-repo contract changes risky.
+
+    Returns the entry dict, or None when neither key resolves (a genuine gap,
+    which callers report).
+    """
+    if not metadata:
+        return None
+    raw = (display or "").strip()
+    entry = metadata.get(raw)
+    if entry is not None:
+        return entry
+    legacy = to_metadata_key(raw, collision_bases)
+    return metadata.get(legacy) if legacy != raw else None
 
 
 def foreign_collision_bases(tickers) -> set[str]:
@@ -947,7 +979,7 @@ def write_missing_metadata_flag(tickers: list[str], metadata: dict,
         # (GETIB.SS → GETIB), so join on the base key — otherwise every
         # foreign name false-flags as a gap. The gap itself is still reported
         # under the display ticker so the operator sees the watchlist entry.
-        meta = metadata.get(to_metadata_key(t))
+        meta = lookup_metadata(metadata, t)
         if meta is None:
             gaps[t] = "not_in_metadata"
         elif not (meta.get("name") or "").strip():
@@ -1303,8 +1335,7 @@ def screen_open_cached(tickers: list[str], cache: dict,
             ytd_return_pct = (today_open - prior_year_end_close) / prior_year_end_close * 100
 
         z = compute_z_score(today_return, mu, sigma)
-        mkey = to_metadata_key(ticker, _collisions)
-        meta = (metadata or {}).get(mkey, {})
+        meta = lookup_metadata(metadata, ticker, _collisions) or {}
         sector = meta.get("sector", "")
         subsector = meta.get("subsector", "")
         abs_z = abs(z)

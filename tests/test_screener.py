@@ -2118,3 +2118,43 @@ def test_post_health_heartbeat_never_raises(monkeypatch, capsys):
     monkeypatch.setattr(sc.requests, "post", lambda *a, **k: _Boom())
     sc.post_health_heartbeat("open", {"screened": 10, "skipped": 0}, 1094, 1)
     assert "non-fatal" in capsys.readouterr().out
+
+
+# ── CM exports schema v4: metadata keyed by the RAW ticker ──────────────────
+
+def test_lookup_metadata_resolves_under_v4_raw_keys():
+    """v4 (2026-07-30) keys by the raw ticker, so a foreign display symbol IS
+    the metadata key. CM changed this because stripping collapsed ROG/ROG.SW onto
+    one key (deleting Rogers Corporation) and broke the join for 183 of 1,096
+    rows. This module was the only consumer relying on the stripping."""
+    from scripts.sigma_screener import lookup_metadata
+    v4 = {"GETIB.SS": {"name": "Getinge B"}, "AAPL": {"name": "Apple Inc"}}
+    assert lookup_metadata(v4, "GETIB.SS")["name"] == "Getinge B"
+    assert lookup_metadata(v4, "AAPL")["name"] == "Apple Inc"
+
+
+def test_lookup_metadata_still_resolves_under_v3_stripped_keys():
+    """Tolerant on purpose: this repo must work either side of CM republishing,
+    rather than depending on two repos deploying in a particular order."""
+    from scripts.sigma_screener import lookup_metadata
+    v3 = {"GETIB": {"name": "Getinge B"}, "AAPL": {"name": "Apple Inc"}}
+    assert lookup_metadata(v3, "GETIB.SS")["name"] == "Getinge B"
+    assert lookup_metadata(v3, "AAPL")["name"] == "Apple Inc"
+
+
+def test_lookup_metadata_reports_a_genuine_gap_as_None():
+    """A real gap must stay a gap — the fallback must not manufacture a hit."""
+    from scripts.sigma_screener import lookup_metadata
+    assert lookup_metadata({"AAPL": {}}, "NOPE.SS") is None
+    assert lookup_metadata({}, "AAPL") is None
+    assert lookup_metadata(None, "AAPL") is None
+
+
+def test_v4_disambiguates_the_DIA_collision_without_help():
+    """`DIA.MI` (DiaSorin) vs the `DIA` SPDR ETF was the collision this repo built
+    foreign_collision_bases() to survive. Under v4 they are simply two keys."""
+    from scripts.sigma_screener import lookup_metadata
+    v4 = {"DIA.MI": {"name": "DiaSorin S.p.A.", "sector": "MedTech"},
+          "DIA": {"name": "SPDR Dow Jones Industrial Average ETF"}}
+    assert lookup_metadata(v4, "DIA.MI")["sector"] == "MedTech"
+    assert lookup_metadata(v4, "DIA")["name"].startswith("SPDR")
