@@ -1924,7 +1924,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "COH Au": {
+  "COH.AX": {
     "name": "Cochlear Limited",
     "sector": "MedTech",
     "subsector": "Hearing Aid",
@@ -1996,10 +1996,10 @@
   },
   "CPH": {
     "name": "Cipher Pharmaceuticals Inc",
-    "sector": "MedTech",
-    "subsector": "Hearing Aid",
+    "sector": "Biopharma",
+    "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "CPRX": {
     "name": "Catalyst Pharmaceuticals Inc",
@@ -4217,13 +4217,6 @@
     "name": "Madrigal Pharmaceuticals Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "MDLA": {
-    "name": "Medela Potentia Tbk PT",
-    "sector": "SaaS",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
