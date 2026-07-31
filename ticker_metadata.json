@@ -1,82 +1,82 @@
 {
-  "000100": {
+  "000100.KS": {
     "name": "Yuhan Corporation",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "000661": {
+  "000661.SZ": {
     "name": "Changchun High-Tech Industry (Group) Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "000963": {
+  "000963.SZ": {
     "name": "Huadong Medicine Co., Ltd",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "002007": {
+  "002007.SZ": {
     "name": "Hualan Biological Engineering Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "008930": {
+  "008930.KS": {
     "name": "Hanmi Science Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
-  "019170": {
+  "019170.KS": {
     "name": "Shinpoong Pharmaceutical Co.,Ltd",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "068270": {
+  "068270.KS": {
     "name": "Celltrion, Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "1093": {
+  "1093.HK": {
     "name": "CSPC Pharmaceutical Group Limited",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "1801": {
+  "1801.HK": {
     "name": "Innovent Biologics, Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "196170": {
+  "196170.KQ": {
     "name": "ALTEOGEN Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "1SXP": {
+  "1SXP.DE": {
     "name": "SCHOTT Pharma AG & Co. KGaA",
     "sector": "MedTech",
     "subsector": "Packaging",
     "sub_subsector": "",
     "core": "Y"
   },
-  "2070": {
+  "2070.SR": {
     "name": "Saudi Pharmaceutical Industries and Medical Appliances Corporation",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -90,91 +90,91 @@
     "sub_subsector": "",
     "core": ""
   },
-  "2269": {
+  "2269.HK": {
     "name": "WuXi Biologics (Cayman) Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "2359": {
+  "2359.HK": {
     "name": "WUXI Apptech",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
-  "2715": {
+  "2715.HK": {
     "name": "Estun Automation Co Ltd",
     "sector": "Tech",
     "subsector": "Industrial Robotics / Automation",
     "sub_subsector": "",
     "core": ""
   },
-  "300122": {
+  "300122.SZ": {
     "name": "Chongqing Zhifei Biological Products Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "300765": {
+  "300765.SZ": {
     "name": "CSPC Innovation Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
-  "3320": {
+  "3320.HK": {
     "name": "China Resources Pharmaceutical Group Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "3692": {
+  "3692.HK": {
     "name": "Hansoh Pharmaceutical Group Company Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4015": {
+  "4015.SR": {
     "name": "Jamjoom Pharmaceuticals Factory Company",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4016": {
+  "4016.SR": {
     "name": "Middle East Pharmaceutical Industries Company",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4503": {
+  "4503.T": {
     "name": "Astellas Pharma Inc.",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4506": {
+  "4506.T": {
     "name": "Sumitomo Pharma Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4507": {
+  "4507.T": {
     "name": "Shionogi & Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4516": {
+  "4516.T": {
     "name": "Nippon Shinyaku Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -188,175 +188,175 @@
     "sub_subsector": "",
     "core": ""
   },
-  "4527": {
+  "4527.T": {
     "name": "Rohto Pharmaceutical Co.,Ltd.",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
-  "4528": {
+  "4528.T": {
     "name": "Ono Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4534": {
+  "4534.T": {
     "name": "Mochida Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4536": {
+  "4536.T": {
     "name": "Santen Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4547": {
+  "4547.T": {
     "name": "Kissei Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4552": {
+  "4552.T": {
     "name": "JCR Pharmaceuticals Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4553": {
+  "4553.T": {
     "name": "Towa Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4559": {
+  "4559.T": {
     "name": "Zeria Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4565": {
+  "4565.T": {
     "name": "Nxera Pharma Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "4568": {
+  "4568.T": {
     "name": "Daiichi Sankyo Company, Limited",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4569": {
+  "4569.T": {
     "name": "KYORIN Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4578": {
+  "4578.T": {
     "name": "OTSUKA HLDGS CO LTD",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "4587": {
+  "4587.T": {
     "name": "PeptiDream Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "4967": {
+  "4967.T": {
     "name": "Kobayashi Pharmaceutical Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
-  "600085": {
+  "600085.SS": {
     "name": "Beijing Tongrentang Co., Ltd",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "600161": {
+  "600161.SS": {
     "name": "Beijing Tiantan Biological Products Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "600196": {
+  "600196.SS": {
     "name": "Shanghai Fosun Pharmaceutical (Group) Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "600276": {
+  "600276.SS": {
     "name": "JIangsu",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "6446": {
+  "6446.TW": {
     "name": "PharmaEssentia Corporation",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "6472": {
+  "6472.TW": {
     "name": "Bora Pharmaceuticals Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "688506": {
+  "688506.SS": {
     "name": "Sichuan Biokin Pharmaceutical Co.,Ltd.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "688578": {
+  "688578.SS": {
     "name": "Shanghai Allist Pharmaceuticals Co., Ltd.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "6919": {
+  "6919.TW": {
     "name": "CALIWAY BIOPHARMACEUTICALS CO L",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "8086": {
+  "8086.T": {
     "name": "Nipro Corporation",
     "sector": "MedTech",
     "subsector": "Diversified MedTech",
     "sub_subsector": "",
     "core": ""
   },
-  "9926": {
+  "9926.HK": {
     "name": "Akeso, Inc.",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -384,14 +384,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "AARTIDRUGS": {
+  "AARTIDRUGS.NS": {
     "name": "Aarti Drugs Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "ABBOTINDIA": {
+  "ABBOTINDIA.NS": {
     "name": "Abbott India Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -517,7 +517,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ADAP": {
+  "ADAPY": {
     "name": "Adaptimmune Therapeutics PLC",
     "sector": "Biopharma",
     "subsector": "",
@@ -608,14 +608,14 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "AFT": {
+  "AFT.NZ": {
     "name": "AFT Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "AFX": {
+  "AFX DE": {
     "name": "Carl Zeiss Meditec AG",
     "sector": "MedTech",
     "subsector": "Ophthalmology",
@@ -643,7 +643,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "AGY": {
+  "AGY.L": {
     "name": "Allergy Therapeutics plc",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -685,13 +685,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ALBT": {
-    "name": "Avalon Globocare Corp",
-    "sector": "Biopharma",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
-  },
   "ALC": {
     "name": "Alcon Inc.",
     "sector": "MedTech",
@@ -713,7 +706,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ALGEN": {
+  "ALGEN.PA": {
     "name": "genOway Soci\u00e9t\u00e9 anonyme",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -734,14 +727,14 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "ALK-B": {
+  "ALK-B.CO": {
     "name": "ALK-Abell\u00f3 A/S",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "ALKEM": {
+  "ALKEM.NS": {
     "name": "Alkem Laboratories Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -769,7 +762,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ALM": {
+  "ALM.MC": {
     "name": "Almirall, S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -790,14 +783,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ALOPM": {
+  "ALOPM.PA": {
     "name": "Oncodesign Precision Medicine Soci\u00e9t\u00e9 anonyme",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "ALSEN": {
+  "ALSEN.PA": {
     "name": "Sensorion SA",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -846,7 +839,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "AMP": {
+  "AMP IM": {
     "name": "Amplifon S.p.A.",
     "sector": "MedTech",
     "subsector": "Hearing Aid",
@@ -972,7 +965,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "APLLTD": {
+  "APLLTD.NS": {
     "name": "Alembic Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -993,7 +986,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "APN": {
+  "APN.JO": {
     "name": "Aspen Pharmacare Holdings Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1011,13 +1004,6 @@
     "name": "Aprea Therapeutics Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "APTO": {
-    "name": "Aptose Biosciences, Inc.",
-    "sector": "Biopharma",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
@@ -1154,7 +1140,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ATORX": {
+  "ATORX.ST": {
     "name": "Alligator Bioscience AB (publ)",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1238,7 +1224,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "AVCT": {
+  "AVCT.L": {
     "name": "Avacta Group Plc",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1294,14 +1280,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "AMBUSH": {
+  "Ambush DC": {
     "name": "Ambu A/S",
     "sector": "MedTech",
     "subsector": "Hospital Supply & Equipment",
     "sub_subsector": "",
     "core": "Y"
   },
-  "BANB": {
+  "BANB.SW": {
     "name": "Bachem Holding AG",
     "sector": "Biopharma",
     "subsector": "",
@@ -1315,7 +1301,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "BAVA": {
+  "BAVA.CO": {
     "name": "Bavarian Nordic A/S",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1476,21 +1462,21 @@
     "sub_subsector": "",
     "core": ""
   },
-  "BIOA-B": {
+  "BIOA-B.ST": {
     "name": "BioArctic AB (publ)",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "BIOCON": {
+  "BIOCON.NS": {
     "name": "Biocon Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "BION": {
+  "BION.SW": {
     "name": "BB Biotech AG",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1525,7 +1511,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "BLISSGVS": {
+  "BLISSGVS.NS": {
     "name": "Bliss GVS Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1581,7 +1567,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "BOI": {
+  "BOI.PA": {
     "name": "Boiron SA",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1595,7 +1581,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "BOT": {
+  "BOT.AX": {
     "name": "Botanix Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1630,7 +1616,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "BSLN": {
+  "BSLN.SW": {
     "name": "Basilea Pharmaceutica AG",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1665,7 +1651,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "C43": {
+  "C43.F": {
     "name": "Cosmo Pharmaceuticals N.V.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1728,7 +1714,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CASI": {
+  "CASIF": {
     "name": "CASI Pharmaceuticals Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -1840,7 +1826,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CIPLA": {
+  "CIPLA.NS": {
     "name": "Cipla Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1861,7 +1847,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CLN": {
+  "CLN.WA": {
     "name": "Celon Pharma S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -1875,7 +1861,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "CLS": {
+  "CLS.JO": {
     "name": "Clicks Group Limited",
     "sector": "Biopharma",
     "subsector": "",
@@ -1938,7 +1924,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "COH": {
+  "COH Au": {
     "name": "Cochlear Limited",
     "sector": "MedTech",
     "subsector": "Hearing Aid",
@@ -1959,7 +1945,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "COLOB": {
+  "COLOB DC": {
     "name": "Coloplast A/S",
     "sector": "MedTech",
     "subsector": "Urology",
@@ -2057,7 +2043,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CRNO-B": {
+  "CRNO-B.ST": {
     "name": "Cereno Scientific AB (publ)",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -2127,7 +2113,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "CTEC": {
+  "CTEC LN": {
     "name": "ConvaTec Group PLC",
     "sector": "MedTech",
     "subsector": "Urology",
@@ -2162,7 +2148,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CTX": {
+  "CTX.WA": {
     "name": "Captor Therapeutics Spolka Akcyjna",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -2183,14 +2169,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CURN": {
+  "CURN.SW": {
     "name": "Curatis Holding AG",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "CUV": {
+  "CUV.AX": {
     "name": "Clinuvel Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -2232,7 +2218,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "CVSG": {
+  "CVSG.L": {
     "name": "CVS Group Plc",
     "sector": "Healthcare Services",
     "subsector": "Animal Health",
@@ -2253,7 +2239,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "CYBN": {
+  "HELP": {
     "name": "Cybin Inc",
     "sector": "Biopharma",
     "subsector": "",
@@ -2310,7 +2296,7 @@
     "core": ""
   },
   "DAY": {
-    "name": "NASDAQ US Dividend Achievers 50 Index",
+    "name": "Dayforce, Inc.",
     "sector": "SaaS",
     "subsector": "",
     "sub_subsector": "",
@@ -2379,21 +2365,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "DHT-UN": {
+  "DHT-UN.TO": {
     "name": "DRI Healthcare Trust",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "DIA": {
+  "DIA.MI": {
     "name": "DiaSorin S.p.A.",
     "sector": "MedTech",
     "subsector": "Diagnostics",
     "sub_subsector": "",
     "core": "Y"
   },
-  "DIVISLAB": {
+  "DIVISLAB.NS": {
     "name": "Divi's Laboratories Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -2421,7 +2407,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "DOCM": {
+  "DOCM.SW": {
     "name": "DocMorris AG",
     "sector": "Biopharma",
     "subsector": "",
@@ -2526,7 +2512,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "EAPI": {
+  "EAPI.PA": {
     "name": "Euroapi S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -2673,7 +2659,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ERF": {
+  "ERF FP": {
     "name": "Eurofins Scientific SE",
     "sector": "MedTech",
     "subsector": "Diagnostics",
@@ -2771,14 +2757,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "FAE": {
+  "FAE.MC": {
     "name": "Faes Farma, S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "FAGR": {
+  "FAGR.BR": {
     "name": "Fagron NV",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -2799,7 +2785,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "FDC": {
+  "FDC.NS": {
     "name": "FDC Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -2827,8 +2813,8 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "FGEN": {
-    "name": "FibroGen Inc.",
+  "KYNB": {
+    "name": "Kyntra Bio, Inc.",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
@@ -2925,28 +2911,28 @@
     "sub_subsector": "",
     "core": ""
   },
-  "FUM": {
+  "FUM.L": {
     "name": "Futura Medical plc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "FYB": {
+  "FYB.DE": {
     "name": "Formycon AG",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "GALD": {
+  "GALD.SW": {
     "name": "Galderma Group AG",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "GALE": {
+  "GALE.SW": {
     "name": "Galenica AG",
     "sector": "Biopharma",
     "subsector": "",
@@ -2967,7 +2953,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "GBT": {
+  "GBT.PA": {
     "name": "Guerbet SA",
     "sector": "Biopharma",
     "subsector": "",
@@ -3023,7 +3009,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "GETIB": {
+  "GETIB SS": {
     "name": "Getinge AB",
     "sector": "MedTech",
     "subsector": "Cardiovascular",
@@ -3058,14 +3044,14 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "GLAND": {
+  "GLAND.NS": {
     "name": "Gland Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "GLENMARK": {
+  "GLENMARK.NS": {
     "name": "Glenmark Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3128,7 +3114,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "GN": {
+  "GN DC": {
     "name": "GN Store Nord A/S",
     "sector": "MedTech",
     "subsector": "Hearing Aid",
@@ -3191,7 +3177,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "GRANULES": {
+  "GRANULES.NS": {
     "name": "Granules India Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3247,7 +3233,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "HAPV3": {
+  "HAPV3.SA": {
     "name": "Hapvida Participacoes e Investimentos SA",
     "sector": "Healthcare Services",
     "subsector": "Ex-US Facilities",
@@ -3296,21 +3282,21 @@
     "sub_subsector": "",
     "core": ""
   },
-  "HESTERBIO": {
+  "HESTERBIO.NS": {
     "name": "Hester Biosciences Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "HIK": {
+  "HIK.L": {
     "name": "Hikma Pharmaceuticals PLC",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "HIKAL": {
+  "HIKAL.NS": {
     "name": "Hikal Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3324,7 +3310,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "HLUN-B": {
+  "HLUN-B.CO": {
     "name": "H. Lundbeck A/S",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3359,7 +3345,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "7741": {
+  "7741.T": {
     "name": "Hoya Corporation",
     "sector": "MedTech",
     "subsector": "Ophthalmology",
@@ -3436,17 +3422,10 @@
     "sub_subsector": "",
     "core": ""
   },
-  "IBT-B": {
+  "IBT-B.ST": {
     "name": "Infant Bacterial Therapeutics AB (publ)",
     "sector": "Biopharma",
     "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": ""
-  },
-  "ICAD": {
-    "name": "Icade SA",
-    "sector": "Biopharma",
-    "subsector": "",
     "sub_subsector": "",
     "core": ""
   },
@@ -3464,7 +3443,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "IDIA": {
+  "IDIA.SW": {
     "name": "Idorsia Ltd",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -3499,7 +3478,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ILM1": {
+  "ILM1.DE": {
     "name": "Medios AG",
     "sector": "Biopharma",
     "subsector": "",
@@ -3569,7 +3548,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "IMU": {
+  "IMU.AX": {
     "name": "Imugene Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -3611,7 +3590,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "INDOCO": {
+  "INDOCO.NS": {
     "name": "Indoco Remedies Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3702,7 +3681,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "IPCALAB": {
+  "IPCALAB.NS": {
     "name": "Ipca Laboratories Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -3835,14 +3814,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "JUBLPHARMA": {
+  "JUBLPHARMA.NS": {
     "name": "Jubilant Pharmova Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "JULPHAR": {
+  "JULPHAR.AE": {
     "name": "Julphar (Gulf Pharmaceutical Industries)",
     "sector": "Biopharma",
     "subsector": "",
@@ -3961,14 +3940,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "LABB": {
+  "LABB.MX": {
     "name": "Genomma Lab Internacional, S.A.B. de C.V.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "LAURUSLABS": {
+  "LAURUSLABS.NS": {
     "name": "Laurus Labs Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4031,13 +4010,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "LIAN": {
-    "name": "LianBio",
-    "sector": "Biopharma",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": ""
-  },
   "LIN": {
     "name": "Linde plc",
     "sector": "Materials",
@@ -4073,7 +4045,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "LONN": {
+  "LONN CH": {
     "name": "Lonza Group AG",
     "sector": "MedTech",
     "subsector": "Life Science Tools",
@@ -4122,7 +4094,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "LUPIN": {
+  "LUPIN.NS": {
     "name": "Lupin Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4171,14 +4143,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "MANKIND": {
+  "MANKIND.NS": {
     "name": "Mankind Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "MARKSANS": {
+  "MARKSANS.NS": {
     "name": "Marksans Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4514,7 +4486,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "MYX": {
+  "MYX.AX": {
     "name": "Mayne Pharma Group Limited",
     "sector": "Biopharma",
     "subsector": "",
@@ -4528,21 +4500,21 @@
     "sub_subsector": "",
     "core": ""
   },
-  "NANEXA": {
+  "NANEXA.ST": {
     "name": "Nanexa AB (publ)",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "NANOFS": {
+  "NANOFS.ST": {
     "name": "Nanoform Finland Oyj",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "NATCOPHARM": {
+  "NATCOPHARM.NS": {
     "name": "NATCO Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4584,7 +4556,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "NECLIFE": {
+  "NECLIFE.NS": {
     "name": "Nectar Lifesciences Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4612,14 +4584,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "NEU": {
+  "NEU.AX": {
     "name": "Neuren Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "NEULANDLAB": {
+  "NEULANDLAB.NS": {
     "name": "Neuland Laboratories Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -4640,7 +4612,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "NGEN": {
+  "NGEN.V": {
     "name": "NervGen Pharma Corp.",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -4801,21 +4773,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "NWRN": {
+  "NWRN.SW": {
     "name": "Newron Pharmaceuticals S.p.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "NYKD": {
+  "NYKD.OL": {
     "name": "Nykode Therapeutics AS",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "NSIS-B": {
+  "NSIS-B.CO": {
     "name": "Novonesis A/S (fka Novozymes)",
     "sector": "Biopharma",
     "subsector": "",
@@ -4962,7 +4934,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ONT": {
+  "ONT.L": {
     "name": "Oxford Nanopore Technologies PLC",
     "sector": "MedTech",
     "subsector": "Diagnostics",
@@ -5004,14 +4976,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ORNAV": {
+  "ORNAV.HE": {
     "name": "Orion Oyj",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "ORY": {
+  "ORY.MC": {
     "name": "Oryzon Genomics S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -5025,7 +4997,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "OSE": {
+  "OSE.PA": {
     "name": "OSE Immunotherapeutics SA",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -5060,14 +5032,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "OXB": {
+  "OXB.L": {
     "name": "Oxford Biomedica plc",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "7733": {
+  "7733.T": {
     "name": "Olympus Corporation",
     "sector": "MedTech",
     "subsector": "Hospital Supply & Equipment",
@@ -5228,14 +5200,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "PHM": {
+  "PHM.MC": {
     "name": "Pharma Mar, S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "PHN": {
+  "PHN.MI": {
     "name": "Pharmanutra S.p.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5305,14 +5277,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "PPGN": {
+  "PPGN.SW": {
     "name": "PolyPeptide Group AG",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "PPLPHARMA": {
+  "PPLPHARMA.NS": {
     "name": "Piramal Pharma Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5396,7 +5368,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "PSG": {
+  "PSG.DE": {
     "name": "Pharma SGP SE",
     "sector": "Biopharma",
     "subsector": "",
@@ -5508,7 +5480,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RAC": {
+  "RAC.AX": {
     "name": "Racura Oncology Ltd",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -5585,7 +5557,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "REC": {
+  "REC.MI": {
     "name": "Recordati Industria Chimica e Farmaceutica S.p.A.",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
@@ -5599,7 +5571,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RENB": {
+  "LNAI": {
     "name": "Lunai Bioworks Inc.",
     "sector": "Biopharma",
     "subsector": "",
@@ -5634,7 +5606,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RIG2": {
+  "RIG2.F": {
     "name": "Gedeon Richter PLC",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5648,7 +5620,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RJF": {
+  "RJF.MC": {
     "name": "Laboratorio Reig Jofre, S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5662,7 +5634,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "RLF": {
+  "RLF.SW": {
     "name": "Relief Therapeutics Holding SA",
     "sector": "Biopharma",
     "subsector": "",
@@ -5719,6 +5691,13 @@
     "core": ""
   },
   "ROG": {
+    "name": "Rogers Corporation",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
+    "sub_subsector": "NextGen Sequencing",
+    "core": "Y"
+  },
+  "ROG.SW": {
     "name": "Roche",
     "sector": "Biopharma",
     "subsector": "Large Pharma",
@@ -5732,7 +5711,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ROVI": {
+  "ROVI.MC": {
     "name": "Laboratorios Farmaceuticos Rovi, S.A.",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5746,7 +5725,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "RPGLIFE": {
+  "RPGLIFE.NS": {
     "name": "RPG Life Sciences Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5837,14 +5816,14 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SANN": {
+  "SANN.SW": {
     "name": "Santhera Pharmaceuticals Holding AG",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": ""
   },
-  "SANOFI": {
+  "SANOFI.NS": {
     "name": "Sanofi India Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5914,7 +5893,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SEQUENT": {
+  "SEQUENT.NS": {
     "name": "Viyash Scientific Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -5928,7 +5907,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SFZN": {
+  "SFZN.SW": {
     "name": "Siegfried Holding AG",
     "sector": "MedTech",
     "subsector": "Life Science Tools",
@@ -5970,7 +5949,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "SHL": {
+  "SHL GY": {
     "name": "Siemens Healthineers AG",
     "sector": "MedTech",
     "subsector": "Hospital Supply & Equipment",
@@ -6005,7 +5984,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SIGHT": {
+  "SIGHT.PA": {
     "name": "GenSight Biologics S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -6054,7 +6033,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SLV": {
+  "SLV.WA": {
     "name": "Selvita S.A.",
     "sector": "Biopharma",
     "subsector": "",
@@ -6131,7 +6110,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SOBI": {
+  "SOBI.ST": {
     "name": "Swedish Orphan Biovitrum AB (publ)",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -6152,7 +6131,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "SPARC": {
+  "SPARC.NS": {
     "name": "Sun Pharma Advanced Research Company Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -6222,7 +6201,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SRT": {
+  "SRT.DE": {
     "name": "Sartorius AG",
     "sector": "MedTech",
     "subsector": "Life Science Tools",
@@ -6236,7 +6215,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "STAR": {
+  "STAR.NS": {
     "name": "Strides Pharma Science Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -6299,7 +6278,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SVE": {
+  "SVE.WA": {
     "name": "Synthaverse S.A.",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -6341,21 +6320,21 @@
     "sub_subsector": "",
     "core": ""
   },
-  "SECARE": {
+  "Secare SS": {
     "name": "Sectra AB",
     "sector": "Healthcare Services",
     "subsector": "HIT",
     "sub_subsector": "",
     "core": "Y"
   },
-  "7701": {
+  "7701.T": {
     "name": "Shimadzu Corporation",
     "sector": "MedTech",
     "subsector": "Life Science Tools",
     "sub_subsector": "Analytical Instruments",
     "core": "Y"
   },
-  "6869": {
+  "6869.T": {
     "name": "Sysmex Corporation",
     "sector": "MedTech",
     "subsector": "Diagnostics",
@@ -6488,7 +6467,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "THAR": {
+  "CNTN": {
     "name": "Canton Strategic Holdings Inc",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -6537,7 +6516,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "TLX": {
+  "TLX.AX": {
     "name": "Telix Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -6565,7 +6544,7 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "TNG": {
+  "TNG.PA": {
     "name": "Transgene SA",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -6593,7 +6572,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "TORNTPHARM": {
+  "TORNTPHARM.NS": {
     "name": "Torrent Pharmaceuticals Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -6733,7 +6712,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "4543": {
+  "4543.T": {
     "name": "Terumo Corporation",
     "sector": "MedTech",
     "subsector": "Cardiovascular",
@@ -6880,21 +6859,21 @@
     "sub_subsector": "",
     "core": ""
   },
-  "VETO": {
+  "VETO.PA": {
     "name": "Vetoquinol SA",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "VIRP": {
+  "VIRP.PA": {
     "name": "Virbac SA",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": ""
   },
-  "VISTN": {
+  "VISTN.OL": {
     "name": "Vistin Pharma ASA",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -7181,7 +7160,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ZEAL": {
+  "ZEAL.CO": {
     "name": "Zealand Pharma A/S",
     "sector": "Biopharma",
     "subsector": "Biotech",
@@ -7216,7 +7195,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ZOM": {
+  "ZOMDF": {
     "name": "Zomedica Corp.",
     "sector": "Biopharma",
     "subsector": "",
@@ -7251,7 +7230,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ZYDUSLIFE": {
+  "ZYDUSLIFE.NS": {
     "name": "Zydus Lifesciences Limited",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
@@ -7300,7 +7279,7 @@
     "sub_subsector": "Bioprocessing",
     "core": "Y"
   },
-  "STMN": {
+  "STMN.SW": {
     "name": "Straumann Holding AG",
     "sector": "MedTech",
     "subsector": "Dental",
@@ -7608,7 +7587,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "2475": {
+  "2475.HK": {
     "name": "Luxshare Precision Industry Co., Ltd.",
     "sector": "Tech",
     "subsector": "Consumer Electronics EMS",
