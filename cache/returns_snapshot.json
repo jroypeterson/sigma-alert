@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-31T17:58:24-04:00",
+  "generated_at": "2026-07-31T18:30:00-04:00",
   "mode": "close",
   "ref_date": "2026-07-31",
   "assets": [
@@ -19,8 +19,8 @@
       "weighting": "price-weighted",
       "group": "US Indices",
       "today_pct": 0.5388194868697934,
-      "ytd_pct": 9.952111950100024,
-      "prior_year_pct": 14.705999158010336,
+      "ytd_pct": 9.95211898666681,
+      "prior_year_pct": 14.706000237548277,
       "prior_year_label": "2025"
     },
     {
@@ -30,7 +30,7 @@
       "group": "US Indices",
       "today_pct": 0.6495505114032746,
       "ytd_pct": 12.258392842648922,
-      "prior_year_pct": 20.772540995437147,
+      "prior_year_pct": 20.772548258556807,
       "prior_year_label": "2025"
     },
     {
@@ -50,7 +50,7 @@
       "group": "Sectors",
       "today_pct": 1.0006787003890396,
       "ytd_pct": 35.02873712849457,
-      "prior_year_pct": 7.876293038653784,
+      "prior_year_pct": 7.876282972663384,
       "prior_year_label": "2025"
     },
     {
@@ -70,7 +70,7 @@
       "group": "Sectors",
       "today_pct": -0.6941365301168471,
       "ytd_pct": 5.282839359190315,
-      "prior_year_pct": 16.024359120512187,
+      "prior_year_pct": 16.0243713110386,
       "prior_year_label": "2025"
     },
     {
@@ -79,8 +79,8 @@
       "weighting": "market-cap weighted",
       "group": "Sectors",
       "today_pct": -0.49139834204609517,
-      "ytd_pct": 10.867886825918106,
-      "prior_year_pct": 1.5161622030652986,
+      "ytd_pct": 10.867897852155105,
+      "prior_year_pct": 1.5161521068942208,
       "prior_year_label": "2025"
     },
     {
@@ -109,8 +109,8 @@
       "weighting": "market-cap weighted",
       "group": "Sectors",
       "today_pct": 1.5575117322161307,
-      "ytd_pct": -7.519631466536469,
-      "prior_year_pct": 23.07843447632754,
+      "ytd_pct": -7.519625438145224,
+      "prior_year_pct": 23.0784462024146,
       "prior_year_label": "2025"
     },
     {
@@ -130,7 +130,7 @@
       "group": "Sectors",
       "today_pct": -0.21623492474932576,
       "ytd_pct": 22.093057599871145,
-      "prior_year_pct": 24.605933129815437,
+      "prior_year_pct": 24.605941377892897,
       "prior_year_label": "2025"
     },
     {
@@ -140,7 +140,7 @@
       "group": "Sectors",
       "today_pct": 3.2921051413253877,
       "ytd_pct": -2.3909306558327814,
-      "prior_year_pct": 7.370741612437287,
+      "prior_year_pct": 7.370734217111276,
       "prior_year_label": "2025"
     },
     {
@@ -178,8 +178,8 @@
       "name": "Bitcoin",
       "weighting": null,
       "group": "Commodities",
-      "today_pct": -2.8572430401337288,
-      "ytd_pct": -28.147213718615888,
+      "today_pct": -2.7505904006951494,
+      "ytd_pct": -28.07711811219047,
       "prior_year_pct": -6.3367499689353695,
       "prior_year_label": "2025"
     },
@@ -230,7 +230,7 @@
       "group": "Global Equity",
       "today_pct": -0.6212312179835978,
       "ytd_pct": 11.684636769026223,
-      "prior_year_pct": 31.54781223183131,
+      "prior_year_pct": 31.54782619773845,
       "prior_year_label": "2025"
     },
     {
@@ -320,7 +320,7 @@
       "group": "Healthcare",
       "today_pct": -0.43610798182340926,
       "ytd_pct": -15.317578283147842,
-      "prior_year_pct": 6.883072213290312,
+      "prior_year_pct": 6.883065185332084,
       "prior_year_label": "2025"
     },
     {
@@ -350,7 +350,7 @@
       "group": "Healthcare",
       "today_pct": -1.0752660973561345,
       "ytd_pct": 8.50455756890267,
-      "prior_year_pct": 21.996723620322705,
+      "prior_year_pct": 21.996734780352366,
       "prior_year_label": "2025"
     },
     {
@@ -370,7 +370,7 @@
       "group": "Tech Themes",
       "today_pct": 0.0713566824592548,
       "ytd_pct": 67.83695700030617,
-      "prior_year_pct": 40.73726498014545,
+      "prior_year_pct": 40.737254933315135,
       "prior_year_label": "2025"
     },
     {
@@ -379,8 +379,8 @@
       "weighting": "market-cap weighted",
       "group": "Global Equity",
       "today_pct": -0.43961043550939477,
-      "ytd_pct": 10.337835753295783,
-      "prior_year_pct": 35.83737318802963,
+      "ytd_pct": 10.337825500112672,
+      "prior_year_pct": 35.837377237569505,
       "prior_year_label": "2025"
     },
     {
