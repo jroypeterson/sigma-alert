@@ -1,48 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-07-01",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-07-02",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-07-03",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-07-06",
       "mode": "close",
       "skipped": [
@@ -1426,6 +1384,64 @@
         },
         {
           "ticker": "YPSN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "^W5000",
+          "reason": "stale_bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-03",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "2715.HK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "4543.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "6869.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7701.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7733.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7741.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "8086.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CCRN",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "OSSFF",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SHMZF",
           "reason": "stale_bar"
         },
         {
