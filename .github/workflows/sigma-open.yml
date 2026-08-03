@@ -29,7 +29,15 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
-        run: python scripts/sigma_screener.py --mode open
+        shell: bash
+        run: |
+          # pipefail is LOAD-BEARING here: without it the pipeline's exit status
+          # is tee's (always 0), the step would PASS on a crash, `if: failure()`
+          # would never fire, and the health backstop below would go silent --
+          # strictly worse than the bug this log capture exists to diagnose.
+          # Never drop it while this pipes.
+          set -eo pipefail
+          python scripts/sigma_screener.py --mode open 2>&1 | tee /tmp/sigma_run.log
 
       - name: Health fallback on failure
         if: failure()
@@ -41,4 +49,12 @@ jobs:
           # the screener crashes or exits early - this backstop posts the
           # error heartbeat so a dead run is never silent in #status-reports.
           [ -n "$SLACK_STATUS_REPORTS_WEBHOOK" ] || exit 0
-          curl -sS -X POST -H 'Content-Type: application/json' --data "{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\":x: *sigma-alert - error*  |  health/v1: run crashed before the in-process heartbeat - <${RUN_URL}|Actions log>\"}}],\"text\":\"sigma-alert error (crashed run)\"}" "$SLACK_STATUS_REPORTS_WEBHOOK"
+          # NAME THE CAUSE. This used to post only "crashed before the in-process
+          # heartbeat" plus a link, so every crash cost a trip to the Actions log
+          # to learn anything -- and on 2026-07-31 / 2026-08-03 the cause was a
+          # one-line NameError the message could simply have carried.
+          # Built in python so a traceback is JSON-escaped properly instead of
+          # being hand-quoted into a curl --data string.
+          python3 scripts/ci_health_payload.py > /tmp/sigma_health.json
+          curl -sS -X POST -H 'Content-Type: application/json' \
+               --data @/tmp/sigma_health.json "$SLACK_STATUS_REPORTS_WEBHOOK"

@@ -330,26 +330,46 @@ def to_metadata_key(display: str, collision_bases: set[str] | None = None) -> st
     return display
 
 
-def lookup_metadata(metadata: dict, display: str,
-                    collision_bases: set[str] | None = None):
-    """Resolve a watchlist ticker's metadata under EITHER CM schema.
+def resolve_metadata(metadata: dict, display: str,
+                     collision_bases: set[str] | None = None) -> tuple[dict | None, str]:
+    """Resolve a watchlist ticker's metadata under EITHER CM schema, and return
+    **the key that matched** alongside the entry.
 
     v4 keys by the raw ticker, v3 by the suffix-stripped base. Trying raw first
     and falling back means this repo works on both sides of CM republishing,
     instead of depending on two repos deploying in a particular order — the
     failure mode that makes cross-repo contract changes risky.
 
-    Returns the entry dict, or None when neither key resolves (a genuine gap,
-    which callers report).
+    The KEY is returned because callers need it too: the position lists
+    (`portfolio.json`, `researching.json`, …) are keyed the same way as the
+    metadata, so membership must be tested with whichever key actually
+    resolved — not with the raw ticker. Under v3, asking `"GETIB.SS" in
+    portfolio_set` against a set keyed `GETIB` answers "not held", silently, for
+    a whole cycle. Returning entry and key together is what stops a caller
+    holding one without the other; `screen_open_cached` did exactly that and
+    crashed on an undefined `mkey` (2026-07-31, 2026-08-03).
+
+    When nothing resolves the entry is None and the key falls back to the raw
+    ticker, so membership checks still ask a sensible question.
     """
-    if not metadata:
-        return None
     raw = (display or "").strip()
+    if not metadata:
+        return None, raw
     entry = metadata.get(raw)
     if entry is not None:
-        return entry
+        return entry, raw
     legacy = to_metadata_key(raw, collision_bases)
-    return metadata.get(legacy) if legacy != raw else None
+    if legacy != raw:
+        entry = metadata.get(legacy)
+        if entry is not None:
+            return entry, legacy
+    return None, raw
+
+
+def lookup_metadata(metadata: dict, display: str,
+                    collision_bases: set[str] | None = None):
+    """Entry-only view of `resolve_metadata`, for callers that don't need the key."""
+    return resolve_metadata(metadata, display, collision_bases)[0]
 
 
 def foreign_collision_bases(tickers) -> set[str]:
@@ -1335,7 +1355,12 @@ def screen_open_cached(tickers: list[str], cache: dict,
             ytd_return_pct = (today_open - prior_year_end_close) / prior_year_end_close * 100
 
         z = compute_z_score(today_return, mu, sigma)
-        meta = lookup_metadata(metadata, ticker, _collisions) or {}
+        # `mkey` is the key that RESOLVED the metadata, and it is what the five
+        # position-set membership checks below must use — the position JSONs are
+        # keyed the same way as ticker_metadata.json, so under CM schema v3 a
+        # foreign line is keyed `GETIB` while the watchlist calls it `GETIB.SS`.
+        _entry, mkey = resolve_metadata(metadata, ticker, _collisions)
+        meta = _entry or {}
         sector = meta.get("sector", "")
         subsector = meta.get("subsector", "")
         abs_z = abs(z)

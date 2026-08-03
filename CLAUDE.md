@@ -41,6 +41,7 @@ When the user says "let's finish", "we're done", "wrap up", or anything similar 
 - `cache/distribution_cache.json` — Per-ticker `{mu, sigma, sample_size, high_52w, low_52w, prior_year_end_close, prior_year_end_year}` from EOD run, used by morning open run to skip full history download. `high_52w`/`low_52w` cached so the cached-open path can render the 52w range; `prior_year_end_close`/`prior_year_end_year` cached so the cached-open path can compute YTD (the year guards against the year-boundary edge case). Existing entries missing any of these fields degrade gracefully until the next close run refreshes the cache
 - `cache/missing_metadata.json` — Written by EOD run when watchlist tickers are missing from `ticker_metadata.json` (or have a blank name). Coverage Manager's weekly `sigma_export` reads this from the sibling clone and surfaces the gaps. File is deleted automatically when there are no gaps. Committed by `sigma-close.yml` alongside the distribution cache. Index/sector ETFs are exempt from this check — their names live in `sources/etf_names.json` rather than CM's universe, so flagging them as gaps would be a false positive
 - `cache/skip_log.json` — Per-run skip events written by EOD close runs, trimmed to a trailing 30-day window. Schema: `{"runs": [{"date", "mode", "skipped": [{"ticker", "reason"}]}]}`. Reasons emitted: `insufficient_history`, `distribution_nan`, `stale_bar` (per-ticker: this name had no today-bar in an otherwise-fresh batch, so it's skipped instead of being z-scored on a stale bar), `fallback_insufficient`, `fallback_exception`. Consumed by `scripts/weekly_skip_report.py` for the Friday digest. Committed by `sigma-close.yml`
+- `scripts/ci_health_payload.py` — Builds the `#status-reports` crash card for the CI health backstop (2026-08-03). The backstop used to post a fixed *"run crashed before the in-process heartbeat"* + a link, which named no cause; it fired that way on 2026-07-31 and 2026-08-03 for what was a **one-line `NameError`**. The three cycle workflows now tee the run to `/tmp/sigma_run.log` and this lifts the last exception line into the Slack message. **`set -eo pipefail` on that tee is load-bearing** — without it the pipeline's status is tee's (always `0`), the step would PASS on a crash, `if: failure()` would never fire, and the backstop would go *silent*; verified empirically (no-pipefail → exit 0, pipefail → exit 1) and pinned by `test_every_cycle_workflow_keeps_pipefail_with_the_tee`. The builder never raises — a payload builder that crashes inside a failure handler turns a diagnosable failure into silence.
 - `.github/workflows/` — sigma-open, sigma-midday, sigma-close (cron-fired), sync-watchlist, sigma-watchdog (recovers dropped runs), sigma-weekly-skip-report (Friday 22:30 UTC, posts skip digest to `#status-reports`)
 - `tests/` — pytest suite
 
@@ -72,6 +73,29 @@ When the user says "let's finish", "we're done", "wrap up", or anything similar 
 - Slack webhooks — stored as GitHub Actions secrets:
   - `SLACK_WEBHOOK` — main sigma-alert channel (`#stock-price-alerts`). Used by the sigma screener for open/midday/close digests
   - `SLACK_STATUS_REPORTS_WEBHOOK` — `#status-reports` channel. Used only by `scripts/weekly_skip_report.py`
+
+## Metadata resolution — `resolve_metadata` returns the entry AND its key
+
+`resolve_metadata(metadata, display, collisions) -> (entry, key)` is the single
+resolver for CM's two keying schemes (v4 raw ticker, v3 suffix-stripped base).
+`lookup_metadata` is the entry-only view of it.
+
+**The key is returned because callers need it too.** The position lists
+(`portfolio.json`, `researching.json`, …) are keyed the same way as
+`ticker_metadata.json`, so membership must be tested with whichever key actually
+resolved — under v3, asking `"GETIB.SS" in portfolio_set` against a set keyed
+`GETIB` answers "not held", silently, for a whole cycle.
+
+`screen_open_cached` held exactly that split: it called `lookup_metadata` (entry
+only) while five membership checks and the 1σ eligibility gate still referenced
+an `mkey` that no longer existed. `NameError: name 'mkey' is not defined`, in
+production, on **2026-07-31 and 2026-08-03**. Two things hid it: the undefined
+name sits inside the **1σ branch**, which only runs when a ticker's |z| lands
+between the 1σ and 2σ thresholds (so it is intermittent, not daily), and only the
+**Open** cycle uses this function — midday and close go through `screen_full`,
+which has its own correct `meta_key`, so two of three cycles posted `ok` the same
+days. `screen_open_cached` had **no tests at all**; `tests/test_screen_open_cached.py`
+now drives a ticker deliberately into the 1σ band.
 
 ## Testing
 Run `python -m pytest tests/ -q` before committing. All tests must pass.
