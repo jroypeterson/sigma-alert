@@ -19,11 +19,25 @@ import hashlib
 import json
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 
-def _call(token: str, method: str, payload: dict | None = None, get: bool = False):
+_PINS_CACHE: dict = {}
+
+
+def _call(token: str, method: str, payload: dict | None = None, get: bool = False,
+          _attempt: int = 0):
+    """Slack call that HONOURS 429 Retry-After.
+
+    Measured 2026-08-04: `pins.list` throttles after about five rapid calls and answers
+    `429 Retry-After: 30`. That matters more than it looks -- `pin_is_current` resolves
+    any read failure to "refresh", so an unhandled 429 does not merely fail, it silently
+    turns into a repost of a card that had not changed. A sweep across 20 channels was
+    reposting most of them for no reason at all.
+    """
     if get:
         url = f"https://slack.com/api/{method}?" + urllib.parse.urlencode(payload or {})
         req = urllib.request.Request(
@@ -34,8 +48,20 @@ def _call(token: str, method: str, payload: dict | None = None, get: bool = Fals
             data=json.dumps(payload or {}).encode(),
             headers={"Authorization": f"Bearer {token}",
                      "Content-Type": "application/json; charset=utf-8"}, method="POST")
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 429 and _attempt < 3:
+            wait = int(e.headers.get("Retry-After") or 30) + 1
+            print(f"[pin] rate limited on {method}; waiting {wait}s", file=sys.stderr)
+            time.sleep(wait)
+            return _call(token, method, payload, get, _attempt + 1)
+        raise
+
+
+def _invalidate(channel: str) -> None:
+    _PINS_CACHE.pop(channel, None)
 
 
 def retire_own_pins(token: str, channel: str, fallback_text: str,
@@ -57,7 +83,8 @@ def retire_own_pins(token: str, channel: str, fallback_text: str,
     property that mattered is preserved.
     """
     try:
-        listing = _call(token, "pins.list", {"channel": channel}, get=True)
+        listing = _PINS_CACHE.get(channel) or _call(
+            token, "pins.list", {"channel": channel}, get=True)
     except Exception as e:  # noqa: BLE001 - tidying must never block publishing
         print(f"[pin] pins.list failed ({e}); not retiring anything", file=sys.stderr)
         return 0
@@ -82,6 +109,7 @@ def retire_own_pins(token: str, channel: str, fallback_text: str,
                     {"channel": channel, "timestamp": msg.get("ts")})
         if res.get("ok"):
             n += 1
+            _invalidate(channel)
         else:
             print(f"[pin] could not unpin {msg.get('ts')}: {res.get('error')}",
                   file=sys.stderr)
@@ -96,6 +124,7 @@ def pin(token: str, channel: str, ts: str) -> bool:
     except Exception as e:  # noqa: BLE001
         print(f"[pin] pins.add raised ({e}) - pin by hand", file=sys.stderr)
         return False
+    _invalidate(channel)
     if res.get("ok") or res.get("error") == "already_pinned":
         return True
     print(f"[pin] pins.add failed: {res.get('error')} - pin by hand", file=sys.stderr)
@@ -155,7 +184,11 @@ def pin_is_current(token: str, channel: str, fallback_text: str,
     if not want:
         return False
     try:
-        listing = _call(token, "pins.list", {"channel": channel}, get=True)
+        if channel in _PINS_CACHE:
+            listing = _PINS_CACHE[channel]
+        else:
+            listing = _call(token, "pins.list", {"channel": channel}, get=True)
+            _PINS_CACHE[channel] = listing
     except Exception as e:  # noqa: BLE001
         print(f"[pin] pins.list failed ({e}); assuming a refresh is needed",
               file=sys.stderr)
