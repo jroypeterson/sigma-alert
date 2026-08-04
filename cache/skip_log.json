@@ -1543,34 +1543,6 @@
           "reason": "stale_bar"
         },
         {
-          "ticker": "2715.HK",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "4543.T",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "6869.T",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "7701.T",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "7733.T",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "7741.T",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "8086.T",
-          "reason": "stale_bar"
-        },
-        {
           "ticker": "AFX.DE",
           "reason": "stale_bar"
         },
@@ -1629,6 +1601,10 @@
         {
           "ticker": "GXI",
           "reason": "stale_bar"
+        },
+        {
+          "ticker": "HIMS",
+          "reason": "insufficient_history"
         },
         {
           "ticker": "LONN.CH",
