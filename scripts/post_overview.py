@@ -14,6 +14,13 @@ Usage:
 Webhook: reuses SLACK_WEBHOOK (the same incoming webhook the screener uses for
 the main channel). Posting via webhook cannot pin — pin the message by hand
 after it lands (Slack: ⋯ → Pin to channel).
+
+NOTE — USE EMOJI SHORTCODES, NOT LITERAL EMOJI, IN A PINNED CARD.
+Slack rewrites a literal emoji to its shortcode when it stores the message (a literal
+pushpin comes back as `:pushpin:`), so a card built with literals can never byte-match
+what Slack stored, and the change-detector that keeps this card from being reposted
+every week would fire forever. Arrows and maths symbols are not emoji and round-trip
+fine.
 """
 import argparse
 import json
@@ -95,7 +102,7 @@ def build_blocks() -> dict:
 
     blocks = [
         {"type": "header",
-         "text": {"type": "plain_text", "text": "📌 #stock-price-alerts — what you're looking at"}},
+         "text": {"type": "plain_text", "text": ":pushpin: #stock-price-alerts — what you're looking at"}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Sigma screener* — flags unusual daily moves across the coverage universe. "
             "Runs *3×/weekday* (Open ~9:40, Midday ~12:35, Close ~16:25 ET; a watchdog "
@@ -128,7 +135,7 @@ def build_blocks() -> dict:
             "yield, the dollar basket) have no meaningful weighting._\n"
             f"• *US Indices* — {', '.join(_named(index, names, weighting))}\n"
             f"• *Macro* — {', '.join(_named(macro, names, weighting))}  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %)_\n"
-            f"• *Treasury Curve* — {curve} _(prior close; level + day bp + YTD bp; colored bond-style: yield up = 🟥)_\n"
+            f"• *Treasury Curve* — {curve} _(prior close; level + day bp + YTD bp; colored bond-style: yield up = :large_red_square:)_\n"
             f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_\n"
             f"• *Global Equity* — {', '.join(_named(global_eq, names, weighting))} _(country ETFs are USD, so they bundle local-equity + FX)_\n"
             f"• *Sectors* — SPDR Select Sector ETFs{_sector_wt} ({', '.join('`'+t+'`' for t in sector)})\n"
@@ -138,14 +145,14 @@ def build_blocks() -> dict:
         )}},
         {"type": "section", "text": {"type": "mrkdwn", "text": (
             "*Reading an alert line*\n"
-            "```🟩/🟥  `TICKER` (name)  |  ±%chg  |  z = ±X.XX  |  $price  |  P% of 52w high  |  "
+            "```:large_green_square:/:large_red_square:  `TICKER` (name)  |  ±%chg  |  z = ±X.XX  |  $price  |  P% of 52w high  |  "
             "52w: $lo - $hi  |  2025: ±%  |  YTD: ±%```\n"
-            "🟩 up / 🟥 down. `2025` = prior calendar-year return; `YTD` = year-to-date "
+            ":large_green_square: up / :large_red_square: down. `2025` = prior calendar-year return; `YTD` = year-to-date "
             "return vs the prior year-end close. ETF rows carry the same pair."
         )}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": (
             "Source: `jroypeterson/sigma-alert` · regenerate this card with "
-            "`python scripts/post_overview.py --post` after structural changes, then re-pin."
+            "`python scripts/post_overview.py --post` after structural changes — it retires the old card and pins itself."
         )}]},
     ]
     return {"blocks": blocks}
@@ -228,24 +235,108 @@ def validate_blocks(payload: dict) -> list[str]:
     return problems
 
 
-def post(payload: dict) -> bool:
-    webhook = os.environ.get("SLACK_WEBHOOK")
-    if not webhook:
-        print("[ERROR] SLACK_WEBHOOK not set — cannot post. (Dry-run output above.)")
-        return False
+CHANNEL_ID = "C0AQXUERQG4"          # #stock-price-alerts (verified 2026-08-04)
+# A stable string this card always contains. Retirement matches on THIS, not on the
+# card's title -- retitling a card must not orphan its predecessor (that flaw left
+# #13f with two pinned cards and #macro-and-markets with three).
+CARD_MARKER = "scripts/post_overview.py"
+
+
+def _bot_token() -> str | None:
+    """SLACK_BOT_TOKEN from the environment, else a sibling project's .env.
+
+    This script is MANUAL / local-only -- it is in no workflow -- so leaning on a
+    workspace sibling is acceptable here in a way it would not be for a CI lane. The
+    screener itself still uses the webhook and is untouched.
+    """
+    tok = os.environ.get("SLACK_BOT_TOKEN")
+    if tok:
+        return tok
+    here = Path(__file__).resolve().parent.parent          # sigma-alert/
+    for env in (here / ".env", here.parent / "portfolio_daily" / ".env"):
+        if env.exists():
+            for line in env.read_text(encoding="utf-8", errors="replace").splitlines():
+                if line.startswith("SLACK_BOT_TOKEN="):
+                    return line.split("=", 1)[1].strip()
+    return None
+
+
+def post(payload: dict, force: bool = False) -> bool:
+    """Post via chat.postMessage so the card can PIN ITSELF.
+
+    Migrated off the incoming webhook on 2026-08-04. A webhook returns no message
+    `ts`, so a webhook-posted card cannot be pinned by anything, ever -- which is why
+    this channel's pinned card sat untouched from 2026-06-03 while the group lists it
+    describes kept changing.
+
+    Falls back to the webhook when no bot token is available: still posts, still warns
+    loudly that it cannot pin. Degrading to "published but unpinnable" beats not
+    publishing, but it must never be silent.
+    """
     if requests is None:
         print("[ERROR] requests not installed — cannot post.")
         return False
-    resp = requests.post(webhook, json=payload, timeout=10)
-    resp.raise_for_status()
-    print("[OK] Overview posted to #stock-price-alerts. Pin it: ⋯ → Pin to channel.")
+
+    blocks = payload.get("blocks") or []
+    text = payload.get("text") or "sigma-alert — channel overview"
+    tok = _bot_token()
+
+    if not tok:
+        webhook = os.environ.get("SLACK_WEBHOOK")
+        if not webhook:
+            print("[ERROR] neither SLACK_BOT_TOKEN nor SLACK_WEBHOOK set — cannot post.")
+            return False
+        print("[WARN] no SLACK_BOT_TOKEN — posting via the webhook, which returns no "
+              "message ts, so THIS CARD CANNOT BE PINNED. Set SLACK_BOT_TOKEN to get "
+              "self-pinning back.")
+        resp = requests.post(webhook, json=payload, timeout=10)
+        resp.raise_for_status()
+        print("[OK] Overview posted (unpinnable). Pin it by hand: ⋯ → Pin to channel.")
+        return True
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import slack_pin
+
+    if not force and slack_pin.pin_is_current(tok, CHANNEL_ID, text, blocks):
+        print("[OK] pinned card is already current — nothing posted.")
+        return True
+
+    retired = slack_pin.retire_own_pins(tok, CHANNEL_ID, text, marker=CARD_MARKER)
+    if retired:
+        print(f"[OK] retired {retired} superseded pin(s)")
+
+    resp = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={"Authorization": f"Bearer {tok}",
+                 "Content-Type": "application/json; charset=utf-8"},
+        json={"channel": CHANNEL_ID, "text": text,
+              "blocks": slack_pin.stamp(blocks)}, timeout=15)
+    body = resp.json()
+    if not body.get("ok"):
+        print(f"[ERROR] chat.postMessage failed: {body.get('error')}"
+              + ("  → /invite @ClaudeBot in #stock-price-alerts"
+                 if body.get("error") == "not_in_channel" else ""))
+        return False
+    pinned = slack_pin.pin(tok, CHANNEL_ID, body.get("ts"))
+    print(f"[OK] Overview posted to #stock-price-alerts (ts={body.get('ts')}); "
+          f"pinned={'yes' if pinned else 'NO — pin by hand'}")
     return True
 
 
 def main():
+    # The dry run prints a payload full of emoji; on the Windows cp1252 console that
+    # raised UnicodeEncodeError and killed the ONE command documented as the safe way
+    # to inspect this card. Ask for UTF-8, fall back to escaping, never crash.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, OSError, ValueError):
+        pass
+
     ap = argparse.ArgumentParser(description="Post the #stock-price-alerts pinned overview card")
     ap.add_argument("--post", action="store_true",
                     help="actually post to Slack (default: print the payload only)")
+    ap.add_argument("--force", action="store_true",
+                    help="repost even when the pinned card is already current")
     args = ap.parse_args()
     payload = build_blocks()
     # Gate BOTH paths, so a dry run tells you the card is broken rather than
@@ -259,9 +350,15 @@ def main():
             print("[ERROR] Refusing to post an invalid card.")
             sys.exit(1)
     if args.post:
-        post(payload)
+        post(payload, force=args.force)
     else:
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        out = json.dumps(payload, indent=2, ensure_ascii=False)
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        try:
+            out.encode(enc, errors="strict")
+        except (UnicodeEncodeError, LookupError):
+            out = json.dumps(payload, indent=2, ensure_ascii=True)
+        print(out)
         print("\n[DRY RUN] Pass --post to send to #stock-price-alerts.")
 
 
