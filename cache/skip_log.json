@@ -1729,6 +1729,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "MCO",
+          "reason": "insufficient_history"
+        },
+        {
           "ticker": "OSSFF",
           "reason": "stale_bar"
         },
