@@ -44,7 +44,7 @@ Short names for S&P 500 tickers that Coverage Manager doesn't maintain come from
 
 ## Caching
 
-The EOD run saves each ticker's `{mu, sigma, sample_size, high_52w, low_52w, prior_year_end_close, prior_year_end_year}` to `cache/distribution_cache.json`. The morning open run loads this cache instead of re-downloading full history — it only needs today's opening prices. This dramatically reduces Yahoo Finance API calls, and lets the open digest render the 52-week range and YTD return without re-downloading history.
+The EOD run saves each ticker's `{mu, sigma, sample_size, high_52w, low_52w, prior_year_end_close, prior_year_end_year, last_bar}` to `cache/distribution_cache.json`. `last_bar` is the session the ticker was last SCORED on, and it is what makes the freshness guard answerable — a bar is screened only when it is newer than that, so a late-arriving foreign session is screened a run late rather than never, and no session is ever scored twice (see `CLAUDE.md`). A ticker skipped as `stale_bar` keeps a `last_seen` record (in its cache entry, or under `refused_bars` when it has no cached distribution) — without it a skipped ticker vanishes from the replaced cache and can never recover. The morning open run loads this cache instead of re-downloading full history — it only needs today's opening prices. This dramatically reduces Yahoo Finance API calls, and lets the open digest render the 52-week range and YTD return without re-downloading history.
 
 The EOD run also writes `cache/skip_log.json` — a 30-day rolling log of per-ticker skips with their reasons. It's consumed by the weekly skip report (see below) to surface data-quality issues.
 
