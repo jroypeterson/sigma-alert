@@ -263,7 +263,6 @@
     "MSCI": "not_in_metadata",
     "MSI": "not_in_metadata",
     "MTB": "not_in_metadata",
-    "MU": "not_in_metadata",
     "NCLH": "not_in_metadata",
     "NDAQ": "not_in_metadata",
     "NDSN": "not_in_metadata",
@@ -405,5 +404,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-08-06T21:04:01.814473-04:00"
+  "updated": "2026-08-07T18:02:24.460146-04:00"
 }
