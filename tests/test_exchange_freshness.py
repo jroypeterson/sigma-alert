@@ -423,3 +423,29 @@ def test_open_mode_anchors_the_baseline_on_the_open_bars_own_session(monkeypatch
     assert abs(stats["return_pct"] / 100 - expected) < 1e-9, (
         "the baseline must be the close before this open's own session, "
         f"not whatever precedes ET today (session={session})")
+
+
+def test_a_future_dated_bar_is_never_recorded_as_seen():
+    """Codex round 4, and a bug the after-today cap itself introduced.
+
+    The guard reads max(last_bar, last_seen) and tests strictly `>`. So a
+    `last_seen` dated in the future makes that session permanently
+    unscoreable the moment it becomes today — equality fails. And the bar
+    that gets refused for being after today is exactly the one that would
+    otherwise be written here.
+    """
+    cache_data = {"tickers": {}}
+    prior = {"BTC-USD": {"mu": 0.0, "sigma": 0.05, "last_bar": "2026-08-06"}}
+    tomorrow = date.fromisoformat(s.today_et().isoformat()) + __import__(
+        "datetime").timedelta(days=1)
+
+    s._carry_refused_bar(cache_data, prior, "BTC-USD",
+                         _series_ending(tomorrow), "stale_bar")
+
+    entry = cache_data["tickers"]["BTC-USD"]
+    assert entry.get("last_seen", "") <= s.today_et().isoformat(), (
+        f"recorded {entry.get('last_seen')} which is after today "
+        f"{s.today_et()} — that session can never be scored")
+    ref = s.prior_bars_from_cache(cache_data)["BTC-USD"]
+    assert s.is_unscored_bar(tomorrow, ref, today=tomorrow), (
+        "when that date becomes today the session must still be scoreable")

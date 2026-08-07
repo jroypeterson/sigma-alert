@@ -1490,7 +1490,15 @@ def _carry_refused_bar(cache_data: dict, prior_entries: dict, ticker: str,
             observed = close.index[-1].date().isoformat()
         except (AttributeError, IndexError, TypeError):
             observed = None
-        if observed and (seen is None or observed > seen):
+        # NEVER record a `last_seen` later than today. The guard reads
+        # max(last_bar, last_seen) and tests strictly `>`, so a future-dated
+        # `last_seen` makes that session permanently unscoreable the moment it
+        # becomes today — equality fails. Codex round 4; this is a bug the
+        # after-today cap in `is_unscored_bar` introduced, because the bar it
+        # refuses is exactly the one that would be written here.
+        today = today_et()
+        if observed and observed <= today.isoformat() and (
+                seen is None or observed > seen):
             seen = observed
 
     if not seen and not prior.get("last_bar"):
