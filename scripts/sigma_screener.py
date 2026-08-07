@@ -21,7 +21,7 @@ import re
 import sys
 import time
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -1433,6 +1433,161 @@ def check_52w_high_low(high_series: pd.Series, low_series: pd.Series, close_seri
     return None
 
 
+# --- Bar freshness: "is this session NEW", not "is this bar today" ---------
+#
+# See `is_unscored_bar` for the rule and the measurement behind it. The short
+# version: comparing every security against `today_et()` skipped 27 tickers on
+# every close run since 2026-07-20 — 26 of them behind by exactly one day,
+# because their exchange's EOD had not reached Yahoo by run time. Judging a bar
+# by whether it is NEWER THAN THE ONE WE LAST SCORED answers the question the
+# guard actually cares about, and does it without a market-calendar dependency.
+#
+# A per-venue quorum was tried first and rejected in review: a venue whose feed
+# has stalled has every one of its names agreeing on the same old date, so the
+# stale names certify each other and the SAME session gets re-scored — and
+# re-alerted — every day. A vote among tickers from one feed cannot detect that
+# feed being down. The per-ticker "have I scored this bar" test cannot make that
+# mistake, because it compares against our own record rather than the feed's.
+
+
+def _carry_refused_bar(cache_data: dict, prior_entries: dict, ticker: str,
+                       close, skip_reason: str | None) -> None:
+    """Carry a skipped ticker's watermark forward. **Monotonic — never back.**
+
+    `save_cache` REPLACES the file, so a ticker that skips simply vanishes from
+    it. That is how the 26 late-arriving European names came to have no cache
+    entry at all after three weeks of being skipped — and a ticker with no
+    entry has no `last_bar`, so `is_unscored_bar` falls back to the `== today`
+    rule for it, which is the very rule that was skipping it. Without this the
+    fix is permanently inert for exactly the names it exists for.
+
+    Two properties, both from Codex round 2, both of which let the same session
+    be scored twice if you get them wrong:
+
+    * **The watermark only ever advances.** A refused bar is by definition not
+      newer than what we scored, so writing it in unconditionally would move
+      the watermark BACKWARD whenever a feed regresses from D to D-1. When the
+      feed recovered, D would clear the strict `>` test and re-alert a session
+      already scored. `max` of the two, so a regression is inert.
+    * **Every unsuccessful ticker keeps its watermark, not just `stale_bar`.**
+      Any other skip (`insufficient_history`, `distribution_nan`, a fallback
+      failure) also drops the ticker from the replaced cache. If it then
+      recovered on a later close run the same day, `last_scored` would be
+      absent, the `>= today` cold-cache fallback would accept, and that
+      session would be scored a second time. Reason only decides whether the
+      watermark may ADVANCE — never whether it is kept.
+
+    The prior distribution is carried forward too, so the cached-open path
+    keeps working for these names.
+    """
+    prior = dict(prior_entries.get(ticker) or {})
+    seen = prior.get("last_seen") or prior.get("last_bar")
+
+    # Only a refused bar is evidence about a session; other skips mean we never
+    # got a usable read, so they preserve without advancing.
+    if skip_reason == "stale_bar":
+        try:
+            observed = close.index[-1].date().isoformat()
+        except (AttributeError, IndexError, TypeError):
+            observed = None
+        if observed and (seen is None or observed > seen):
+            seen = observed
+
+    if not seen and not prior.get("last_bar"):
+        return
+    # `last_seen` is deliberately NOT `last_bar`. A refusal means we did not
+    # score that session, and writing it into the scored watermark would make
+    # it permanently unscoreable if it later turned out to be simply late
+    # (Codex round 3). `last_bar` is only ever written by a ticker that was
+    # actually scored.
+    if seen:
+        prior["last_seen"] = seen
+    if "mu" in prior and "sigma" in prior:
+        cache_data["tickers"][ticker] = prior
+    else:
+        # No prior distribution to carry. Park the observation under a separate
+        # key so `_cache_has_tickers` still measures real screens and an empty
+        # batch cannot look healthy.
+        cache_data.setdefault("refused_bars", {})[ticker] = seen
+
+
+def prior_bars_from_cache(cache: dict | None) -> dict:
+    """`{ticker: date}` of the session each ticker was last scored on.
+
+    Entries written before `last_bar` existed simply have no key, and
+    `is_unscored_bar` falls back to the original `== today` rule for those —
+    so the whole watchlist degrades to pre-2026-08-07 behaviour on a cold or
+    old cache rather than to a wrong answer.
+    """
+    out: dict = {}
+    for tkr, raw in ((cache or {}).get("refused_bars") or {}).items():
+        # A `refused_bars` entry is a `last_seen`, never a `last_bar`.
+        try:
+            out[tkr] = date.fromisoformat(raw)
+        except (TypeError, ValueError):
+            continue
+    for tkr, entry in ((cache or {}).get("tickers") or {}).items():
+        # Scored beats merely-seen: `last_bar` is the real watermark, and
+        # `last_seen` only bounds what we have already looked at and refused.
+        # Using the newer of the two keeps both monotonic.
+        cand = [v for v in ((entry or {}).get("last_bar"),
+                            (entry or {}).get("last_seen")) if v]
+        if not cand:
+            continue
+        raw = max(cand)
+        try:
+            out[tkr] = date.fromisoformat(raw)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def is_unscored_bar(latest_bar, last_scored, today=None) -> bool:
+    """Is this bar a session we have NOT already scored for this ticker?
+
+    This is the invariant the freshness guard is actually protecting. The
+    original rule was `latest_bar == today_et()`, which conflates two
+    different things — "is this bar current" and "is this bar new" — and gets
+    both wrong at the edges:
+
+    * **Too strict.** A venue whose EOD has not reached Yahoo yet is skipped
+      forever rather than a run late. Measured on the 2026-08-06 close run:
+      **27 tickers skipped `stale_bar`, and 26 of them were behind by exactly
+      one day** (`latest close bar is 2026-08-05, expected 2026-08-06`) — the
+      whole European book plus `BTC-USD`, every close run since 07-20. Their
+      08-05 sessions were real and simply arrived late; under the old rule
+      they were never scored at all.
+    * **Too loose in the other direction is what it was guarding.** A ticker
+      with no bar for the current session gets `dropna()`'d back to the prior
+      one, and scoring that as today's move manufactures a spurious 2 sigma.
+
+    Both are answered by asking whether the bar is newer than the last one
+    this ticker was scored on — which is exactly "is there new information",
+    and is the thing that must never be false when we emit an alert. A bar
+    dated *later* than ET today (a venue whose local date has rolled over, or
+    a 24/7 UTC-dated instrument) is new, so it passes.
+
+    With no prior bar on record — a first run, or a cache that predates this
+    field — fall back to the original `== today` rule rather than trusting an
+    unknown. Being conservative on a cold cache costs one cycle; guessing
+    costs a false alert.
+    """
+    today = today or today_et()
+    if latest_bar is None:
+        return True                        # nothing to judge; caller's problem
+    if latest_bar > today:
+        # A bar dated after ET today is a partial/forming session somewhere, and
+        # accepting it lets the SAME session be scored again by the next
+        # morning's cached-open run (which has no watermark of its own). The
+        # measured problem was always bars arriving LATE — the 2026-08-06 log is
+        # 26 x "one day behind" and zero ahead — so nothing is given up by
+        # capping here. Codex round 3.
+        return False
+    if last_scored is None:
+        return latest_bar >= today
+    return latest_bar > last_scored
+
+
 def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          high_series: pd.Series | None, low_series: pd.Series | None,
                          mode: str, metadata: dict | None = None,
@@ -1442,7 +1597,8 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                          ready_to_buy_set: set[str] | None = None,
                          ready_to_short_set: set[str] | None = None,
                          meta_key: str | None = None,
-                         require_current_bar: bool = False) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
+                         require_current_bar: bool = False,
+                         last_scored_bar=None) -> tuple[dict | None, dict | None, dict | None, dict | None, str | None]:
     """Process a single ticker in full-screen mode.
 
     `ticker` is the display identity (stamped on alerts/cache/stats — the
@@ -1479,9 +1635,14 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             latest_bar = price_series.index[-1].date()
         except (AttributeError, IndexError, TypeError):
             latest_bar = None
-        if latest_bar is not None and latest_bar != today_et():
+        # `last_scored_bar` is the bar date this ticker was last SCORED on,
+        # carried in the distribution cache by the previous close run. See
+        # `is_unscored_bar` — with no record it falls back to the original
+        # `== today` rule, so a cold cache is conservative rather than wrong.
+        if not is_unscored_bar(latest_bar, last_scored_bar):
             print(f"[WARN] {ticker}: latest {mode} bar is {latest_bar}, "
-                  f"expected {today_et()} — skipping (stale bar)")
+                  f"already scored through {last_scored_bar or today_et()} "
+                  f"— skipping (stale bar)")
             return None, None, None, None, "stale_bar"
 
     mu, sigma, sample_size = compute_distribution(close)
@@ -1527,6 +1688,14 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
         prior_year_end_close = None
 
     cache_entry = {"mu": mu, "sigma": sigma, "sample_size": sample_size}
+    # The session this ticker was scored on. Read back by the NEXT run as
+    # `last_scored_bar`, which is what makes "is this bar new" answerable.
+    try:
+        cache_entry["last_bar"] = (open_prices if mode == "open"
+                                   else close).index[-1].date().isoformat()
+    except (AttributeError, IndexError, TypeError):
+        pass  # plain-index fixture; the field is optional by contract
+
     if high_52w is not None:
         cache_entry["high_52w"] = high_52w
     if low_52w is not None:
@@ -1539,16 +1708,23 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     prev_close = float(close.iloc[-2])
     if mode == "open":
         today_price = float(open_prices.iloc[-1])
-        # prev_close must be the last close STRICTLY before today. When today's
-        # (partial) close is present, iloc[-2] is yesterday — correct. But if
-        # today's close is absent/NaN (dropna'd), iloc[-2] would be two-days-ago.
-        # Select by date when the series is date-indexed to stay anchored on
-        # yesterday's close regardless.
+        # prev_close must be the last close STRICTLY before THE SESSION THIS
+        # OPEN BELONGS TO. When that session's (partial) close is present,
+        # iloc[-2] is the prior session — correct. But if it is absent/NaN
+        # (dropna'd), iloc[-2] would be two sessions back.
+        #
+        # Anchor on the open bar's OWN date, not `today_et()`. Once a bar dated
+        # other than ET today can be scored — a venue whose EOD arrived late,
+        # or one whose local date has rolled over — `< today_et()` picks the
+        # wrong close. Concretely, accepting an 08-05 open on 08-06 would take
+        # the 08-05 *close* as the baseline and report the open against its own
+        # session's close. Codex flagged this as a false-2-sigma path.
         try:
-            before_today = close[close.index.date < today_et()]
-            if len(before_today):
-                prev_close = float(before_today.iloc[-1])
-        except (AttributeError, TypeError):
+            session = open_prices.index[-1].date()
+            before_session = close[close.index.date < session]
+            if len(before_session):
+                prev_close = float(before_session.iloc[-1])
+        except (AttributeError, TypeError, IndexError):
             pass
     else:
         today_price = float(close.iloc[-1])
@@ -1643,7 +1819,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 following_set: set[str] | None = None,
                 ready_to_buy_set: set[str] | None = None,
                 ready_to_short_set: set[str] | None = None,
-                etf_set: set[str] | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
+                etf_set: set[str] | None = None,
+                prior_cache: dict | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
     `etf_set` is the union of index + sector ETFs whose per-ticker stats
@@ -1683,6 +1860,19 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     yf_symbols = [to_yf_symbol(t) for t in tickers]
     data = batch_download(yf_symbols, start_str, end_str)
     failed_tickers = []
+    # The per-ticker fallback loop runs even when the batch never arrived, so
+    # these must exist unconditionally.
+    # BOTH homes for a watermark, or the monotonic guard is only half wired.
+    # A ticker with no cached distribution parks its watermark under
+    # `refused_bars` instead of `tickers`; reading only `tickers` meant
+    # `_carry_refused_bar` saw no prior for exactly those names and happily
+    # wrote an older bar over a newer one. Caught by the live four-run check
+    # (EA, OSSFF, SHMZF, ^W5000 all regressed a day), NOT by the unit tests,
+    # which only ever exercised the `tickers` path.
+    _prior_entries: dict = dict((prior_cache or {}).get("tickers") or {})
+    for _t, _d in ((prior_cache or {}).get("refused_bars") or {}).items():
+        _prior_entries.setdefault(_t, {"last_bar": _d})
+    _prior: dict = prior_bars_from_cache(prior_cache)
 
     if data is not None:
         # Validate that the latest bar is from today's session
@@ -1692,6 +1882,16 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
         stats["ref_date"] = str(data.index[-1].date())
+
+        # What each ticker was last SCORED on, per the distribution cache the
+        # previous close run wrote. This is our own record, not the feed's —
+        # see `is_unscored_bar` for why a vote among the feed's own tickers
+        # cannot substitute for it.
+        _late = sum(1 for t in tickers
+                    if _prior.get(t) and _prior[t] < today)
+        if _late:
+            print(f"[INFO] {_late} ticker(s) were last scored before {today}; "
+                  f"any that carry a newer bar this run will be picked up")
 
         for ticker in tickers:
             try:
@@ -1716,11 +1916,14 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     ready_to_short_set=ready_to_short_set,
                     meta_key=to_metadata_key(ticker, _collisions),
                     require_current_bar=True,
+                    last_scored_bar=_prior.get(ticker),
                 )
 
                 if cache_entry is None:
                     stats["skipped"] += 1
                     skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
+                    _carry_refused_bar(cache_data, _prior_entries, ticker,
+                                       close, skip_reason)
                     continue
 
                 cache_data["tickers"][ticker] = cache_entry
@@ -1747,11 +1950,30 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             print(f"[WARN] {ticker}: insufficient data in fallback, skipping")
             stats["skipped"] += 1
             skip_events.append({"ticker": ticker, "reason": "fallback_insufficient"})
+            _carry_refused_bar(cache_data, _prior_entries, ticker, None,
+                               "fallback_insufficient")
             continue
 
-        if not validate_bar_date(single_data.index, mode):
-            print(f"[WARN] {ticker}: stale data in fallback, skipping")
+        # NOT `validate_bar_date` here. That is the legacy `== today` rule, and
+        # applying it in the fallback path rejects a ticker BEFORE the
+        # per-ticker rule below ever sees it — so a name that is chronically one
+        # session late (exactly the population this fallback serves, and exactly
+        # the 26 the CI log measured) is rejected forever no matter how new its
+        # bar is relative to what we scored. Codex round 3. `_process_ticker_full`
+        # is the single authority on whether a bar is scoreable; let it decide.
+        try:
+            _fb_bar = single_data.index[-1].date()
+        except (AttributeError, IndexError, TypeError):
+            _fb_bar = None
+        if not is_unscored_bar(_fb_bar, _prior.get(ticker)):
+            print(f"[WARN] {ticker}: fallback bar {_fb_bar} is not newer than "
+                  f"{_prior.get(ticker) or today} — skipping")
             stats["stale"] += 1
+            # Counted as stale rather than skipped, but it drops out of the
+            # replaced cache exactly the same way — so it keeps its watermark
+            # exactly the same way. See `_carry_refused_bar`.
+            _carry_refused_bar(cache_data, _prior_entries, ticker, single_data,
+                               "stale_bar")
             continue
 
         if stats["ref_date"] is None:
@@ -1772,11 +1994,14 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 ready_to_short_set=ready_to_short_set,
                 meta_key=to_metadata_key(ticker, _collisions),
                 require_current_bar=True,
+                last_scored_bar=_prior.get(ticker),
             )
 
             if cache_entry is None:
                 stats["skipped"] += 1
                 skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
+                _carry_refused_bar(cache_data, _prior_entries, ticker,
+                                   close, skip_reason)
                 continue
 
             cache_data["tickers"][ticker] = cache_entry
@@ -1792,6 +2017,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             print(f"[WARN] {ticker} fallback processing failed: {e}")
             stats["skipped"] += 1
             skip_events.append({"ticker": ticker, "reason": "fallback_exception"})
+            _carry_refused_bar(cache_data, _prior_entries, ticker, None,
+                               "fallback_exception")
 
     return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
@@ -2644,6 +2871,14 @@ def main():
     hi_lo_hits = []
     etf_returns = []
 
+    # The session each ticker was last scored on, per the previous close run.
+    # Every mode reads it; only close mode writes it back. See `is_unscored_bar`.
+    _prior_cache = load_cache()
+    _n_recorded = len(prior_bars_from_cache(_prior_cache))
+    if _n_recorded:
+        print(f"[INFO] last-scored bar on record for {_n_recorded} of "
+              f"{len(tickers)} tickers")
+
     if args.mode == "open":
         # Try cached path first — avoids full history download
         cache = load_cache()
@@ -2660,7 +2895,7 @@ def main():
         else:
             print("[INFO] Cache stale or missing, running full download for open mode")
             alerts, _, stats, _, etf_returns, _ = screen_full(
-                tickers, "open", metadata=metadata,
+                tickers, "open", metadata=metadata, prior_cache=_prior_cache,
                 portfolio_set=portfolio_set, researching_set=researching_set,
                 following_set=following_set,
                 ready_to_buy_set=ready_to_buy_set,
@@ -2671,7 +2906,7 @@ def main():
     elif args.mode == "midday":
         # Midday mode: same price comparison as close but don't update cache
         alerts, _, stats, _, etf_returns, _ = screen_full(
-            tickers, "close", metadata=metadata,
+            tickers, "close", metadata=metadata, prior_cache=_prior_cache,
             portfolio_set=portfolio_set, researching_set=researching_set,
             following_set=following_set,
             ready_to_buy_set=ready_to_buy_set,
@@ -2682,6 +2917,7 @@ def main():
         # Close mode: full download, update cache, and check 52-week highs/lows
         alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
+            prior_cache=_prior_cache,
             portfolio_set=portfolio_set, researching_set=researching_set,
             following_set=following_set,
             ready_to_buy_set=ready_to_buy_set,
