@@ -297,7 +297,7 @@
     "sector": "Biopharma",
     "subsector": "Large Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "OPCH": {
     "position": "Portfolio",
@@ -357,7 +357,7 @@
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "RPD": {
     "position": "Portfolio",
