@@ -9302,6 +9302,90 @@
     "sub_subsector": "",
     "core": ""
   },
+  "AAOI": {
+    "name": "Applied Optoelectronics, Inc.",
+    "sector": "Tech",
+    "subsector": "Optical Interconnect",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "ALAB": {
+    "name": "Astera Labs, Inc.",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Connectivity",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "ANET": {
+    "name": "Arista Networks, Inc.",
+    "sector": "Tech",
+    "subsector": "Networking",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "BLSM": {
+    "name": "BlossomHill Therapeutics, Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech (Oncology)",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CIEN": {
+    "name": "Ciena Corporation",
+    "sector": "Tech",
+    "subsector": "Optical Interconnect",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "COHR": {
+    "name": "Coherent Corp.",
+    "sector": "Tech",
+    "subsector": "Optical Interconnect",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CRDO": {
+    "name": "Credo Technology Group Holding Ltd",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Connectivity",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "FN": {
+    "name": "Fabrinet",
+    "sector": "Tech",
+    "subsector": "Optical Interconnect",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "JMKE": {
+    "name": "Jersey Mike's Subs Inc.",
+    "sector": "Consumer",
+    "subsector": "Restaurants",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "LITE": {
+    "name": "Lumentum Holdings Inc.",
+    "sector": "Tech",
+    "subsector": "Optical Interconnect",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "LTGO": {
+    "name": "Latigo Biotherapeutics Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech (Pain)",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "MRVL": {
+    "name": "Marvell Technology, Inc.",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Connectivity",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
