@@ -308,7 +308,7 @@
     "core": ""
   },
   "600276.SS": {
-    "name": "JIangsu",
+    "name": "Jiangsu Hengrui Pharmaceuticals Co Ltd",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
@@ -1273,7 +1273,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "Ambush DC": {
+  "AMBUB DC": {
     "name": "Ambu A/S",
     "sector": "MedTech",
     "subsector": "Hospital Supply & Equipment",
@@ -6257,7 +6257,7 @@
     "sub_subsector": "",
     "core": ""
   },
-  "Secare SS": {
+  "SECTB SS": {
     "name": "Sectra AB",
     "sector": "Healthcare Services",
     "subsector": "HIT",
@@ -6801,14 +6801,14 @@
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "VIRP.PA": {
     "name": "Virbac SA",
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "VISTN.OL": {
     "name": "Vistin Pharma ASA",
@@ -9383,6 +9383,48 @@
     "name": "Marvell Technology, Inc.",
     "sector": "Tech",
     "subsector": "Semiconductors / Connectivity",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "SECARE SS": {
+    "name": "Swedencare AB",
+    "sector": "Healthcare Services",
+    "subsector": "Animal Health",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "AVGO": {
+    "name": "Broadcom Inc.",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Connectivity",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "GEV": {
+    "name": "GE Vernova Inc.",
+    "sector": "Industrials",
+    "subsector": "Electrical Equipment",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "005930.KS": {
+    "name": "Samsung Electronics Co., Ltd.",
+    "sector": "Tech",
+    "subsector": "Semiconductors / Memory",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "WDC": {
+    "name": "Western Digital Corporation",
+    "sector": "Tech",
+    "subsector": "Storage / HDD",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "STX": {
+    "name": "Seagate Technology Holdings plc",
+    "sector": "Tech",
+    "subsector": "Storage / HDD",
     "sub_subsector": "",
     "core": ""
   },
