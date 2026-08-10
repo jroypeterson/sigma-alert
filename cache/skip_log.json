@@ -1,76 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-07-08",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MASI",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-07-09",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MASI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MODV",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
-      "date": "2026-07-10",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "FDXF",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MASI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MODV",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SEM",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SILA",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-07-13",
       "mode": "close",
       "skipped": [
@@ -1979,6 +1909,32 @@
         {
           "ticker": "YPSN",
           "reason": "stale_bar"
+        },
+        {
+          "ticker": "^W5000",
+          "reason": "stale_bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-10",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
         },
         {
           "ticker": "^W5000",
