@@ -1,32 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-07-14",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "HONA",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MASI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "MODV",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SEM",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SILA",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-07-15",
       "mode": "close",
       "skipped": [
@@ -14239,6 +14213,32 @@
         {
           "ticker": "^W5000",
           "reason": "stale_bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-14",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "EA",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
         }
       ]
     }
