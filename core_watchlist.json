@@ -449,6 +449,16 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "NTRA": {
+    "buy_price": null,
+    "target_price": null,
+    "date_added": "2026-08-14",
+    "notes": "",
+    "name": "Natera, Inc.",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
+    "sub_subsector": ""
+  },
   "NVDA": {
     "buy_price": null,
     "target_price": null,

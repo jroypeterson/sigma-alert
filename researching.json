@@ -374,6 +374,21 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "NTRA": {
+    "position": "Researching",
+    "position_date": "2026-08-14",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Natera, Inc.",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "NVDA": {
     "position": "Researching",
     "position_date": "2026-05-03",
