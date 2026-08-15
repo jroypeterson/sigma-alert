@@ -968,6 +968,112 @@ class TestTreasuryCurveRendering:
                 < text.index("_Credit_"))
 
 
+class TestMortgageRateRendering:
+    ROW = {"label": "30Y fixed, Freddie Mac PMMS — weekly", "level": 6.67,
+           "bp_chg": -2.0, "obs_date": "2026-08-13", "prev_date": "2026-08-06",
+           "ytd_bp": -12.0, "ytd_base": 6.79}
+
+    def _text(self, mortgage_data, **kw):
+        payload = format_slack_message(
+            [], "close", 100, {"ref_date": "2026-08-14"}, None, set(),
+            mortgage_data=mortgage_data, **kw,
+        )
+        return "\n".join(
+            b["text"]["text"] for b in payload["blocks"]
+            if b.get("type") == "section"
+        )
+
+    def test_renders_level_wow_change_and_ytd(self):
+        text = self._text(self.ROW)
+        assert "_Macro_" in text
+        assert "`30Y Mortgage`" in text
+        assert "6.67%" in text
+        assert "-2.0bp w/w" in text
+        assert "YTD: -12bp from 6.79%" in text
+        # A rate is a level, not a $price, and carries no z-score.
+        assert "$6.67" not in text
+        assert "z =" not in text
+
+    def test_weekly_cadence_is_labeled_not_implied(self):
+        # PMMS is weekly and the same value re-renders across ~15 daily digests.
+        # Both labels are load-bearing: an unlabeled bp change next to the daily
+        # curve rows reads as a one-day move, and without the observation date a
+        # delayed release passes as today's rate.
+        text = self._text(self.ROW)
+        assert "w/w" in text                 # not a one-day move
+        assert "as of 2026-08-13" in text    # the observation is dated
+        assert "weekly" in text.lower()
+
+    def test_rate_rise_is_red_fall_is_green(self):
+        rise = dict(self.ROW, bp_chg=4.0)
+        assert "\U0001F7E5" in self._text(rise)   # red on a rate rise
+        fall = dict(self.ROW, bp_chg=-4.0)
+        assert "\U0001F7E9" in self._text(fall)   # green on a rate fall
+
+    def test_missing_ytd_omits_suffix(self):
+        row = {k: v for k, v in self.ROW.items()
+               if k not in ("ytd_bp", "ytd_base")}
+        assert "YTD" not in self._text(row)
+
+    def test_renders_without_etf_returns(self):
+        # A mortgage-only message (no yfinance returns) still emits the section
+        # AND the _Macro_ header — the row must not depend on ^TNX resolving.
+        text = self._text(self.ROW)
+        assert "Index, Sector & Macro Returns" in text
+        assert "_Macro_" in text
+
+    def test_no_data_omits_the_row_entirely(self):
+        macro_row = {"ticker": "^TNX", "name": "10Y", "z_score": 0.5,
+                     "return_pct": 1.0, "price": 4.1,
+                     "high_52w": None, "low_52w": None}
+        text = self._text({}, etf_returns=[macro_row], macro_etf_set={"^TNX"})
+        assert "_Macro_" in text            # the rest of the group still renders
+        assert "30Y Mortgage" not in text
+
+    def test_mortgage_row_closes_the_macro_group(self):
+        macro_row = {"ticker": "CL=F", "name": "WTI Crude", "z_score": 0.5,
+                     "return_pct": 1.0, "price": 68.2,
+                     "high_52w": None, "low_52w": None}
+        curve = {"10Y": {"label": "10Y", "level": 4.41, "bp_chg": 5.0}}
+        text = self._text(self.ROW, etf_returns=[macro_row],
+                          macro_etf_set={"CL=F"}, curve_data=curve)
+        assert (text.index("`CL=F`") < text.index("`30Y Mortgage`")
+                < text.index("_Treasury Curve_"))
+
+
+class TestFetchMortgageRate:
+    def test_computes_wow_change_and_ytd(self, monkeypatch):
+        series = [("2025-12-25", 6.79), ("2026-08-06", 6.69), ("2026-08-13", 6.67)]
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series if sid == "MORTGAGE30US" else [])
+        m = sigma_screener.fetch_mortgage_rate()
+        assert m["level"] == 6.67
+        assert round(m["bp_chg"], 1) == -2.0     # (6.67-6.69)*100
+        assert round(m["ytd_bp"], 0) == -12      # (6.67-6.79)*100
+        assert m["ytd_base"] == 6.79
+        assert m["obs_date"] == "2026-08-13"
+        assert m["prev_date"] == "2026-08-06"
+
+    def test_insufficient_data_returns_empty(self, monkeypatch):
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: [("2026-08-13", 6.67)])
+        assert sigma_screener.fetch_mortgage_rate() == {}
+
+    def test_fetch_failure_returns_empty(self, monkeypatch):
+        # _fetch_fred_series returns [] on any network/parse failure — that must
+        # drop the row, not raise (warn-and-proceed).
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: [])
+        assert sigma_screener.fetch_mortgage_rate() == {}
+
+    def test_omits_ytd_when_no_prior_year_obs(self, monkeypatch):
+        series = [("2026-08-06", 6.69), ("2026-08-13", 6.67)]
+        monkeypatch.setattr(sigma_screener, "_fetch_fred_series",
+                            lambda sid, **kw: series)
+        m = sigma_screener.fetch_mortgage_rate()
+        assert "ytd_bp" not in m and "ytd_base" not in m
+
+
 class TestFetchTreasuryCurve:
     def test_computes_bp_changes_and_ytd(self, monkeypatch):
         series = {

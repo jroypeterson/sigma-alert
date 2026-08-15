@@ -602,6 +602,30 @@ TREASURY_CURVE_SERIES = {
 TREASURY_CURVE_ORDER = ["2Y", "10Y", "30Y"]
 
 
+# ---------------------------------------------------------------------------
+# 30-year fixed mortgage rate — sourced from FRED, NOT yfinance.
+# ---------------------------------------------------------------------------
+# JP asked for the 30-year mortgage rate in the macro section (2026-08-15). The
+# Freddie Mac Primary Mortgage Market Survey (PMMS) is the reference series;
+# FRED carries it as MORTGAGE30US on the same public no-key CSV endpoint the
+# credit and Treasury-curve blocks already use, so this adds the household
+# borrowing-cost backdrop without a new secret or a new dependency.
+#
+# **It is WEEKLY, not daily** — PMMS publishes every Thursday for the week
+# ending that day, so the same value is re-rendered across ~15 consecutive
+# open/midday/close digests. Two consequences the renderer must honour:
+#   1. The change vs the prior observation is a WEEK-over-week move and is
+#      labeled `w/w`. Printing it as an unlabeled bp change next to the daily
+#      Treasury/credit rows would read as a one-day move.
+#   2. The observation date is rendered inline (`as of YYYY-MM-DD`) so a stale
+#      or delayed PMMS release is visible rather than looking like today's rate.
+# A level, not a tradeable ticker: no z-score, no alert, not in the yfinance
+# download path. Rendered as the last row of the `_Macro_` sub-group, colored
+# bond-style (a rate RISE is 🟥) like the curve and OAS rows.
+MORTGAGE_SERIES_ID = "MORTGAGE30US"
+MORTGAGE_LABEL = "30Y fixed, Freddie Mac PMMS — weekly"
+
+
 def _fetch_fred_series(series_id: str, start: str | None = None,
                        timeout: int = 15, retries: int = 1) -> list[tuple[str, float]]:
     """Fetch one FRED series via the public no-key CSV endpoint.
@@ -736,6 +760,44 @@ def fetch_treasury_curve() -> dict:
             entry["ytd_bp"] = (last - prior_year_obs[-1]) * 100
         results[key] = entry
     return results
+
+
+def fetch_mortgage_rate() -> dict:
+    """Fetch the 30-year fixed mortgage rate (FRED `MORTGAGE30US`) for the
+    `_Macro_` returns sub-group.
+
+    Returns `{label, level, bp_chg, obs_date, prev_date, [ytd_bp, ytd_base]}`,
+    or `{}` when the series doesn't resolve (warn-and-proceed — the mortgage row
+    is simply omitted, never a hard stop). `level` is the rate in percent as of
+    the latest weekly PMMS observation; `bp_chg` is the move in basis points vs
+    the PREVIOUS WEEK's observation (the series is weekly — see the
+    MORTGAGE_SERIES_ID note above; the caller labels it `w/w`); `ytd_bp` is the
+    move from the prior calendar year's final observation, with `ytd_base` the
+    level it moved from. `obs_date`/`prev_date` are the two observation dates
+    behind `bp_chg`, carried so the renderer can date-stamp a weekly figure that
+    is re-shown across ~15 daily digests. No API key required.
+    """
+    prior_year = str(today_et().year - 1)
+    # Same ~2-year bound as the credit/curve fetches: enough for last/prev plus
+    # the prior-year-end YTD baseline (~104 weekly observations).
+    start = f"{prior_year}-01-01"
+    series = _fetch_fred_series(MORTGAGE_SERIES_ID, start=start)
+    if len(series) < 2:
+        print(f"[WARN] mortgage: insufficient data for {MORTGAGE_SERIES_ID}, skipping")
+        return {}
+    (last_date, last), (prev_date, prev) = series[-1], series[-2]
+    entry = {
+        "label": MORTGAGE_LABEL,
+        "level": last,
+        "bp_chg": (last - prev) * 100,
+        "obs_date": last_date,
+        "prev_date": prev_date,
+    }
+    prior_year_obs = [v for (d, v) in series if d[:4] == prior_year]
+    if prior_year_obs:
+        entry["ytd_base"] = prior_year_obs[-1]
+        entry["ytd_bp"] = (last - prior_year_obs[-1]) * 100
+    return entry
 
 
 def load_etf_names() -> dict:
@@ -2150,6 +2212,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                          macro_etf_set: set[str] | None = None,
                          credit_data: dict | None = None,
                          curve_data: dict | None = None,
+                         mortgage_data: dict | None = None,
                          etf_period_returns: dict | None = None,
                          etf_weighting: dict | None = None) -> dict:
     """Build Slack message payload using Block Kit for clean formatting.
@@ -2395,7 +2458,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # ^RUT) lead, then the macro/rates/credit backdrop, then the remaining
     # ETF groups. Each equity group sorted by z-score descending so the
     # strongest move within each group leads.
-    if etf_returns or credit_data or curve_data:
+    if etf_returns or credit_data or curve_data or mortgage_data:
         _etf_returns = etf_returns or []
         idx_set = index_etf_set or set()
         global_eq_set = global_equity_etf_set or set()
@@ -2443,6 +2506,9 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
         # Treasury-curve rows also come from FRED (curve_data), in fixed
         # short->long maturity order.
         curve_rows = [k for k in TREASURY_CURVE_ORDER if k in (curve_data or {})]
+        # The 30Y mortgage rate is a single FRED row appended to _Macro_ (below
+        # the yfinance macro tickers) — a weekly level, so it has no z-score.
+        mortgage_row = mortgage_data if (mortgage_data or {}).get("level") is not None else None
 
         def _format_macro_line(s):
             """Render a macro row. Yields show level% + bp change; price/level
@@ -2492,6 +2558,32 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
             else:
                 core = f"{sign}{rp:.2f}%  |  z = {z:+.2f}"
             return f"{marker}  `{t}` ({name})  |  {core}"
+
+        def _format_mortgage_line(d):
+            """Render the 30-year mortgage row, e.g.:
+            `🟩 `30Y Mortgage` (30Y fixed, Freddie Mac PMMS — weekly) | 6.67% |
+             -2.0bp w/w | YTD: -12bp from 6.79% | as of 2026-08-13`.
+            Colored like a bond, NOT an equity: a rate RISE is 🟥 (borrowing got
+            more expensive / bond prices fell), a FALL is 🟩 — same inversion as
+            the Treasury-curve and credit-OAS rows.
+
+            Two labels are load-bearing, both because PMMS is a WEEKLY series
+            re-rendered across ~15 daily digests: the change is stamped `w/w` so
+            it can't be read as a one-day move next to the daily curve rows, and
+            the observation date is stamped inline so a stale or delayed release
+            is visible instead of passing as today's rate."""
+            bp = d["bp_chg"]
+            marker = "\U0001F7E5" if bp > 0 else "\U0001F7E9"
+            parts = [f"{d['level']:.2f}%", f"{bp:+.1f}bp w/w"]
+            if "ytd_bp" in d:
+                ytd = f"YTD: {d['ytd_bp']:+.0f}bp"
+                if "ytd_base" in d:
+                    ytd += f" from {d['ytd_base']:.2f}%"
+                parts.append(ytd)
+            if d.get("obs_date"):
+                parts.append(f"as of {d['obs_date']}")
+            label = d.get("label") or MORTGAGE_LABEL
+            return f"{marker}  `30Y Mortgage` ({label})  |  " + "  |  ".join(parts)
 
         def _format_credit_line(key, d):
             """Render a credit row, e.g.:
@@ -2569,7 +2661,7 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
 
         if (index_rows or global_equity_rows or sector_rows or healthcare_rows
                 or tech_rows or commodity_rows or macro_rows or credit_rows
-                or curve_rows):
+                or curve_rows or mortgage_row):
             blocks.append({"type": "divider"})
             header = ":chart_with_upwards_trend: *Index, Sector & Macro Returns*"
             lines = []
@@ -2581,11 +2673,17 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
                 lines.append("_US Indices_")
                 lines.extend(_format_etf_line(s) for s in index_rows)
                 rendered_any = True
-            if macro_rows:
+            if macro_rows or mortgage_row:
                 if rendered_any:
                     lines.append("")  # blank spacer between groups
                 lines.append("_Macro_")
                 lines.extend(_format_macro_line(s) for s in macro_rows)
+                # The mortgage rate closes the group: it's the household
+                # borrowing-cost read on the same rates backdrop, and being
+                # weekly + z-score-less it shouldn't sit between the daily
+                # cross-asset ticks.
+                if mortgage_row:
+                    lines.append(_format_mortgage_line(mortgage_row))
                 rendered_any = True
             if curve_rows:
                 if rendered_any:
@@ -2996,6 +3094,17 @@ def main():
     else:
         print("[WARN] No treasury-curve data from FRED — _Treasury Curve_ block will be omitted")
 
+    # 30-year fixed mortgage rate (Freddie Mac PMMS via FRED MORTGAGE30US), the
+    # last row of _Macro_. Weekly series — the same value re-renders across the
+    # week, which is why the row carries `w/w` and an `as of` date. Failure is
+    # non-fatal: an empty dict just omits the row.
+    mortgage_data = fetch_mortgage_rate()
+    if mortgage_data:
+        print(f"[INFO] 30Y mortgage rate fetched from FRED: "
+              f"{mortgage_data['level']:.2f}% as of {mortgage_data['obs_date']}")
+    else:
+        print("[WARN] No mortgage data from FRED — 30Y mortgage row will be omitted")
+
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
@@ -3007,6 +3116,7 @@ def main():
         macro_etf_set=macro_set,
         credit_data=credit_data,
         curve_data=curve_data,
+        mortgage_data=mortgage_data,
         etf_period_returns=etf_period_returns,
         etf_weighting=etf_weighting,
     )
