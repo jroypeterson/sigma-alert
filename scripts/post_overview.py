@@ -138,7 +138,17 @@ def build_blocks() -> dict:
             "  _(10Y: level + day bp + YTD bp from year-start; WTI/dollar: level + YTD %; "
             "the mortgage row is Freddie Mac PMMS — *weekly*, so its change is `w/w` and it carries its observation date)_\n"
             f"• *Treasury Curve* — {curve} _(prior close; level + day bp + YTD bp; colored bond-style: yield up = :large_red_square:)_\n"
-            f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_\n"
+            f"• *Credit* — {credit} _(effective yield + OAS spread from FRED; each as level + day bp; trailing `YTD: yield ±bp, OAS ±bp` labeled separately; colored by the spread move)_"
+        )}},
+        # SPLIT INTO TWO SECTIONS ON PURPOSE (2026-08-17). One block carrying all
+        # nine groups reached 2851 of Slack's 3000 chars when the 30Y mortgage row
+        # was added — 149 to spare, under this file's own <400 warning threshold.
+        # Slack renders consecutive sections contiguously, so the card reads the
+        # same; the cut is between the rates/credit backdrop and the equity groups
+        # because that is where the list already changes subject. Do NOT merge
+        # them back: the next few tickers would fail as an opaque Slack 400 at the
+        # moment of posting.
+        {"type": "section", "text": {"type": "mrkdwn", "text": (
             f"• *Global Equity* — {', '.join(_named(global_eq, names, weighting))} _(country ETFs are USD, so they bundle local-equity + FX)_\n"
             f"• *Sectors* — SPDR Select Sector ETFs{_sector_wt} ({', '.join('`'+t+'`' for t in sector)})\n"
             f"• *Healthcare* — {', '.join(_named(healthcare, names, weighting))}\n"
