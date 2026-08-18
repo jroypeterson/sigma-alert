@@ -14241,6 +14241,72 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-08-18",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "2715.HK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "4543.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "6869.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7701.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7733.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7741.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "8086.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "EA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "EQR",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "^TNX",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
