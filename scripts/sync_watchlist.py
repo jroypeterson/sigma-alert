@@ -37,6 +37,11 @@ SOURCES = [
     ("S&P 500", "sp500.txt"),
     ("Index ETFs", "index_etfs.txt"),
     ("Sector ETFs", "sector_etfs.txt"),
+    ("Global Equity ETFs", "global_equity_etfs.txt"),
+    ("Healthcare ETFs", "healthcare_etfs.txt"),
+    ("Tech ETFs", "tech_etfs.txt"),
+    ("Commodity ETFs", "commodity_etfs.txt"),
+    ("Macro", "macro.txt"),
 ]
 
 
@@ -81,7 +86,7 @@ def build_watchlist() -> str:
 
     lines = [
         "# Sigma-Alert Watchlist",
-        "# Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector ETFs",
+        "# Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector/global/healthcare/tech/commodity ETFs + macro",
         f"# Last synced: {date_str}",
         "",
     ]
