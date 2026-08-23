@@ -419,6 +419,36 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "ROIV": {
+    "position": "Researching",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "Former-employer grant shares (E*Trade)",
+    "name": "Roivant Sciences Ltd",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "RPD": {
+    "position": "Researching",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Rapid7, Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "SGRY": {
     "position": "Researching",
     "position_date": "2026-07-14",
@@ -460,6 +490,21 @@
     "notes": "",
     "name": "Texas Pacific Land Corp",
     "sector": "Energy",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "U": {
+    "position": "Researching",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Unity Software Inc",
+    "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
     "core": "Y"
