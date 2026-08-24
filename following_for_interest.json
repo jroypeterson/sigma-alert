@@ -164,6 +164,21 @@
     "sub_subsector": "",
     "core": ""
   },
+  "NTRA": {
+    "position": "Following for Interest",
+    "position_date": "2026-08-14",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Natera, Inc.",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "PETS": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
@@ -178,6 +193,36 @@
     "subsector": "Animal Health",
     "sub_subsector": "",
     "core": ""
+  },
+  "ROIV": {
+    "position": "Following for Interest",
+    "position_date": "2026-07-24",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "Former-employer grant shares (E*Trade)",
+    "name": "Roivant Sciences Ltd",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "Y"
+  },
+  "RPD": {
+    "position": "Following for Interest",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Rapid7, Inc.",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
   },
   "TRUP": {
     "position": "Following for Interest",
@@ -208,6 +253,21 @@
     "subsector": "",
     "sub_subsector": "",
     "core": ""
+  },
+  "U": {
+    "position": "Following for Interest",
+    "position_date": "2026-04-11",
+    "buy_price": null,
+    "sell_price": null,
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Unity Software Inc",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
   },
   "WMT": {
     "position": "Following for Interest",

@@ -449,16 +449,6 @@
     "subsector": "",
     "sub_subsector": ""
   },
-  "NTRA": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-08-14",
-    "notes": "",
-    "name": "Natera, Inc.",
-    "sector": "MedTech",
-    "subsector": "Diagnostics",
-    "sub_subsector": ""
-  },
   "NVDA": {
     "buy_price": null,
     "target_price": null,
@@ -505,26 +495,6 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Qnity Electronics Inc.",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "ROIV": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-07-24",
-    "notes": "Former-employer grant shares (E*Trade)",
-    "name": "Roivant Sciences Ltd",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": ""
-  },
-  "RPD": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "Rapid7, Inc.",
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
@@ -585,16 +555,6 @@
     "date_added": "2026-04-11",
     "notes": "",
     "name": "Tesla, Inc.",
-    "sector": "Tech",
-    "subsector": "",
-    "sub_subsector": ""
-  },
-  "U": {
-    "buy_price": null,
-    "target_price": null,
-    "date_added": "2026-04-11",
-    "notes": "",
-    "name": "Unity Software Inc",
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": ""
