@@ -1,6 +1,6 @@
 # Sigma-Alert Watchlist
 # Synced from Coverage Manager (HC Services, MedTech, S&P 500) + index/sector/global/healthcare/tech/commodity ETFs + macro
-# Last synced: 2026-08-21
+# Last synced: 2026-08-26
 
 # --- Healthcare Services (103 tickers) ---
 ACH
@@ -107,7 +107,7 @@ WELL
 XRN
 ZTS
 
-# --- MedTech (139 tickers) ---
+# --- MedTech (136 tickers) ---
 1SXP.DE
 4543.T
 6869.T
@@ -125,7 +125,6 @@ ALMR
 AMBUB.DC
 AMP.IM
 AORT
-ASX
 ATEC
 ATR
 ATRC
@@ -211,14 +210,12 @@ QDEL
 QGEN
 RGEN
 RMD
-ROG
 RVTY
 RXST
 SFZN.SW
 SGHT
 SHC
 SHL.GY
-SHMZF
 SIBN
 SNN
 SOLV

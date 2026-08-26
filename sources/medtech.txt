@@ -1,5 +1,5 @@
 # MedTech — Coverage Manager
-# Last updated: 2026-08-10
+# Last updated: 2026-08-26
 1SXP.DE
 4543.T
 6869.T
@@ -17,7 +17,6 @@ ALMR
 AMBUB.DC
 AMP.IM
 AORT
-ASX
 ATEC
 ATR
 ATRC
@@ -103,14 +102,12 @@ QDEL
 QGEN
 RGEN
 RMD
-ROG
 RVTY
 RXST
 SFZN.SW
 SGHT
 SHC
 SHL.GY
-SHMZF
 SIBN
 SNN
 SOLV
