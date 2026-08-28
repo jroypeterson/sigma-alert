@@ -1098,13 +1098,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ASX": {
-    "name": "ASE Technology Holding Co., Ltd.",
-    "sector": "MedTech",
-    "subsector": "Sleep",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "ATAI": {
     "name": "AtaiBeckley Inc",
     "sector": "Biopharma",
@@ -5627,13 +5620,6 @@
     "sub_subsector": "",
     "core": ""
   },
-  "ROG": {
-    "name": "Rogers Corporation",
-    "sector": "MedTech",
-    "subsector": "Diagnostics",
-    "sub_subsector": "NextGen Sequencing",
-    "core": "Y"
-  },
   "ROG.SW": {
     "name": "Roche",
     "sector": "Biopharma",
@@ -5890,13 +5876,6 @@
     "name": "Siemens Healthineers AG",
     "sector": "MedTech",
     "subsector": "Hospital Supply & Equipment",
-    "sub_subsector": "",
-    "core": "Y"
-  },
-  "SHMZF": {
-    "name": "Shimadzu",
-    "sector": "MedTech",
-    "subsector": "Life Science Tools",
     "sub_subsector": "",
     "core": "Y"
   },
