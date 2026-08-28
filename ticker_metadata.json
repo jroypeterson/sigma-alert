@@ -9421,6 +9421,13 @@
     "sub_subsector": "",
     "core": ""
   },
+  "HONA": {
+    "name": "Honeywell Aerospace Inc",
+    "sector": "Industrials",
+    "subsector": "Aerospace & Defense",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
