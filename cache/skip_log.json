@@ -13767,6 +13767,34 @@
       "mode": "close",
       "skipped": [
         {
+          "ticker": "2715.HK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "4543.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "6869.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7701.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7733.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7741.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "8086.T",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "AMBUB.DC",
           "reason": "insufficient_history"
         },
@@ -13775,8 +13803,24 @@
           "reason": "insufficient_history"
         },
         {
+          "ticker": "BTC-USD",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CL=F",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "COH.AX",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "CSU",
           "reason": "insufficient_history"
+        },
+        {
+          "ticker": "DX-Y.NYB",
+          "reason": "stale_bar"
         },
         {
           "ticker": "EA",
@@ -13791,11 +13835,7 @@
           "reason": "insufficient_history"
         },
         {
-          "ticker": "HAPV3.SA",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "RDOR3",
+          "ticker": "LONN.CH",
           "reason": "stale_bar"
         },
         {
@@ -13803,8 +13843,16 @@
           "reason": "insufficient_history"
         },
         {
+          "ticker": "STMN.SW",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "TALK",
           "reason": "insufficient_history"
+        },
+        {
+          "ticker": "^W5000",
+          "reason": "stale_bar"
         }
       ]
     }

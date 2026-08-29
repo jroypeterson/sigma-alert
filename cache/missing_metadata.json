@@ -183,7 +183,6 @@
     "HII": "not_in_metadata",
     "HLT": "not_in_metadata",
     "HON": "not_in_metadata",
-    "HONA": "not_in_metadata",
     "HPE": "not_in_metadata",
     "HPQ": "not_in_metadata",
     "HRL": "not_in_metadata",
@@ -396,5 +395,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-08-28T01:31:14.757670-04:00"
+  "updated": "2026-08-28T23:13:28.815609-04:00"
 }
