@@ -1,5 +1,5 @@
 # S&P 500 Constituents
-# Last updated: 2026-07-01
+# Last updated: 2026-09-01
 # Check for reconstitution updates quarterly (March, June, September, December)
 # Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
 A
@@ -46,7 +46,6 @@ APTV
 ARE
 ARES
 ATO
-AVB
 AVGO
 AVY
 AWK
@@ -153,7 +152,6 @@ DUK
 DVA
 DVN
 DXCM
-EA
 EBAY
 ECHO
 ECL
@@ -167,7 +165,6 @@ EME
 EMR
 EOG
 EQIX
-EQR
 EQT
 ERIE
 ES
@@ -189,6 +186,7 @@ FDS
 FDX
 FDXF
 FE
+FERG
 FFIV
 FICO
 FIS
@@ -389,6 +387,7 @@ PYPL
 Q
 QCOM
 RCL
+RDDT
 REG
 REGN
 RF
@@ -472,6 +471,7 @@ VICI
 VLO
 VLTO
 VMC
+VMRK
 VRSK
 VRSN
 VRT
