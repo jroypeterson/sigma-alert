@@ -13617,6 +13617,44 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-09-02",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CTEC.LN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CVSG.L",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ONT.L",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
