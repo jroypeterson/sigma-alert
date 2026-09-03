@@ -1,5 +1,5 @@
 # Healthcare Services — Coverage Manager
-# Last updated: 2026-08-10
+# Last updated: 2026-09-03
 ACH
 ACHC
 ADUS
@@ -10,7 +10,6 @@ ALHC
 AMN
 AMWL
 ARDT
-ARE
 AUNA
 AVAH
 BKD
@@ -33,7 +32,6 @@ DCGO
 DGX
 DH
 DHC
-DOC
 DOCS
 DVA
 EHC
@@ -98,8 +96,6 @@ UNH
 USPH
 VEEV
 VMD
-VTR
 WAY
-WELL
 XRN
 ZTS
