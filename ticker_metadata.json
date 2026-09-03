@@ -652,7 +652,7 @@
   },
   "AHR": {
     "name": "American Healthcare REIT Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -1030,7 +1030,7 @@
   },
   "ARE": {
     "name": "Alexandria Real Estate Equities Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -1479,8 +1479,8 @@
   "BKD": {
     "name": "Brookdale Senior Living Inc",
     "sector": "Healthcare Services",
-    "subsector": "Healthcare Real Estate",
-    "sub_subsector": "",
+    "subsector": "Post-Acute",
+    "sub_subsector": "Senior Housing",
     "core": ""
   },
   "BL": {
@@ -1765,7 +1765,7 @@
   },
   "CHCT": {
     "name": "Community Healthcare Trust Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -2115,7 +2115,7 @@
   },
   "CTRE": {
     "name": "Caretrust REIT Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -2325,7 +2325,7 @@
   },
   "DHC": {
     "name": "Diversified Healthcare Trust",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -2374,7 +2374,7 @@
   },
   "DOC": {
     "name": "Healthpeak Properties Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -3081,7 +3081,7 @@
   },
   "XRN": {
     "name": "Chiron Real Estate Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -3326,7 +3326,7 @@
   },
   "HR": {
     "name": "Healthcare Realty Trust Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -4047,7 +4047,7 @@
   },
   "LTC": {
     "name": "LTC Properties Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -4362,7 +4362,7 @@
   },
   "MPT": {
     "name": "Medical Properties Trust, Inc.",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -4579,7 +4579,7 @@
   },
   "NHI": {
     "name": "National Health Investors Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -4796,7 +4796,7 @@
   },
   "OHI": {
     "name": "Omega Healthcare Investors Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -5762,7 +5762,7 @@
   },
   "SBRA": {
     "name": "Sabra Health Care REIT Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -6161,7 +6161,7 @@
   },
   "STRW": {
     "name": "Strawberry Fields Reit Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -6882,7 +6882,7 @@
   },
   "VTR": {
     "name": "Ventas Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -6892,7 +6892,7 @@
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "VTVT": {
     "name": "vTv Therapeutics Inc",
@@ -6945,7 +6945,7 @@
   },
   "WELL": {
     "name": "Welltower Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
@@ -7155,7 +7155,7 @@
   },
   "JAN": {
     "name": "Janus Living Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "Senior Housing REIT",
     "core": ""
@@ -7225,7 +7225,7 @@
   },
   "NHP": {
     "name": "National Healthcare Properties Inc",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "Senior Housing REIT",
     "core": ""
@@ -7267,7 +7267,7 @@
   },
   "KRC": {
     "name": "Kilroy Realty Corporation",
-    "sector": "Healthcare Services",
+    "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
     "core": ""
