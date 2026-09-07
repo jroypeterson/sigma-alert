@@ -109,9 +109,32 @@ class TestHealthPayload:
 
     def test_published_flag_overrides_the_derived_value(self):
         """The heartbeat must report what HAPPENED. If a caller suppressed the
-        post for its own reasons, the heartbeat may not claim it published."""
-        _, payload = ss.build_health_payload("close", 757, 757, 3, 0, published=False)
-        assert "NOT PUBLISHED" in _text(payload)
+        post for its own reasons, the heartbeat may not claim it published.
+
+        ⛑ TIGHTENED after Codex found this test PERMITTED a contradiction
+        (Medium, 2026-09-07): it supplied 757/757 with published=False and
+        asserted only on the words "NOT PUBLISHED", so a card claiming 100%
+        coverage was "below the 80% floor" passed it clean. The reason is now
+        asserted, not just the marker."""
+        _, payload = ss.build_health_payload(
+            "close", 757, 757, 3, 0, published=False,
+            reason="the Slack POST did not succeed")
+        body = _text(payload)
+        assert "NOT PUBLISHED" in body
+        assert "the Slack POST did not succeed" in body
+        assert "below" not in body.split("NOT PUBLISHED")[1],             "a full-coverage run must not be told its coverage was below a floor"
+
+    def test_a_full_coverage_run_is_never_told_its_coverage_was_low(self):
+        """The plausible wrong value: 100% coverage, failed delivery."""
+        _, payload = ss.build_health_payload(
+            "close", 757, 757, 3, 0, published=False, reason="delivery failed")
+        assert "80%" not in _text(payload)
+
+    def test_a_below_floor_run_still_explains_the_floor_without_a_reason(self):
+        """Default wording must survive when no reason is supplied."""
+        _, payload = ss.build_health_payload("midday", 36, 757, 2, 721)
+        body = _text(payload)
+        assert "80%" in body and "5%" in body
 
     def test_status_is_still_derived_from_coverage_not_from_published(self):
         """`published=False` must not turn a fully-covered run into an `error`;
@@ -172,11 +195,11 @@ class TestEnforcePublishGate:
         did NOT publish."""
         seen = {}
 
-        def _spy(mode, stats, total, n_alerts, published=None):
-            seen.update(mode=mode, total=total, published=published)
+        def _spy(mode, stats, total, n_alerts, published=None, reason=None):
+            seen.update(mode=mode, total=total, published=published, reason=reason)
             seen["status"] = ss.build_health_payload(
                 mode, stats.get("screened", 0), total, n_alerts,
-                stats.get("skipped", 0), published=published)[0]
+                stats.get("skipped", 0), published=published, reason=reason)[0]
 
         monkeypatch.setattr(ss, "post_health_heartbeat", _spy)
         ss.enforce_publish_gate("midday", {"screened": 36, "skipped": 721}, 757, 2)
@@ -231,3 +254,86 @@ class TestGateIsWiredIntoMain:
         head = gate[:gate.index("# Send to Slack")]
         assert _re.search(r"^\s+return\s*$", head, _re.M), \
             "main() must RETURN when the gate refuses, not log and continue"
+
+
+# ------------------------------------------------- the return-map denominator
+class TestReturnMapCoverage:
+    """Codex, High, 2026-09-07: one constant cannot gate two jobs whose
+    denominators differ. The screen floor counts ~757 watchlist tickers; the
+    return map is built from a ~43-symbol ETF/macro universe.
+    """
+    ETFS = {f"E{i}" for i in range(43)}
+
+    @staticmethod
+    def _returns(tickers):
+        return [{"ticker": t} for t in tickers]
+
+    def test_the_exact_scenario_the_screen_gate_misses(self):
+        """Yahoo returns 714 of 757 watchlist names (94.3%, screen gate PASSES)
+        but zero of the 43 return-map symbols. The map must not be rewritten."""
+        assert ss.coverage_is_publishable(714, 757) is True
+        assert ss.return_map_is_publishable([], self.ETFS) is False
+
+    def test_a_full_etf_set_publishes(self):
+        assert ss.return_map_is_publishable(self._returns(self.ETFS), self.ETFS) is True
+
+    def test_half_the_etf_set_is_refused(self):
+        half = list(self.ETFS)[:21]
+        assert ss.return_map_is_publishable(self._returns(half), self.ETFS) is False
+
+    def test_just_below_the_floor_is_refused(self):
+        some = list(self.ETFS)[:34]           # 79.1%
+        assert ss.return_map_is_publishable(self._returns(some), self.ETFS) is False
+
+    def test_at_the_floor_publishes(self):
+        some = list(self.ETFS)[:35]           # 81.4%
+        assert ss.return_map_is_publishable(self._returns(some), self.ETFS) is True
+
+    def test_an_empty_expected_set_never_publishes(self):
+        """0/0 must not read as full coverage — same rule as screen_coverage."""
+        assert ss.return_map_is_publishable([], set()) is False
+
+    def test_extra_symbols_outside_the_set_do_not_inflate_coverage(self):
+        """Counting the raw length of etf_returns would let 43 unrelated
+        tickers satisfy the gate. It intersects with the expected set."""
+        noise = self._returns({f"X{i}" for i in range(43)})
+        assert ss.return_map_is_publishable(noise, self.ETFS) is False
+
+    def test_rows_without_a_ticker_are_ignored(self):
+        assert ss.return_map_is_publishable([{}, {"ticker": None}], self.ETFS) is False
+
+
+# ------------------------------------------------------- delivery is observed
+class TestSendSlackReportsDelivery:
+    """Codex, High, 2026-09-07: `published` was a constant, so a failed POST at
+    full coverage emitted `ok` with no NOT PUBLISHED line and exited zero."""
+
+    def test_missing_webhook_returns_false(self, monkeypatch, capsys):
+        monkeypatch.delenv("SLACK_WEBHOOK", raising=False)
+        assert ss.send_slack({"text": "x"}) is False
+
+    def test_http_error_returns_false(self, monkeypatch):
+        monkeypatch.setenv("SLACK_WEBHOOK", "https://example.invalid/hook")
+
+        def _boom(*a, **k):
+            raise ss.requests.RequestException("429 Too Many Requests")
+
+        monkeypatch.setattr(ss.requests, "post", _boom)
+        assert ss.send_slack({"text": "x"}) is False
+
+    def test_success_returns_true(self, monkeypatch):
+        monkeypatch.setenv("SLACK_WEBHOOK", "https://example.invalid/hook")
+
+        class _Resp:
+            def raise_for_status(self):
+                return None
+
+        monkeypatch.setattr(ss.requests, "post", lambda *a, **k: _Resp())
+        assert ss.send_slack({"text": "x"}) is True
+
+    def test_main_passes_the_observed_result_not_a_constant(self):
+        """Structural: `published=True` as a literal is the defect."""
+        import inspect
+        src = inspect.getsource(ss.main)
+        assert "delivered = send_slack(payload)" in src
+        assert "published=True" not in src,             "main() must pass the observed delivery result, never a constant"

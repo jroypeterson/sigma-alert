@@ -5,7 +5,7 @@
 #      %LOCALAPPDATA%\sigma-alert-runner) so scheduled runs never touch your
 #      Dropbox dev tree and Dropbox never fights the runner over the .git folder.
 #   2. Installs the Python dependencies into the chosen interpreter.
-#   3. Writes a gitignored .env holding the Slack webhook (and the python path).
+#   3. Writes a gitignored .env holding BOTH Slack webhooks (and the python path).
 #   4. Registers three weekday Scheduled Tasks (open / midday / close) that fire
 #      within ~30 min of each market event, catch up if a start was missed
 #      (laptop asleep or powered off at the trigger time), and run on battery.
@@ -19,11 +19,21 @@
 # The webhook is the same value stored as the SLACK_WEBHOOK GitHub Actions
 # secret (the #stock-price-alerts incoming webhook). It is not kept in this
 # repo, so you must paste it in here once.
+#
+# -StatusWebhook is the #status-reports incoming webhook (the
+# SLACK_STATUS_REPORTS_WEBHOOK secret) and it is NOT optional in practice.
+# Without it a local run that falls below the screen-coverage floor suppresses
+# the digest, then finds no status webhook for the health heartbeat, and exits
+# ZERO -- silence on both channels, which is indistinguishable from a lane that
+# never ran. That is the exact condition the coverage floor exists to prevent
+# (Codex, High, 2026-09-07). It is a warning rather than a hard requirement
+# only so an existing install can be re-run to add it.
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$SlackWebhook,
+    [string]$StatusWebhook = "",
 
     [string]$RunnerDir = (Join-Path $env:LOCALAPPDATA 'sigma-alert-runner'),
 
@@ -74,6 +84,11 @@ $envLines = @(
     "SLACK_WEBHOOK=$SlackWebhook",
     "PYTHON_EXE=$PythonExe"
 )
+if ($StatusWebhook) {
+    $envLines += "SLACK_STATUS_REPORTS_WEBHOOK=$StatusWebhook"
+} else {
+    Write-Warning "No -StatusWebhook given. A local run below the screen-coverage floor will post NOTHING to either channel and still exit 0. Re-run this script with -StatusWebhook to fix it."
+}
 Set-Content -Path $EnvFile -Value $envLines -Encoding ASCII
 Write-Host "Wrote $EnvFile"
 

@@ -2809,26 +2809,66 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     return {"blocks": blocks}
 
 
-def send_slack(payload: dict) -> None:
-    """Post message to Slack via incoming webhook."""
+def send_slack(payload: dict) -> bool:
+    """Post message to Slack via incoming webhook. True iff Slack accepted it.
+
+    ⛑ RETURNS DELIVERY SUCCESS, and the caller must pass it to the heartbeat
+    (Codex, High, 2026-09-07). This used to return None and swallow a missing
+    webhook, a 429, a 500 and a timeout identically — so a full-coverage run
+    whose POST failed still emitted `ok` with no `NOT PUBLISHED` line, and
+    exited zero. The gate had made the heartbeat's `published` field a claim
+    about DELIVERY, and this function was the one place that knew whether
+    delivery happened and threw it away.
+    """
     webhook_url = os.environ.get("SLACK_WEBHOOK")
     if not webhook_url:
         print("[ERROR] SLACK_WEBHOOK environment variable not set")
         print("[FALLBACK] Alert payload:")
         print(json.dumps(payload, indent=2))
-        return
+        return False
 
     try:
         resp = requests.post(webhook_url, json=payload, timeout=10)
         resp.raise_for_status()
         print("[OK] Slack message sent successfully")
+        return True
     except requests.RequestException as e:
         print(f"[ERROR] Slack webhook failed: {e}")
         print("[FALLBACK] Alert payload:")
         print(json.dumps(payload, indent=2))
+        return False
 
 
-def build_health_payload(mode, screened, total, n_alerts, skipped, published=None):
+def return_map_is_publishable(etf_returns, etf_set):
+    """True when enough of the RETURN-MAP universe answered to rewrite it.
+
+    ⛑ A SECOND COVERAGE TEST, ON A DIFFERENT DENOMINATOR (Codex, High,
+    2026-09-07). The screen floor counts all ~757 watchlist tickers; the return
+    map is built solely from `etf_returns`, a ~43-symbol universe. Yahoo could
+    omit every one of those 43 and return the other 714 — coverage 94.3%, the
+    screen gate passes, and `return_map.write_html` overwrites the periodic
+    table of returns with an empty one AND resets its mtime, so the artifact
+    freshness monitor reads a broken lane as freshly updated. That is precisely
+    the protection the screen floor claimed to provide.
+
+    One constant cannot do two jobs when the two jobs have different
+    denominators. Same threshold, measured against the right set.
+    """
+    if not etf_set:
+        return False
+    returned = {r.get("ticker") for r in (etf_returns or []) if r.get("ticker")}
+    return (len(returned & set(etf_set)) / len(etf_set)) >= MIN_SCREEN_COVERAGE
+
+
+def _coverage_floor_reason(frac):
+    return (f"screen coverage {frac:.0%} is below the {MIN_SCREEN_COVERAGE:.0%} "
+            f"floor, so no digest was posted and the return map was left "
+            f"untouched. A screen this thin cannot tell a quiet market from a "
+            f"missing one, and posting it would be worse than posting nothing.")
+
+
+def build_health_payload(mode, screened, total, n_alerts, skipped, published=None,
+                         reason=None):
     """(status, Block Kit payload) for the per-run health/v1 heartbeat.
 
     Status per HEALTH_REPORTING.md 4.2 (abnormal-counts): ok asserts the
@@ -2838,11 +2878,12 @@ def build_health_payload(mode, screened, total, n_alerts, skipped, published=Non
     which are also what gate publishing — one definition of degraded, used by
     the heartbeat and by the digest, not two that can drift apart.
 
-    `published` says whether the run actually posted a digest. It is passed in
-    rather than re-derived so the heartbeat reports what HAPPENED, not what the
-    thresholds imply should have happened; the caller may suppress a post for
-    its own reasons and the heartbeat must not contradict it. Default None =
-    derive it from coverage.
+    `published` says whether the run actually posted a digest, and `reason`
+    says why not. Both are passed in rather than re-derived so the heartbeat
+    reports what HAPPENED, not what the thresholds imply should have happened:
+    a run can fail to publish because coverage was thin OR because the Slack
+    POST failed at full coverage, and one hardcoded explanation cannot be
+    honest about both. Default None = derive from coverage.
     """
     frac = screen_coverage(screened, total)
     if published is None:
@@ -2865,17 +2906,19 @@ def build_health_payload(mode, screened, total, n_alerts, skipped, published=Non
                  f"tickers ({frac:.0%}) {dash} alert tiers are incomplete "
                  f"(Yahoo throttling?), not a quiet market")
     if not published:
-        text += (f"\n*NOT PUBLISHED:* coverage is below the "
-                 f"{MIN_SCREEN_COVERAGE:.0%} floor, so no digest was posted and "
-                 f"the return map was left untouched. A screen this thin cannot "
-                 f"tell a quiet market from a missing one, and posting it would "
-                 f"be worse than posting nothing.")
+        # ⛑ The REASON is passed in, not assumed (Codex, Medium, 2026-09-07).
+        # This line used to hardcode "coverage is below the 80% floor", which is
+        # only one of the ways a run fails to publish — a failed Slack POST at
+        # 100% coverage would have produced a card claiming 100% was below 80%.
+        # My own test supplied 757/757 with published=False and asserted only on
+        # the words NOT PUBLISHED, so it permitted exactly that contradiction.
+        text += f"\n*NOT PUBLISHED:* {reason or _coverage_floor_reason(frac)}"
     payload = {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
                "text": f"sigma-alert {status} {dot} {today} {mode} {dot} {screened}/{total}"}
     return status, payload
 
 
-def post_health_heartbeat(mode, stats, total, n_alerts, published=None):
+def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=None):
     """Per-run heartbeat to #status-reports (never raises; absent webhook =
     print-and-skip, mirroring the weekly skip report's local behaviour).
     Env: SLACK_STATUS_REPORTS_WEBHOOK (same secret the weekly report uses).
@@ -2886,7 +2929,7 @@ def post_health_heartbeat(mode, stats, total, n_alerts, published=None):
     running at all."""
     status, payload = build_health_payload(
         mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0),
-        published=published)
+        published=published, reason=reason)
     webhook = os.environ.get("SLACK_STATUS_REPORTS_WEBHOOK")
     if not webhook:
         print(f"[INFO] SLACK_STATUS_REPORTS_WEBHOOK not set; heartbeat ({status}) not posted")
@@ -2919,7 +2962,9 @@ def enforce_publish_gate(mode, stats, total, n_alerts):
           f"({screened}/{total}) is below the {MIN_SCREEN_COVERAGE:.0%} floor — "
           f"suppressing the Slack digest AND the return-map rewrite. "
           f"The health heartbeat still posts, as `error`.")
-    post_health_heartbeat(mode, stats, total, n_alerts, published=False)
+    post_health_heartbeat(mode, stats, total, n_alerts, published=False,
+                          reason=_coverage_floor_reason(
+                              screen_coverage(screened, total)))
     return False
 
 
@@ -3227,12 +3272,25 @@ def main():
         etf_period_returns=etf_period_returns,
         etf_weighting=etf_weighting,
     )
-    send_slack(payload)
+    delivered = send_slack(payload)
 
     # Persist the returns snapshot + rebuild the interactive return-map HTML
     # (BlackRock-style periodic table of returns). Reuses the returns already
     # computed above — no extra market-data fetch. Warn-and-proceed: a failure
     # here must never break the alert pipeline.
+    # ⛑ Gated on the RETURN-MAP universe, not the watchlist (Codex, High).
+    # These two writes overwrite a published artifact and reset its mtime, so a
+    # run with a healthy watchlist but no ETF data must not touch them.
+    if not return_map_is_publishable(etf_returns, etf_set):
+        print(f"[ERROR] Return-map coverage is below the {MIN_SCREEN_COVERAGE:.0%} "
+              f"floor ({len(etf_returns or [])} of {len(etf_set)} return-map "
+              f"symbols returned data) — leaving return_map.html and the "
+              f"snapshot untouched so a stale artifact stays visibly stale.")
+        post_health_heartbeat(
+            args.mode, stats, len(tickers), len(alerts), published=delivered,
+            reason=None if delivered else "the Slack POST did not succeed")
+        return
+
     try:
         import return_map
         snapshot = return_map.assemble_snapshot(
@@ -3259,7 +3317,11 @@ def main():
     # the fleet heartbeat audit: sigma-alert was the highest-frequency
     # scheduled job with NO per-run health signal).
     post_health_heartbeat(args.mode, stats, len(tickers), len(alerts),
-                          published=True)
+                          published=delivered,
+                          reason=None if delivered else
+                          "the Slack POST did not succeed, so the digest never "
+                          "reached #stock-price-alerts even though coverage was "
+                          "sufficient to publish it")
 
 
 if __name__ == "__main__":

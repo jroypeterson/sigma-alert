@@ -43,6 +43,14 @@ if (-not $env:SLACK_WEBHOOK) {
     exit 1
 }
 
+# Not fatal, but loud. Below the screen-coverage floor the screener suppresses
+# the digest and reports ONLY through the health heartbeat; with no status
+# webhook that heartbeat is a print statement into a scheduled task's void, so
+# the run says nothing anywhere and still exits 0 (Codex, High, 2026-09-07).
+if (-not $env:SLACK_STATUS_REPORTS_WEBHOOK) {
+    Write-Warning "SLACK_STATUS_REPORTS_WEBHOOK not set (expected in $EnvFile). A run below the coverage floor will be SILENT on both channels. Re-run setup_local_runner.ps1 with -StatusWebhook."
+}
+
 # Refresh the clone to match origin exactly. This checkout is disposable and
 # is never edited by hand, so a hard reset is safe and avoids merge conflicts.
 # It also pulls in the freshest Coverage-Manager / CI pushes (portfolio.json,
