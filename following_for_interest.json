@@ -23,7 +23,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "ARE": {
     "position": "Following for Interest",
@@ -36,7 +36,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "CAT": {
     "position": "Following for Interest",
@@ -114,7 +114,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "FDX": {
     "position": "Following for Interest",
@@ -166,7 +166,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "Senior Housing REIT",
-    "core": ""
+    "core": "Y"
   },
   "JPM": {
     "position": "Following for Interest",
@@ -283,7 +283,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "WMT": {
     "position": "Following for Interest",

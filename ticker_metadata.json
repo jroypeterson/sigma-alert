@@ -655,7 +655,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "AIM": {
     "name": "AIM ImmunoTech Inc",
@@ -1033,7 +1033,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "ARGX": {
     "name": "argenx SE - ADR",
@@ -1768,7 +1768,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "CHE": {
     "name": "Chemed Corp",
@@ -2118,7 +2118,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "CTSO": {
     "name": "Cytosorbents Corp",
@@ -2328,7 +2328,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "DHR": {
     "name": "Danaher Corp",
@@ -2377,7 +2377,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "DOCM.SW": {
     "name": "DocMorris AG",
@@ -3084,7 +3084,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "GN DC": {
     "name": "GN Store Nord A/S",
@@ -3329,7 +3329,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "HRMY": {
     "name": "Harmony Biosciences Holdings Inc",
@@ -4050,7 +4050,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "LTRN": {
     "name": "Lantern Pharma Inc",
@@ -4365,7 +4365,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "MREO": {
     "name": "Mereo BioPharma Group plc - ADR",
@@ -4582,7 +4582,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "NKTR": {
     "name": "Nektar Therapeutics",
@@ -4799,7 +4799,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "OKTA": {
     "name": "Okta, Inc.",
@@ -5765,7 +5765,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "SCI": {
     "name": "Service Corporation International",
@@ -6164,7 +6164,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "STTK": {
     "name": "Shattuck Labs Inc",
@@ -6885,7 +6885,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "VTRS": {
     "name": "Viatris Inc",
@@ -6948,7 +6948,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "WHWK": {
     "name": "Whitehawk Therapeutics Inc",
@@ -7158,7 +7158,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "Senior Housing REIT",
-    "core": ""
+    "core": "Y"
   },
   "HTFL": {
     "name": "HeartFlow, Inc.",
@@ -7228,7 +7228,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "Senior Housing REIT",
-    "core": ""
+    "core": "Y"
   },
   "LULU": {
     "name": "Lululemon Athletica Inc.",
@@ -7270,7 +7270,7 @@
     "sector": "Real Estate",
     "subsector": "Healthcare Real Estate",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "Q": {
     "name": "Qnity Electronics Inc.",
