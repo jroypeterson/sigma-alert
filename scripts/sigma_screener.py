@@ -82,6 +82,50 @@ SIGMA_THRESHOLD = 2.0
 ONE_SIGMA_THRESHOLD = 1.0
 THREE_SIGMA = 3.0
 
+# --- Screen-coverage floor (added 2026-09-07, board #327) ----------------------
+# The fraction of the watchlist that must actually return market data before a
+# run is allowed to PUBLISH anything.
+#
+# Why a floor and not just a banner. From 2026-09-03 the close cycle screened
+# 0/769, then 0/757, then 34/757 and 36/757 on 09-07 — and the 09-07 midday run
+# still POSTED, carrying 2 alerts drawn from 4.8% of the universe. A digest built
+# on 4.8% of the market is not a thin digest, it is a misleading one: every tier,
+# every 52-week list and every sector return in it is silently conditional on
+# which 36 names Yahoo happened to answer for. The old logic could not say this,
+# because its only two options below 50% were "post it with a banner" and, at
+# exactly zero, "post it with a banner anyway" — `error` was a heartbeat colour
+# that changed nothing about what got published.
+#
+# So there are two thresholds now, and they mean different things:
+#   * below MIN_SCREEN_COVERAGE  -> heartbeat `error`, and PUBLISH NOTHING.
+#     No digest, no return-map snapshot. The absence is the signal.
+#   * between the floor and DEGRADED_SCREEN_COVERAGE -> publish, heartbeat
+#     `partial`, and carry the DEGRADED banner naming the real coverage.
+#   * at or above DEGRADED_SCREEN_COVERAGE -> `ok`.
+#
+# The return map is gated on the same floor deliberately: `return_map.html` is a
+# published artifact that OVERWRITES its predecessor, so a throttled run that
+# rebuilt it would replace a good periodic-table-of-returns with a hollow one and
+# reset its mtime, making a broken lane look freshly updated to the artifact
+# freshness monitor. Not writing is the correct behaviour, and it is why the
+# staleness of that file stays visible.
+MIN_SCREEN_COVERAGE = 0.80
+DEGRADED_SCREEN_COVERAGE = 0.95
+
+
+def screen_coverage(screened, total):
+    """Fraction of the watchlist that returned usable market data (0.0–1.0).
+
+    `total` of 0 returns 0.0 rather than raising: an empty watchlist has no
+    coverage to speak of, and it must not read as fully covered.
+    """
+    return (screened / total) if total else 0.0
+
+
+def coverage_is_publishable(screened, total):
+    """True when this run may publish a digest and rewrite the return map."""
+    return screen_coverage(screened, total) >= MIN_SCREEN_COVERAGE
+
 # Trailing window kept in cache/skip_log.json. Coverage Manager's weekly
 # report reads trailing 7 days; keep 30 days so there's headroom for a
 # longer-window view without growing the file unbounded.
@@ -2244,12 +2288,21 @@ def format_slack_message(alerts: list[dict], mode: str, total_tickers: int,
     # index/sector returns groups below are silently thin — e.g. the 2026-07-07
     # open post rendered _Sectors_ with 2 of 11 ETFs and no XLV. Say so loudly
     # at the top instead of letting a hollow digest read as a quiet day.
+    #
+    # Threshold changed 2026-09-07 (board #327): 0.5 -> DEGRADED_SCREEN_COVERAGE
+    # (0.95), and the sub-0.80 band no longer reaches this function at all —
+    # main() refuses to publish below MIN_SCREEN_COVERAGE. So this banner now
+    # covers exactly the band that IS published but incomplete, which is the
+    # only band where a banner does any work. At 0.5 it was both too permissive
+    # (a 60% screen posted clean) and beside the point (a 4.8% screen posted
+    # with a banner, and the banner did not stop anyone reading the tiers).
     _screened = stats.get("screened", 0)
-    if total_tickers and (_screened / total_tickers) < 0.5:
+    _coverage = screen_coverage(_screened, total_tickers)
+    if total_tickers and _coverage < DEGRADED_SCREEN_COVERAGE:
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": (
             f":warning: *DEGRADED RUN — market data returned for only "
-            f"{_screened}/{total_tickers} tickers.* Alert tiers and the "
-            f"index/sector returns below are incomplete (missing rows, not "
+            f"{_screened}/{total_tickers} tickers ({_coverage:.0%}).* Alert tiers "
+            f"and the index/sector returns below are incomplete (missing rows, not "
             f"quiet markets). Likely transient Yahoo throttling; the next "
             f"scheduled run usually recovers."
         )}})
@@ -2775,18 +2828,28 @@ def send_slack(payload: dict) -> None:
         print(json.dumps(payload, indent=2))
 
 
-def build_health_payload(mode, screened, total, n_alerts, skipped):
+def build_health_payload(mode, screened, total, n_alerts, skipped, published=None):
     """(status, Block Kit payload) for the per-run health/v1 heartbeat.
 
     Status per HEALTH_REPORTING.md 4.2 (abnormal-counts): ok asserts the
-    COUNTERS are normal, not merely that no exception was raised. Coverage
-    below 50% uses the same threshold as the in-digest DEGRADED banner
-    (one definition of degraded, not two); zero screened = nothing usable.
+    COUNTERS are normal, not merely that no exception was raised.
+
+    The thresholds are `MIN_SCREEN_COVERAGE` and `DEGRADED_SCREEN_COVERAGE`,
+    which are also what gate publishing — one definition of degraded, used by
+    the heartbeat and by the digest, not two that can drift apart.
+
+    `published` says whether the run actually posted a digest. It is passed in
+    rather than re-derived so the heartbeat reports what HAPPENED, not what the
+    thresholds imply should have happened; the caller may suppress a post for
+    its own reasons and the heartbeat must not contradict it. Default None =
+    derive it from coverage.
     """
-    frac = (screened / total) if total else 0.0
-    if screened == 0:
+    frac = screen_coverage(screened, total)
+    if published is None:
+        published = coverage_is_publishable(screened, total)
+    if not coverage_is_publishable(screened, total):
         status = "error"
-    elif frac < 0.5:
+    elif frac < DEGRADED_SCREEN_COVERAGE:
         status = "partial"
     else:
         status = "ok"
@@ -2799,19 +2862,31 @@ def build_health_payload(mode, screened, total, n_alerts, skipped):
             f"{n_alerts} alerts {dot} {skipped} skipped")
     if status != "ok":
         text += (f"\n*Warnings:* market data returned for only {screened}/{total} "
-                 f"tickers {dash} alert tiers are incomplete (Yahoo throttling?), "
-                 f"not a quiet market")
+                 f"tickers ({frac:.0%}) {dash} alert tiers are incomplete "
+                 f"(Yahoo throttling?), not a quiet market")
+    if not published:
+        text += (f"\n*NOT PUBLISHED:* coverage is below the "
+                 f"{MIN_SCREEN_COVERAGE:.0%} floor, so no digest was posted and "
+                 f"the return map was left untouched. A screen this thin cannot "
+                 f"tell a quiet market from a missing one, and posting it would "
+                 f"be worse than posting nothing.")
     payload = {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
                "text": f"sigma-alert {status} {dot} {today} {mode} {dot} {screened}/{total}"}
     return status, payload
 
 
-def post_health_heartbeat(mode, stats, total, n_alerts):
+def post_health_heartbeat(mode, stats, total, n_alerts, published=None):
     """Per-run heartbeat to #status-reports (never raises; absent webhook =
     print-and-skip, mirroring the weekly skip report's local behaviour).
-    Env: SLACK_STATUS_REPORTS_WEBHOOK (same secret the weekly report uses)."""
+    Env: SLACK_STATUS_REPORTS_WEBHOOK (same secret the weekly report uses).
+
+    This heartbeat is the ONLY thing a below-floor run posts, which is exactly
+    why it must still fire when the digest is suppressed: a lane that goes
+    silent on both channels is indistinguishable from a lane that is not
+    running at all."""
     status, payload = build_health_payload(
-        mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0))
+        mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0),
+        published=published)
     webhook = os.environ.get("SLACK_STATUS_REPORTS_WEBHOOK")
     if not webhook:
         print(f"[INFO] SLACK_STATUS_REPORTS_WEBHOOK not set; heartbeat ({status}) not posted")
@@ -2821,6 +2896,31 @@ def post_health_heartbeat(mode, stats, total, n_alerts):
         print(f"[OK] health heartbeat posted ({status})")
     except requests.RequestException as e:
         print(f"[WARN] health heartbeat failed (non-fatal): {e}")
+
+
+def enforce_publish_gate(mode, stats, total, n_alerts):
+    """Decide whether this run may publish, and handle the refusal (board #327).
+
+    Returns True when coverage clears `MIN_SCREEN_COVERAGE`. On False it has
+    already posted the `error` heartbeat, and the caller must return without
+    writing anything — no Slack digest, no return-map rewrite.
+
+    This lives in its own function rather than inline in `main()` so the
+    decision is unit-testable. It was inline first, and mutation-testing showed
+    why that does not work: with the branch condition buried in a 200-line
+    `main()`, replacing `if not publishable:` with `if False:` disabled the
+    entire gate and all 301 tests still passed. A guard whose condition no test
+    can reach is not a guard [[feedback_a_green_suite_is_not_evidence]].
+    """
+    screened = stats.get("screened", 0)
+    if coverage_is_publishable(screened, total):
+        return True
+    print(f"[ERROR] Screen coverage {screen_coverage(screened, total):.1%} "
+          f"({screened}/{total}) is below the {MIN_SCREEN_COVERAGE:.0%} floor — "
+          f"suppressing the Slack digest AND the return-map rewrite. "
+          f"The health heartbeat still posts, as `error`.")
+    post_health_heartbeat(mode, stats, total, n_alerts, published=False)
+    return False
 
 
 def main():
@@ -3105,6 +3205,13 @@ def main():
     else:
         print("[WARN] No mortgage data from FRED — 30Y mortgage row will be omitted")
 
+    # --- Publish gate (board #327) --------------------------------------------
+    # Everything below this point WRITES: the Slack digest, and the return-map
+    # snapshot + HTML that overwrite their predecessors. A run that screened only
+    # a sliver of the watchlist must do neither.
+    if not enforce_publish_gate(args.mode, stats, len(tickers), len(alerts)):
+        return
+
     # Send to Slack
     payload = format_slack_message(
         alerts, args.mode, len(tickers), stats, hi_lo_hits, sp500_set,
@@ -3151,7 +3258,8 @@ def main():
     # Per-run health/v1 heartbeat to #status-reports (added 2026-07-23 per
     # the fleet heartbeat audit: sigma-alert was the highest-frequency
     # scheduled job with NO per-run health signal).
-    post_health_heartbeat(args.mode, stats, len(tickers), len(alerts))
+    post_health_heartbeat(args.mode, stats, len(tickers), len(alerts),
+                          published=True)
 
 
 if __name__ == "__main__":

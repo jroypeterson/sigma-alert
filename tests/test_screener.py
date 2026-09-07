@@ -1666,11 +1666,27 @@ def test_degraded_run_banner_fires_below_half_screened():
 
 
 def test_degraded_run_banner_absent_on_healthy_run():
+    """RE-BASED 2026-09-07 (board #327): 700/742 is 94.3%, which is now inside
+    the DEGRADED band (< DEGRADED_SCREEN_COVERAGE = 95%) and correctly carries
+    the banner. A "healthy run" means a complete one, so this test now asserts
+    against a full screen. The old 0.5 threshold called 94% healthy AND called
+    a 4.8% screen publishable — one number could not do both jobs."""
     payload = sigma_screener.format_slack_message(
-        [], "close", 742, {"screened": 700, "skipped": 2, "ref_date": "2026-07-08"})
+        [], "close", 742, {"screened": 742, "skipped": 0, "ref_date": "2026-07-08"})
     texts = [b.get("text", {}).get("text", "")
              for b in payload["blocks"] if b.get("type") == "section"]
     assert not any("DEGRADED RUN" in t for t in texts)
+
+
+def test_degraded_run_banner_fires_in_the_published_but_incomplete_band():
+    """The band the banner now exists for: published (>= 80%) but incomplete
+    (< 95%). Below 80% nothing is published at all, so no banner can reach a
+    reader — see tests/test_screen_coverage_floor.py."""
+    payload = sigma_screener.format_slack_message(
+        [], "close", 742, {"screened": 700, "skipped": 42, "ref_date": "2026-07-08"})
+    texts = [b.get("text", {}).get("text", "")
+             for b in payload["blocks"] if b.get("type") == "section"]
+    assert any("DEGRADED RUN" in t for t in texts)
 
 
 def test_batch_download_retries_on_partial_coverage():
@@ -2190,11 +2206,23 @@ class TestOverviewValidatorFieldsSections:
 # --- per-run health heartbeat (HEALTH_REPORTING.md 4.2, added 2026-07-23) ---
 
 def test_health_status_ok_partial_error_thresholds():
+    """RE-BASED 2026-09-07 (board #327). The thresholds moved from a single
+    0.5 cut to MIN_SCREEN_COVERAGE=0.80 (below it: `error`, and nothing is
+    published) and DEGRADED_SCREEN_COVERAGE=0.95 (below it: `partial`).
+
+    The two lines that changed meaning are kept and inverted rather than
+    deleted, because they are the regression:
+      * 1000/1094 = 91.4% was `ok`; it is now `partial` — published, but the
+        digest is measurably incomplete and says so.
+      * 547/1094 = exactly 50% was `ok`; it is now `error` and publishes
+        nothing. A half-empty screen cannot tell a quiet market from a
+        missing one, which is the whole finding behind #327."""
     from sigma_screener import build_health_payload
-    assert build_health_payload("open", 1000, 1094, 12, 94)[0] == "ok"
-    assert build_health_payload("open", 547, 1094, 0, 547)[0] == "ok"      # exactly 50%
-    assert build_health_payload("open", 400, 1094, 3, 694)[0] == "partial"  # the DEGRADED-banner case
-    assert build_health_payload("open", 0, 1094, 0, 1094)[0] == "error"     # nothing screened
+    assert build_health_payload("open", 1094, 1094, 12, 0)[0] == "ok"
+    assert build_health_payload("open", 1000, 1094, 12, 94)[0] == "partial"   # was "ok"
+    assert build_health_payload("open", 547, 1094, 0, 547)[0] == "error"      # was "ok" at exactly 50%
+    assert build_health_payload("open", 400, 1094, 3, 694)[0] == "error"      # was "partial"
+    assert build_health_payload("open", 0, 1094, 0, 1094)[0] == "error"       # nothing screened
 
 
 def test_health_payload_is_blockkit_and_self_explaining():
