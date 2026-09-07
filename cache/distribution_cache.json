@@ -262,7 +262,8 @@
       "high_52w": 1647.8860990894784,
       "low_52w": 1062.0,
       "prior_year_end_close": 1284.0,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "CYH": {
       "mu": 0.0007696835130016141,
@@ -393,7 +394,8 @@
       "high_52w": 51.526061934569015,
       "low_52w": 35.11000061035156,
       "prior_year_end_close": 47.65382385253906,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "FTRE": {
       "mu": 0.0032847716547251948,
@@ -775,7 +777,8 @@
       "high_52w": 340.79724685579924,
       "low_52w": 173.3000030517578,
       "prior_year_end_close": 251.0,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "SGRY": {
       "mu": -0.0013465950929170746,
@@ -917,7 +920,8 @@
       "high_52w": 23.75,
       "low_52w": 12.619999885559082,
       "prior_year_end_close": 14.911773681640625,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "4543.T": {
       "mu": -0.00019541265069664623,
@@ -927,7 +931,8 @@
       "high_52w": 2695.1615313525613,
       "low_52w": 1886.6291315909016,
       "prior_year_end_close": 2254.025390625,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "6869.T": {
       "mu": 0.00039330435698742766,
@@ -937,7 +942,8 @@
       "high_52w": 2012.5,
       "low_52w": 1246.0,
       "prior_year_end_close": 1521.595947265625,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "7701.T": {
       "mu": 0.0003718728994298694,
@@ -947,7 +953,8 @@
       "high_52w": 4490.536726537998,
       "low_52w": 3388.0,
       "prior_year_end_close": 4122.58984375,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "7733.T": {
       "mu": 0.001058146136191137,
@@ -957,7 +964,8 @@
       "high_52w": 2210.5,
       "low_52w": 1276.960817618663,
       "prior_year_end_close": 1945.5882568359375,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "7741.T": {
       "mu": 0.0011590745432013315,
@@ -967,7 +975,8 @@
       "high_52w": 30400.0,
       "low_52w": 18627.626707273554,
       "prior_year_end_close": 23537.40234375,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "8086.T": {
       "mu": 2.9832438384158698e-05,
@@ -977,7 +986,8 @@
       "high_52w": 1760.5,
       "low_52w": 1384.1471592091752,
       "prior_year_end_close": 1459.2330322265625,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "A": {
       "mu": 0.0009539025717612656,
@@ -1020,7 +1030,8 @@
       "high_52w": 47.29608161751042,
       "low_52w": 22.122361097099645,
       "prior_year_end_close": 39.119998931884766,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "ALC": {
       "mu": -0.0001773529948753555,
@@ -1061,7 +1072,8 @@
       "high_52w": 15.414858332366743,
       "low_52w": 7.628091308920434,
       "prior_year_end_close": 13.385178565979004,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "AORT": {
       "mu": -0.0015846458706432031,
@@ -1181,7 +1193,8 @@
       "high_52w": 115.71114324842648,
       "low_52w": 65.5999984741211,
       "prior_year_end_close": 108.80596160888672,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "BIO": {
       "mu": 0.001457297392230429,
@@ -1257,7 +1270,8 @@
       "high_52w": 297.7745117508862,
       "low_52w": 88.73999786376953,
       "prior_year_end_close": 257.4098815917969,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "COLOB.DC": {
       "mu": -0.0008532854845604552,
@@ -1267,7 +1281,8 @@
       "high_52w": 618.8637324020452,
       "low_52w": 369.70001220703125,
       "prior_year_end_close": 539.5580444335938,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "COO": {
       "mu": 0.00035267342302907603,
@@ -1299,7 +1314,8 @@
       "high_52w": 259.23664410271886,
       "low_52w": 192.98683882251228,
       "prior_year_end_close": 243.1433868408203,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "DAE": {
       "mu": 0.00018929278833011907,
@@ -1309,7 +1325,8 @@
       "high_52w": 171.0,
       "low_52w": 129.1999969482422,
       "prior_year_end_close": 160.12838745117188,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "DHR": {
       "mu": 0.0004480284090413257,
@@ -1330,7 +1347,8 @@
       "high_52w": 81.42936829347155,
       "low_52w": 51.374317400222175,
       "prior_year_end_close": 67.35395050048828,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "DXCM": {
       "mu": 0.0008458985488554278,
@@ -1373,7 +1391,8 @@
       "high_52w": 74.77999877929688,
       "low_52w": 54.218153655892785,
       "prior_year_end_close": 61.66993713378906,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "ESTA": {
       "mu": 0.00310814208831231,
@@ -1427,7 +1446,8 @@
       "high_52w": 248.39999389648438,
       "low_52w": 171.68442252631255,
       "prior_year_end_close": 213.55630493164062,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "GH": {
       "mu": 0.004251672070883794,
@@ -1470,7 +1490,8 @@
       "high_52w": 123.75,
       "low_52w": 85.12000274658203,
       "prior_year_end_close": 106.75,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "GRAL": {
       "mu": 0.005868325573654426,
@@ -1491,7 +1512,8 @@
       "high_52w": 44.7599983215332,
       "low_52w": 14.829999923706055,
       "prior_year_end_close": 27.579999923706055,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "HAE": {
       "mu": 0.0030548076108102666,
@@ -1677,7 +1699,8 @@
       "high_52w": 597.7999877929688,
       "low_52w": 449.8822856236341,
       "prior_year_end_close": 532.2188110351562,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "MDT": {
       "mu": 0.0002713248887077855,
@@ -1870,7 +1893,8 @@
       "high_52w": 191.39999389648438,
       "low_52w": 95.61000061035156,
       "prior_year_end_close": 128.39999389648438,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "OSSFF": {
       "mu": -0.000155254675630816,
@@ -1880,7 +1904,8 @@
       "high_52w": 5.324999809265137,
       "low_52w": 4.150000095367432,
       "prior_year_end_close": 5.324999809265137,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-04"
     },
     "PACB": {
       "mu": 0.0016471168649558891,
@@ -2022,7 +2047,8 @@
       "high_52w": 101.08196573746461,
       "low_52w": 65.05000305175781,
       "prior_year_end_close": 74.2196273803711,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "SGHT": {
       "mu": 0.004479935018291369,
@@ -2054,7 +2080,8 @@
       "high_52w": 48.543099782550854,
       "low_52w": 32.810001373291016,
       "prior_year_end_close": 43.86553955078125,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "SIBN": {
       "mu": 0.0010149340560706107,
@@ -2097,7 +2124,8 @@
       "high_52w": 248.0,
       "low_52w": 159.09928963323972,
       "prior_year_end_close": 202.14395141601562,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "SRT.DE": {
       "mu": 0.0010619513285170963,
@@ -2107,7 +2135,8 @@
       "high_52w": 207.10153636329073,
       "low_52w": 155.72441753483307,
       "prior_year_end_close": 190.1749725341797,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "STAA": {
       "mu": 3.2693057965337862e-06,
@@ -2139,7 +2168,8 @@
       "high_52w": 109.80000305175781,
       "low_52w": 72.21634097089944,
       "prior_year_end_close": 92.43138122558594,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "STVN": {
       "mu": -3.649637756210201e-05,
@@ -2347,7 +2377,8 @@
       "high_52w": 418.0,
       "low_52w": 257.32139814897016,
       "prior_year_end_close": 323.9977722167969,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "ZBH": {
       "mu": 8.131805948877147e-06,
@@ -7424,7 +7455,8 @@
       "high_52w": 78201.40625,
       "low_52w": 63236.0,
       "prior_year_end_close": 68208.6796875,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-04"
     },
     "^RUT": {
       "mu": 0.0009973852464536428,
@@ -7819,7 +7851,8 @@
       "high_52w": 97860.6015625,
       "low_52w": 57747.765625,
       "prior_year_end_close": 87508.828125,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "^TNX": {
       "mu": 0.0005299480364056842,
@@ -7840,7 +7873,8 @@
       "high_52w": 101.80000305175781,
       "low_52w": 95.55000305175781,
       "prior_year_end_close": 98.27999877929688,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "CL=F": {
       "mu": 0.0020383838845981126,
@@ -7850,7 +7884,8 @@
       "high_52w": 119.4800033569336,
       "low_52w": 54.97999954223633,
       "prior_year_end_close": 57.41999816894531,
-      "prior_year_end_year": 2025
+      "prior_year_end_year": 2025,
+      "last_seen": "2026-09-07"
     },
     "2715.HK": {
       "mu": 0.0038151323357143887,
@@ -7858,7 +7893,8 @@
       "sample_size": 122,
       "last_bar": "2026-09-07",
       "high_52w": 26.18000030517578,
-      "low_52w": 11.220000267028809
+      "low_52w": 11.220000267028809,
+      "last_seen": "2026-09-07"
     },
     "ACVA": {
       "mu": -0.0009130016054106238,

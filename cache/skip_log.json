@@ -19155,6 +19155,38 @@
       "mode": "close",
       "skipped": [
         {
+          "ticker": "1SXP.DE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "2715.HK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "4543.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "6869.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7701.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7733.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "7741.T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "8086.T",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "A",
           "reason": "stale_bar"
         },
@@ -19247,6 +19279,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "AFX.DE",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "AGL",
           "reason": "stale_bar"
         },
@@ -19336,6 +19372,10 @@
         },
         {
           "ticker": "AMP",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMP.IM",
           "reason": "stale_bar"
         },
         {
@@ -19515,6 +19555,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "BIM",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "BIO",
           "reason": "stale_bar"
         },
@@ -19572,6 +19616,10 @@
         },
         {
           "ticker": "BSX",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "BTC-USD",
           "reason": "stale_bar"
         },
         {
@@ -19695,6 +19743,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "CL=F",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "CLOV",
           "reason": "stale_bar"
         },
@@ -19743,11 +19795,19 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "COH.AX",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "COHR",
           "reason": "stale_bar"
         },
         {
           "ticker": "COIN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "COLOB.DC",
           "reason": "stale_bar"
         },
         {
@@ -19831,6 +19891,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "CTEC.LN",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "CTSH",
           "reason": "stale_bar"
         },
@@ -19847,6 +19911,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "CVSG.L",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "CVX",
           "reason": "stale_bar"
         },
@@ -19856,6 +19924,10 @@
         },
         {
           "ticker": "D",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "DAE",
           "reason": "stale_bar"
         },
         {
@@ -19919,6 +19991,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "DIA.MI",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "DIS",
           "reason": "stale_bar"
         },
@@ -19972,6 +20048,10 @@
         },
         {
           "ticker": "DVN",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "DX-Y.NYB",
           "reason": "stale_bar"
         },
         {
@@ -20056,6 +20136,10 @@
         },
         {
           "ticker": "EQT",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "ERF.FP",
           "reason": "stale_bar"
         },
         {
@@ -20215,6 +20299,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "FRE",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "FRPT",
           "reason": "stale_bar"
         },
@@ -20267,6 +20355,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "GETIB.SS",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "GEV",
           "reason": "stale_bar"
         },
@@ -20311,6 +20403,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "GN.DC",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "GNRC",
           "reason": "stale_bar"
         },
@@ -20344,6 +20440,10 @@
         },
         {
           "ticker": "GWW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "GXI",
           "reason": "stale_bar"
         },
         {
@@ -20739,6 +20839,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "LONN.CH",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "LOW",
           "reason": "stale_bar"
         },
@@ -21099,6 +21203,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "ONT.L",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "OPCH",
           "reason": "stale_bar"
         },
@@ -21112,6 +21220,10 @@
         },
         {
           "ticker": "OSCR",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "OSSFF",
           "reason": "stale_bar"
         },
         {
@@ -21415,8 +21527,16 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "SECARE.SS",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "SECTB.SS",
           "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SFZN.SW",
+          "reason": "stale_bar"
         },
         {
           "ticker": "SGHT",
@@ -21428,6 +21548,10 @@
         },
         {
           "ticker": "SHC",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SHL.GY",
           "reason": "stale_bar"
         },
         {
@@ -21479,6 +21603,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "SOON",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "SOXX",
           "reason": "stale_bar"
         },
@@ -21507,6 +21635,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "SRT.DE",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "SRTA",
           "reason": "stale_bar"
         },
@@ -21520,6 +21652,10 @@
         },
         {
           "ticker": "STLD",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "STMN.SW",
           "reason": "stale_bar"
         },
         {
@@ -22011,6 +22147,10 @@
           "reason": "stale_bar"
         },
         {
+          "ticker": "YPSN",
+          "reason": "stale_bar"
+        },
+        {
           "ticker": "YUM",
           "reason": "stale_bar"
         },
@@ -22036,6 +22176,10 @@
         },
         {
           "ticker": "^TNX",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "^W5000",
           "reason": "stale_bar"
         }
       ]
