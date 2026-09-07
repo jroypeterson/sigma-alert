@@ -2,8 +2,6 @@
   "WELL": {
     "position": "Ready to Buy",
     "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -17,8 +15,6 @@
   "WST": {
     "position": "Ready to Buy",
     "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,

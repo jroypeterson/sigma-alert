@@ -2,8 +2,6 @@
   "ACVA": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -17,8 +15,6 @@
   "AHR": {
     "position": "Following for Interest",
     "position_date": "2026-09-02",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -32,8 +28,6 @@
   "ARE": {
     "position": "Following for Interest",
     "position_date": "2026-09-02",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -47,8 +41,6 @@
   "CAT": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -62,8 +54,6 @@
   "CENTA": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -77,8 +67,6 @@
   "CHWY": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -92,8 +80,6 @@
   "CSU": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -107,8 +93,6 @@
   "CVNA": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -122,8 +106,6 @@
   "DOC": {
     "position": "Following for Interest",
     "position_date": "2026-09-02",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -137,8 +119,6 @@
   "FDX": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -152,8 +132,6 @@
   "FER": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -167,8 +145,6 @@
   "FRPT": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -182,8 +158,6 @@
   "JAN": {
     "position": "Following for Interest",
     "position_date": "2026-09-02",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -197,8 +171,6 @@
   "JPM": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -212,8 +184,6 @@
   "LULU": {
     "position": "Following for Interest",
     "position_date": "2026-07-24",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -224,26 +194,9 @@
     "sub_subsector": "",
     "core": ""
   },
-  "NTRA": {
-    "position": "Following for Interest",
-    "position_date": "2026-08-14",
-    "buy_price": null,
-    "sell_price": null,
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "",
-    "name": "Natera, Inc.",
-    "sector": "MedTech",
-    "subsector": "Diagnostics",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "PETS": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -257,8 +210,6 @@
   "ROIV": {
     "position": "Following for Interest",
     "position_date": "2026-07-24",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -272,8 +223,6 @@
   "RPD": {
     "position": "Following for Interest",
     "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -287,8 +236,6 @@
   "TRUP": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -302,8 +249,6 @@
   "TSM": {
     "position": "Following for Interest",
     "position_date": "2026-07-13",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -317,8 +262,6 @@
   "U": {
     "position": "Following for Interest",
     "position_date": "2026-04-11",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -332,8 +275,6 @@
   "VTR": {
     "position": "Following for Interest",
     "position_date": "2026-09-02",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -347,8 +288,6 @@
   "WMT": {
     "position": "Following for Interest",
     "position_date": "2026-05-03",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,
@@ -362,8 +301,6 @@
   "WOOF": {
     "position": "Following for Interest",
     "position_date": "2026-06-06",
-    "buy_price": null,
-    "sell_price": null,
     "first_buy_date": "",
     "average_cost": null,
     "shares": null,

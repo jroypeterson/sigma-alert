@@ -9463,6 +9463,20 @@
     "sub_subsector": "",
     "core": ""
   },
+  "SOM.AX": {
+    "name": "SomnoMed Limited",
+    "sector": "MedTech",
+    "subsector": "Sleep",
+    "sub_subsector": "",
+    "core": ""
+  },
+  "CMP": {
+    "name": "Compass Minerals International, Inc.",
+    "sector": "Materials",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
