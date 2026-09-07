@@ -337,3 +337,112 @@ class TestSendSlackReportsDelivery:
         src = inspect.getsource(ss.main)
         assert "delivered = send_slack(payload)" in src
         assert "published=True" not in src,             "main() must pass the observed delivery result, never a constant"
+
+
+# ------------------------------------- the SECOND return-map input (round 2)
+class TestReturnMapPeriodCoverage:
+    """Codex round 2, High: a defect in the round-1 fix. `assemble_snapshot`
+    takes TWO inputs — `etf_returns` from the 400-day screen pull, and
+    `etf_period_returns` from a SEPARATE ~800-day download (the screen window
+    cannot reach the year-before-last's close). Round 1 gated only the first, so
+    a throttled period fetch rewrote the map with every Prior Year and YTD
+    column blank. Codex reproduced it: gate=True, assets=43, missing_prior=43,
+    missing_ytd=43.
+
+    Fixing the one-constant-two-jobs class once did not exempt the fix from it.
+    """
+    ETFS = {f"E{i}" for i in range(43)}
+
+    @staticmethod
+    def _rows(tickers):
+        return [{"ticker": t} for t in tickers]
+
+    def _full_period(self):
+        return {t: {"ytd_return_pct": 1.0} for t in self.ETFS}
+
+    def test_the_exact_round_2_repro(self):
+        """All 43 in the screen pull, period pull empty."""
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, {}) is False
+
+    def test_both_inputs_full_publishes(self):
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, self._full_period()) is True
+
+    def test_thin_period_coverage_is_refused(self):
+        thin = {t: {} for t in list(self.ETFS)[:21]}     # 48.8%
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, thin) is False
+
+    def test_just_below_the_floor_on_the_period_pull_is_refused(self):
+        near = {t: {} for t in list(self.ETFS)[:34]}     # 79.1%
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, near) is False
+
+    def test_at_the_floor_on_the_period_pull_publishes(self):
+        at = {t: {} for t in list(self.ETFS)[:35]}       # 81.4%
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, at) is True
+
+    def test_period_keys_outside_the_expected_set_do_not_inflate_coverage(self):
+        noise = {f"X{i}": {} for i in range(43)}
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, noise) is False
+
+    def test_omitting_the_period_argument_skips_that_half(self):
+        """None means 'not supplied' and must stay back-compatible; an EMPTY
+        dict is a real measurement of zero and must NOT."""
+        assert ss.return_map_is_publishable(self._rows(self.ETFS), self.ETFS) is True
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, None) is True
+        assert ss.return_map_is_publishable(
+            self._rows(self.ETFS), self.ETFS, {}) is False
+
+    def test_main_passes_the_period_returns_to_the_gate(self):
+        import inspect
+        src = inspect.getsource(ss.main)
+        assert "return_map_is_publishable(etf_returns, etf_set, etf_period_returns)" in src,             "main() must gate on BOTH return-map inputs"
+
+
+# --------------------------------------- the runner cannot be left silent
+class TestLocalRunnerCannotBeInstalledSilent:
+    """Codex round 2, High: the round-1 fix left -StatusWebhook optional AND
+    made an idempotent re-run DELETE an existing one, because the script
+    rewrites .env every time. Load-with-fallback feeding write-everything, on
+    the single setting whose absence causes the silence being fixed.
+
+    PowerShell is not executed here; these read the script as text, which is a
+    weaker claim than running it and is labelled as such.
+    """
+    import pathlib
+    SRC = (pathlib.Path(__file__).resolve().parent.parent
+           / "scripts" / "setup_local_runner.ps1").read_text(encoding="ascii")
+
+    def test_it_refuses_to_continue_without_a_status_webhook(self):
+        assert 'if (-not $StatusWebhook) {' in self.SRC
+        gate = self.SRC.split('if (-not $StatusWebhook) {')[-1]
+        head = gate[:gate.index('}')]
+        assert "Write-Error" in head and "exit 1" in head,             "a warning is not a mechanism; it must refuse to register the tasks"
+
+    def test_an_existing_value_is_carried_forward_before_the_rewrite(self):
+        """The clobber: .env is rewritten every run, so the read must happen
+        BEFORE the write and must feed it."""
+        assert "SLACK_STATUS_REPORTS_WEBHOOK" in self.SRC
+        assert "$ExistingStatus" in self.SRC
+        assert self.SRC.index("$ExistingStatus = ''") < self.SRC.index("$envLines = @(")
+        assert self.SRC.index("$StatusWebhook = $ExistingStatus") < self.SRC.index("$envLines = @(")
+
+    def test_the_status_webhook_is_always_written(self):
+        """It used to be appended conditionally, so .env could be written
+        without it. By the time we reach the write it is guaranteed non-empty."""
+        block = self.SRC.split("$envLines = @(")[1]
+        block = block[:block.index(")")]
+        assert "SLACK_STATUS_REPORTS_WEBHOOK=$StatusWebhook" in block
+        assert "if (" not in block, "the write must be unconditional"
+
+    def test_the_documented_setup_command_passes_it(self):
+        import pathlib
+        readme = (pathlib.Path(__file__).resolve().parent.parent
+                  / "README.md").read_text(encoding="utf-8")
+        setup = readme.split("setup_local_runner.ps1")[1][:400]
+        assert "-StatusWebhook" in setup,             "the documented command must not install the silent configuration"

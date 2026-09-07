@@ -26,8 +26,9 @@
 # the digest, then finds no status webhook for the health heartbeat, and exits
 # ZERO -- silence on both channels, which is indistinguishable from a lane that
 # never ran. That is the exact condition the coverage floor exists to prevent
-# (Codex, High, 2026-09-07). It is a warning rather than a hard requirement
-# only so an existing install can be re-run to add it.
+# (Codex, High, 2026-09-07). It is REQUIRED: this script refuses to register
+# the tasks without one, and an existing value in .env is carried forward so
+# an ordinary idempotent re-run cannot delete it (Codex round 2, High).
 
 [CmdletBinding()]
 param(
@@ -79,16 +80,43 @@ Write-Host "Installing Python dependencies..."
 & $PythonExe -m pip install --quiet --upgrade -r (Join-Path $RunnerDir 'requirements.txt')
 
 # --- Write .env (ASCII, gitignored) ---------------------------------------
+# This script is documented as idempotent and it REWRITES .env every run. So an
+# ordinary re-run with no -StatusWebhook used to DELETE a status webhook set by
+# an earlier run -- load-with-fallback feeding write-everything, on the one
+# setting whose absence makes a below-floor run silent on both channels. The
+# round-1 fix for that silence introduced a second way to cause it (Codex round
+# 2, High, 2026-09-07). An existing value is carried forward unless the caller
+# explicitly supplies a new one.
 $EnvFile = Join-Path $RunnerDir '.env'
+
+$ExistingStatus = ''
+if (Test-Path $EnvFile) {
+    foreach ($line in (Get-Content $EnvFile)) {
+        if ($line -match '^\s*SLACK_STATUS_REPORTS_WEBHOOK\s*=\s*(.+)$') {
+            $ExistingStatus = $Matches[1].Trim()
+        }
+    }
+}
+if ((-not $StatusWebhook) -and $ExistingStatus) {
+    $StatusWebhook = $ExistingStatus
+    Write-Host "Carried the existing SLACK_STATUS_REPORTS_WEBHOOK forward from $EnvFile"
+}
+
+# REFUSE to register tasks without it. A warning is not a mechanism: the whole
+# point of the screen-coverage floor is that a thin run reports through the
+# heartbeat INSTEAD of publishing, and with no status webhook that heartbeat is
+# a print statement into Task Scheduler's void -- silence on both channels at
+# exit 0, indistinguishable from a lane that never ran.
+if (-not $StatusWebhook) {
+    Write-Error "SLACK_STATUS_REPORTS_WEBHOOK is required. Without it a run below the screen-coverage floor suppresses the digest and has nowhere to post the health heartbeat, so it says NOTHING anywhere and still exits 0. Re-run with -StatusWebhook '<the #status-reports incoming webhook>'."
+    exit 1
+}
+
 $envLines = @(
     "SLACK_WEBHOOK=$SlackWebhook",
+    "SLACK_STATUS_REPORTS_WEBHOOK=$StatusWebhook",
     "PYTHON_EXE=$PythonExe"
 )
-if ($StatusWebhook) {
-    $envLines += "SLACK_STATUS_REPORTS_WEBHOOK=$StatusWebhook"
-} else {
-    Write-Warning "No -StatusWebhook given. A local run below the screen-coverage floor will post NOTHING to either channel and still exit 0. Re-run this script with -StatusWebhook to fix it."
-}
 Set-Content -Path $EnvFile -Value $envLines -Encoding ASCII
 Write-Host "Wrote $EnvFile"
 

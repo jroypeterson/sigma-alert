@@ -2839,25 +2839,47 @@ def send_slack(payload: dict) -> bool:
         return False
 
 
-def return_map_is_publishable(etf_returns, etf_set):
+def return_map_is_publishable(etf_returns, etf_set, period_returns=None):
     """True when enough of the RETURN-MAP universe answered to rewrite it.
 
     ⛑ A SECOND COVERAGE TEST, ON A DIFFERENT DENOMINATOR (Codex, High,
     2026-09-07). The screen floor counts all ~757 watchlist tickers; the return
-    map is built solely from `etf_returns`, a ~43-symbol universe. Yahoo could
-    omit every one of those 43 and return the other 714 — coverage 94.3%, the
-    screen gate passes, and `return_map.write_html` overwrites the periodic
-    table of returns with an empty one AND resets its mtime, so the artifact
-    freshness monitor reads a broken lane as freshly updated. That is precisely
-    the protection the screen floor claimed to provide.
+    map is built from a ~43-symbol universe. Yahoo could omit every one of those
+    43 and return the other 714 — coverage 94.3%, the screen gate passes, and
+    `return_map.write_html` overwrites the periodic table of returns with an
+    empty one AND resets its mtime, so the artifact freshness monitor reads a
+    broken lane as freshly updated. That is precisely the protection the screen
+    floor claimed to provide.
 
-    One constant cannot do two jobs when the two jobs have different
-    denominators. Same threshold, measured against the right set.
+    ⛑ AND IT HAS **TWO** INPUTS, NOT ONE (Codex round 2, High, 2026-09-07 —
+    a defect in the round-1 fix above). `assemble_snapshot(etf_returns,
+    period_map, ...)` also consumes `etf_period_returns`, which comes from a
+    SEPARATE ~800-day download precisely because the 400-day screen window
+    cannot reach the year-before-last's close. That download can be throttled on
+    its own: all 43 symbols present in `etf_returns`, `etf_period_returns` empty,
+    gate passes, and the map is rewritten with every Prior Year and YTD column
+    blank. Codex reproduced it — `gate=True, assets=43, missing_prior=43,
+    missing_ytd=43`.
+
+    So both are gated, independently, against the same expected set. Fixing the
+    one-constant-two-jobs class once did not exempt the fix from it: the round-1
+    version replaced one wrong denominator with one right denominator and still
+    counted only one of the two things being written.
+
+    `period_returns=None` means "not supplied" and skips that half, so callers
+    that only have the first input keep working; an EMPTY dict is a real
+    measurement of zero and is checked.
     """
     if not etf_set:
         return False
+    expected = set(etf_set)
     returned = {r.get("ticker") for r in (etf_returns or []) if r.get("ticker")}
-    return (len(returned & set(etf_set)) / len(etf_set)) >= MIN_SCREEN_COVERAGE
+    if (len(returned & expected) / len(expected)) < MIN_SCREEN_COVERAGE:
+        return False
+    if period_returns is None:
+        return True
+    have_period = {t for t in period_returns if t in expected}
+    return (len(have_period) / len(expected)) >= MIN_SCREEN_COVERAGE
 
 
 def _coverage_floor_reason(frac):
@@ -3281,10 +3303,11 @@ def main():
     # ⛑ Gated on the RETURN-MAP universe, not the watchlist (Codex, High).
     # These two writes overwrite a published artifact and reset its mtime, so a
     # run with a healthy watchlist but no ETF data must not touch them.
-    if not return_map_is_publishable(etf_returns, etf_set):
+    if not return_map_is_publishable(etf_returns, etf_set, etf_period_returns):
         print(f"[ERROR] Return-map coverage is below the {MIN_SCREEN_COVERAGE:.0%} "
               f"floor ({len(etf_returns or [])} of {len(etf_set)} return-map "
-              f"symbols returned data) — leaving return_map.html and the "
+              f"symbols in the screen pull, {len(etf_period_returns or {})} in the "
+              f"separate period-returns pull) — leaving return_map.html and the "
               f"snapshot untouched so a stale artifact stays visibly stale.")
         post_health_heartbeat(
             args.mode, stats, len(tickers), len(alerts), published=delivered,

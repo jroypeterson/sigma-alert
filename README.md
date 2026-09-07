@@ -90,8 +90,16 @@ The local runner is a **read-only consumer**: it refreshes a disposable clone to
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File scripts\setup_local_runner.ps1 `
-  -SlackWebhook "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+  -SlackWebhook "https://hooks.slack.com/services/XXX/YYY/ZZZ" `
+  -StatusWebhook "https://hooks.slack.com/services/AAA/BBB/CCC"
 ```
+
+`-StatusWebhook` is the **#status-reports** incoming webhook and the script
+**refuses to register the tasks without one**. Below the screen-coverage floor a
+run suppresses the digest and reports only through the health heartbeat, so with
+no status webhook it says nothing on either channel and still exits 0 — exactly
+the silence the floor exists to prevent. An existing value in `.env` is carried
+forward, so an idempotent re-run without the flag cannot delete it.
 
 That script (`scripts/setup_local_runner.ps1`):
 
