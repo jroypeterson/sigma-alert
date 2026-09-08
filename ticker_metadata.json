@@ -46,7 +46,7 @@
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "1093.HK": {
     "name": "CSPC Pharmaceutical Group Limited",
@@ -95,7 +95,7 @@
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "2359.HK": {
     "name": "WUXI Apptech",
@@ -137,7 +137,7 @@
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "4015.SR": {
     "name": "Jamjoom Pharmaceuticals Factory Company",
@@ -2356,7 +2356,7 @@
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "DNA": {
     "name": "Ginkgo Bioworks Holdings Inc",
@@ -4729,7 +4729,7 @@
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "OABI": {
     "name": "OmniAb Inc",
@@ -5807,7 +5807,7 @@
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "SEPN": {
     "name": "Septerna Inc",
@@ -8404,7 +8404,7 @@
     "sector": "Biopharma",
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "HUMA": {
     "name": "Humacyte, Inc.",
