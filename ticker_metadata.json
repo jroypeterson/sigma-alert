@@ -354,7 +354,7 @@
     "sector": "MedTech",
     "subsector": "Diversified MedTech",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "9926.HK": {
     "name": "Akeso, Inc.",
@@ -1481,7 +1481,7 @@
     "sector": "Healthcare Services",
     "subsector": "Post-Acute",
     "sub_subsector": "Senior Housing",
-    "core": ""
+    "core": "Y"
   },
   "BL": {
     "name": "Blackline Inc",
@@ -7298,7 +7298,7 @@
     "sector": "MedTech",
     "subsector": "Life Science Tools",
     "sub_subsector": "",
-    "core": ""
+    "core": "Y"
   },
   "KLRA": {
     "name": "Kailera Therapeutics, Inc.",
@@ -7333,7 +7333,7 @@
     "sector": "MedTech",
     "subsector": "Neuromodulation",
     "sub_subsector": "Stroke Recovery",
-    "core": ""
+    "core": "Y"
   },
   "HAWK": {
     "name": "HawkEye 360, Inc.",
@@ -7368,7 +7368,7 @@
     "sector": "Healthcare Services",
     "subsector": "Emergency Medical Services",
     "sub_subsector": "Patient Transport",
-    "core": ""
+    "core": "Y"
   },
   "BXDC": {
     "name": "Blackstone Digital Infrastructure Trust Inc.",
