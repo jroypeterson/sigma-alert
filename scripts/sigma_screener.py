@@ -947,6 +947,25 @@ SUBCATEGORIES = [
     ("Healthcare Services", lambda a, sp500: a.get("sector") == "Healthcare Services"),
     ("MedTech", lambda a, sp500: a.get("sector") == "MedTech"),
     ("Large Pharma", lambda a, sp500: a.get("subsector") == "Large Pharma"),
+    # Coverage Manager's computed commercial-biopharma universe (TTM revenue
+    # >= $1bn USD OR market cap >= $10bn USD, plus every curated Large Pharma
+    # row), carried in `ticker_metadata.json` as `commercial`. JP asked for
+    # exactly this: "I would like this broader list of 121 as names that
+    # something like sigma-alert ... would pick up."
+    #
+    # ⛑ IT UNHIDES 2-SIGMA NAMES; IT ADDS NOTHING AT 1 SIGMA. A 2σ alert whose
+    # ticker matches NO subcategory is dropped at render time, so a commercial
+    # biopharma name that is not Core, not held, not Large Pharma and not in the
+    # S&P 500 was invisible -- which is the gap this closes. The 1σ tier is
+    # gated UPSTREAM by `_is_one_sigma_eligible`, so this cannot widen it.
+    #
+    # ⛑ AND IT EXCLUDES Large Pharma, which renders immediately above. An alert
+    # is duplicated across every category it matches, and Large Pharma is a
+    # strict subset of commercial by construction -- without this the digest
+    # would repeat all 28 of those names back-to-back for no information.
+    ("Commercial Biopharma",
+     lambda a, sp500: (a.get("commercial") == "Y"
+                       and a.get("subsector") != "Large Pharma")),
     ("Other (Tech, SaaS, Fin, Ind, Cons, Energy, Mat, RE)",
      lambda a, sp500: a.get("sector") in SECTORS_GROUPED_AS_OTHER),
     ("S&P 500", lambda a, sp500: a["ticker"] in sp500),
@@ -1854,6 +1873,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     name = meta.get("name", "")
     sector = meta.get("sector", "")
     subsector = meta.get("subsector", "")
+    commercial = meta.get("commercial", "")
 
     # Always-populated stats for sector ETF returns section
     ticker_stats = {
@@ -1884,6 +1904,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
             "name": name,
             "sector": sector,
             "subsector": subsector,
+            "commercial": commercial,
             "z_score": z,
             "return_pct": today_return * 100,
             "price": today_price,
@@ -1914,6 +1935,7 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
                 "name": name,
                 "sector": sector,
                 "subsector": subsector,
+                "commercial": commercial,
                 "type": result,
                 "price": float(close.iloc[-1]),
                 "in_portfolio": meta_key in (portfolio_set or set()),
