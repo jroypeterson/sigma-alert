@@ -231,3 +231,77 @@ def test_every_cycle_workflow_keeps_pipefail_with_the_tee():
         assert "tee /tmp/sigma_run.log" in text, name
         assert "set -eo pipefail" in text, f"{name} pipes to tee without pipefail"
         assert "ci_health_payload.py" in text, name
+
+
+def test_cached_path_carries_commercial_so_the_subcategory_can_match():
+    """The Commercial Biopharma flag must survive the path Open ACTUALLY takes.
+
+    ⛑ Codex High #2, 2026-09-08. `screen_full` copied `commercial` into its alert
+    dict and this function did not, so on any morning with a fresh cache -- the
+    normal case -- a commercial biotech's alert was built without the field. The
+    subcategory predicate then matched nothing, and a ticker matching no
+    subcategory is DROPPED at render, so the name went silently missing from the
+    digest it had just been added to.
+
+    Every existing test of that predicate passed throughout, because they all
+    construct an already-enriched alert dict by hand and never run either
+    screener. Both halves were tested; the seam between them was not.
+    """
+    t = "BIO"
+    with mock.patch.object(ss, "download_todays_prices",
+                           return_value=_prices(t, 100.0, 105.0)):
+        alerts, _stats, _etf = ss.screen_open_cached(
+            [t], _cache(t),
+            metadata={t: {"name": "Biocorp", "sector": "Biopharma",
+                          "subsector": "Biotech", "commercial": "Y"}},
+            portfolio_set=set(), researching_set=set(),
+        )
+    assert len(alerts) == 1, "a 5% move on sigma=0.01 must alert"
+    assert alerts[0].get("commercial") == "Y"
+
+
+def test_both_screeners_emit_the_SAME_alert_fields():
+    """A field added to one alert constructor and not the other is invisible.
+
+    This is the structural version of the test above: it fails for ANY future
+    field that lands on one path only, rather than for `commercial` specifically.
+    Open reads the cached path and Midday/Close read `screen_full`, so a
+    one-sided field means a section that works at 16:00 and silently does not at
+    09:30 -- which is indistinguishable from a quiet market.
+    """
+    import ast
+
+    src = ast.parse((Path(__file__).resolve().parent.parent
+                     / "scripts" / "sigma_screener.py").read_text(encoding="utf-8"))
+    # The full path builds its alert inside the per-ticker worker
+    # `_process_ticker_full`, not in `screen_full` itself.
+    fns = {n.name: n for n in ast.walk(src)
+           if isinstance(n, ast.FunctionDef) and n.name in
+           ("screen_open_cached", "_process_ticker_full")}
+    assert set(fns) == {"screen_open_cached", "_process_ticker_full"}
+
+    def alert_keys(fn):
+        """Keys of the largest dict literal holding 'ticker' and 'z_score'.
+
+        Both constructors are the only such dicts in their function; the ETF
+        stats dict carries 'ticker' but no 'tier'/'direction' and is smaller.
+        """
+        best = set()
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Dict):
+                continue
+            keys = {k.value for k in node.keys
+                    if isinstance(k, ast.Constant) and isinstance(k.value, str)}
+            if {"ticker", "z_score", "direction"} <= keys and len(keys) > len(best):
+                best = keys
+        return best
+
+    open_keys = alert_keys(fns["screen_open_cached"])
+    full_keys = alert_keys(fns["_process_ticker_full"])
+    assert open_keys, "could not locate the cached-path alert dict"
+    assert full_keys, "could not locate the full-path alert dict"
+
+    only_full = full_keys - open_keys
+    only_open = open_keys - full_keys
+    assert not only_full, f"fields only on the full path (Open would drop them): {sorted(only_full)}"
+    assert not only_open, f"fields only on the cached path: {sorted(only_open)}"

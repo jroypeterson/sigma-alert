@@ -1518,6 +1518,17 @@ def screen_open_cached(tickers: list[str], cache: dict,
                 "name": meta.get("name", ""),
                 "sector": sector,
                 "subsector": subsector,
+                # ⛑ `commercial` MUST be here as well as on the full-download
+                # path (Codex High #2, 2026-09-08). Open mode prefers THIS path
+                # whenever the cache is fresh, so it is the one that runs on an
+                # ordinary morning -- and without the key the Commercial
+                # Biopharma subcategory predicate never matches. A non-Core,
+                # non-position, non-Large-Pharma, non-S&P-500 commercial biotech
+                # moving 2.2 sigma built an alert that then matched no bucket and
+                # was DROPPED at render, which is the exact invisibility the
+                # subcategory was added to fix. The enrichment is on the chokepoint
+                # some paths return before: one field, two constructors.
+                "commercial": meta.get("commercial", ""),
                 "z_score": z,
                 "return_pct": today_return * 100,
                 "price": today_open,
