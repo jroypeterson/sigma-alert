@@ -102,5 +102,18 @@ def test_roundtrip_write_load(tmp_path):
     assert out.exists() and out.stat().st_size > 0
 
 
-def test_sample_renders():
-    assert rm.main(["--sample", "--out", str(Path(rm.HTML_PATH))]) == 0
+def test_sample_renders(tmp_path):
+    # ⛑ THIS USED TO RENDER OVER THE PRODUCTION PAGE. It passed
+    # `str(Path(rm.HTML_PATH))` — the real `readable/return_map.html` — so every
+    # `pytest` run replaced the live artifact with `--sample` data. Measured
+    # 2026-09-10: the file on disk was stamped "sample run - bar 2026-06-26"
+    # with an mtime of 2026-09-08, i.e. the page a reader would open had been
+    # the June sample for days. It is untracked, so git never flagged it, and
+    # the sample labels itself honestly in the subtitle, so the page did not
+    # look broken — it was simply the wrong data at the right path.
+    # The output path is what is under test here, so it must be a temp path;
+    # `--out` already exists precisely so the caller chooses.
+    out = tmp_path / "return_map.html"
+    assert rm.main(["--sample", "--out", str(out)]) == 0
+    assert out.exists() and out.stat().st_size > 0
+    assert rm.HTML_PATH.name == "return_map.html"  # the default is still wired
