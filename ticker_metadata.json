@@ -101,7 +101,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "2269.HK": {
     "name": "WuXi Biologics (Cayman) Inc.",
@@ -213,7 +213,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "4527.T": {
     "name": "Rohto Pharmaceutical Co.,Ltd.",
@@ -4197,7 +4197,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "IQV": {
     "name": "IQVIA Holdings Inc.",
@@ -6637,7 +6637,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "SEPN": {
     "name": "Septerna Inc",
@@ -7069,7 +7069,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "SUPN": {
     "name": "Supernus Pharmaceuticals Inc",
@@ -7597,7 +7597,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "UFPT": {
     "name": "UFP Technologies, Inc.",
