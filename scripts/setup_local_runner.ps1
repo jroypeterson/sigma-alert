@@ -142,6 +142,8 @@ foreach ($job in $schedule) {
     # StartWhenAvailable: run ASAP after a missed start (asleep/off at trigger).
     # AllowStartIfOnBatteries + DontStopIfGoingOnBatteries: it's a laptop.
     $settings = New-ScheduledTaskSettingsSet `
+        -RestartCount 2 `
+        -RestartInterval (New-TimeSpan -Minutes 10) `
         -StartWhenAvailable `
         -RunOnlyIfNetworkAvailable `
         -AllowStartIfOnBatteries `
