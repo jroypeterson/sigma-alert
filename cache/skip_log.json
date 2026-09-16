@@ -25113,6 +25113,32 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-09-16",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
