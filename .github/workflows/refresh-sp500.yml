@@ -35,8 +35,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add sources/sp500.txt
-          git diff --cached --quiet || git commit -m "Refresh S&P 500 constituents (monthly) [skip ci]"
+          # BOTH files. `refresh_sp500.py` rewrites sources/sp500_names.json on every
+          # run by design -- its own comment says "Always refresh the names file -- even
+          # if the ticker set is unchanged, company renames should propagate" -- but this
+          # step staged only sp500.txt, so that write was discarded every month.
+          # Measured 2026-09-16: the names file's last commit was 2026-04-13 against a
+          # 2026-09-01 ticker refresh, and it was missing 10 current members (MRVL, RDDT,
+          # VEEV, FERG, FLEX, BNY, ECHO, FDXF, HONA, VMRK) while carrying 10 departed
+          # ones. sigma_screener.load_sp500_names() fills company names for the ~390 S&P
+          # names Coverage Manager holds no metadata for, so each of those rendered in
+          # Slack as a bare ticker. Found by Coverage Manager's index-mirror check.
+          git add sources/sp500.txt sources/sp500_names.json
+          git diff --cached --quiet || git commit -m "Refresh S&P 500 constituents and names (monthly) [skip ci]"
           git push
 
       - name: Re-sync watchlist
