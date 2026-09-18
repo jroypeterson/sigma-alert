@@ -1,5 +1,5 @@
 # S&P 500 Constituents
-# Last updated: 2026-09-01
+# Last updated: 2026-09-18
 # Check for reconstitution updates quarterly (March, June, September, December)
 # Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
 A
@@ -58,13 +58,13 @@ BALL
 BAX
 BBY
 BDX
+BE
 BEN
 BF-B
 BG
 BIIB
 BKNG
 BKR
-BLDR
 BLK
 BMY
 BNY
@@ -245,6 +245,7 @@ ICE
 IDXX
 IEX
 IFF
+ILMN
 INCY
 INTC
 INTU
@@ -355,6 +356,7 @@ ORCL
 ORLY
 OTIS
 OXY
+P
 PANW
 PAYX
 PCAR
@@ -428,7 +430,6 @@ SYF
 SYK
 SYY
 T
-TAP
 TDG
 TDY
 TECH
@@ -450,7 +451,6 @@ TSCO
 TSLA
 TSN
 TT
-TTD
 TTWO
 TXN
 TXT
