@@ -48,7 +48,6 @@
     "BG": "not_in_metadata",
     "BKNG": "not_in_metadata",
     "BKR": "not_in_metadata",
-    "BLDR": "not_in_metadata",
     "BLK": "not_in_metadata",
     "BNY": "not_in_metadata",
     "BR": "not_in_metadata",
@@ -278,6 +277,7 @@
     "ORLY": "not_in_metadata",
     "OTIS": "not_in_metadata",
     "OXY": "not_in_metadata",
+    "P": "not_in_metadata",
     "PAYX": "not_in_metadata",
     "PCAR": "not_in_metadata",
     "PCG": "not_in_metadata",
@@ -340,7 +340,6 @@
     "SYF": "not_in_metadata",
     "SYY": "not_in_metadata",
     "T": "not_in_metadata",
-    "TAP": "not_in_metadata",
     "TDG": "not_in_metadata",
     "TDY": "not_in_metadata",
     "TEL": "not_in_metadata",
@@ -358,7 +357,6 @@
     "TSCO": "not_in_metadata",
     "TSN": "not_in_metadata",
     "TT": "not_in_metadata",
-    "TTD": "not_in_metadata",
     "TTWO": "not_in_metadata",
     "TXN": "not_in_metadata",
     "TXT": "not_in_metadata",
@@ -395,5 +393,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-09-17T19:35:59.904585-04:00"
+  "updated": "2026-09-18T18:56:12.963486-04:00"
 }
