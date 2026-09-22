@@ -1,5 +1,12 @@
 """Refresh sources/sp500.txt from Wikipedia's S&P 500 constituents page.
 
+MANUAL FALLBACK ONLY since 2026-09-22. Coverage Manager owns both S&P 500 files now:
+its weekly sigma-export step (`reporting/sigma_export.build_sp500_mirror`) writes them
+from CM's snapshot, in the same format this script writes. The monthly GitHub Actions
+schedule was removed; `refresh-sp500.yml` is workflow_dispatch only. Run this by hand
+only when CM cannot (e.g. its machine is off across a reconstitution) -- CM will not
+overwrite a list stamped newer than its own snapshot, so a manual refresh is not undone.
+
 The S&P 500 rebalances quarterly (March, June, September, December) plus
 ad-hoc for M&A. sigma-alert's S&P 500 subcategory in the Slack digest is
 driven by a static ticker list at `sources/sp500.txt`, which this script

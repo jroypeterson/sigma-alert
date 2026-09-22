@@ -473,7 +473,11 @@ def disambiguate_collision_metadata(metadata: dict, metadata_raw: dict,
 
 
 def load_sp500_set() -> set[str]:
-    """Load S&P 500 tickers from sources/sp500.txt into a set for membership checks."""
+    """Load S&P 500 tickers from sources/sp500.txt into a set for membership checks.
+
+    The file is owned by Coverage Manager (its weekly sigma-export writes it since
+    2026-09-22); `scripts/refresh_sp500.py` is a manual fallback only.
+    """
     if not SP500_PATH.exists():
         return set()
     out = set()
@@ -489,7 +493,8 @@ def load_sp500_names() -> dict:
     """Load `{TICKER: short company name}` fallback for S&P 500 tickers not in
     ticker_metadata.json. Coverage Manager only maintains metadata for the
     healthcare/MedTech/PA universe, so most S&P 500 names come from this file
-    (populated from Wikipedia by refresh_sp500.py). Missing file is not fatal.
+    (written by Coverage Manager's weekly sigma-export since 2026-09-22; Wikipedia
+    via CM's snapshot). Missing file is not fatal.
     """
     if not SP500_NAMES_PATH.exists():
         return {}

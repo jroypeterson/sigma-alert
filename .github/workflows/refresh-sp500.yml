@@ -1,9 +1,12 @@
 name: Refresh S&P 500
 
 on:
-  # 1st of each month, 10:00 AM ET = 14:00 UTC (15:00 during EST)
-  schedule:
-    - cron: '0 14 1 * *'
+  # MANUAL ONLY since 2026-09-22. Coverage Manager now owns sources/sp500.txt and
+  # sources/sp500_names.json: its weekly sigma-export step writes both from CM's S&P 500
+  # snapshot and pushes them with ticker_metadata.json (JP: "retire
+  # sigma-alert/sources/sp500.txt"). The monthly schedule ('0 14 1 * *') was removed so
+  # two collectors no longer write one file. Kept runnable by hand as a fallback, e.g.
+  # if the CM machine is off for weeks around a reconstitution.
   workflow_dispatch:  # manual trigger
 
 jobs:

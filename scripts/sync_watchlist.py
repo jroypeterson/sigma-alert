@@ -6,7 +6,7 @@ Merges all source files in sources/ into a single watchlist.txt.
 Source files:
   sources/hc_services.txt — Healthcare Services coverage
   sources/medtech.txt     — MedTech coverage
-  sources/sp500.txt       — S&P 500 constituents
+  sources/sp500.txt       — S&P 500 constituents (written by Coverage Manager)
   sources/index_etfs.txt  — Broad-market index ETFs (SPYM, DIA, QQQ)
   sources/sector_etfs.txt — SPDR Select Sector ETFs (XLE, XLF, ...)
 
@@ -17,7 +17,8 @@ The script is designed to run both locally and in GitHub Actions.
 When run in CI, the workflow handles committing the updated watchlist.
 
 Note: ticker_metadata.json (company names + sector tags used by the
-screener) is owned by Coverage Manager. Its weekly-build pipeline writes
+screener) is owned by Coverage Manager, and so -- since 2026-09-22 -- are
+sources/sp500.txt and sources/sp500_names.json, pushed in the same commit. Its weekly-build pipeline writes
 the file directly into this repo and pushes it. Do NOT generate the
 metadata file from this script — CI does not have access to the
 Coverage Manager CSV, so doing so would corrupt the file.

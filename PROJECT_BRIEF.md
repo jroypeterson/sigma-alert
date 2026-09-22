@@ -122,9 +122,10 @@ of #13), not missing core function.
   "Other" catch-all — intentional, to keep the broad tier from re-flooding with
   uncovered names. (The close-only 52-week hi/lo list *does* keep an
   `Uncategorized` catch-all; different surface, different goal.)
-- **S&P 500 membership is a static repo-maintained list** (`sources/sp500.txt`,
-  refreshed manually at quarterly reconstitution via `refresh_sp500.py`), not a
-  live feed — accepted because reconstitutions are infrequent and dated.
+- **S&P 500 membership is a committed list owned by Coverage Manager**
+  (`sources/sp500.txt` + `sources/sp500_names.json`, written weekly by CM's
+  sigma-export step from its S&P 500 snapshot since 2026-09-22), not a live feed.
+  `refresh_sp500.py` / `refresh-sp500.yml` remain as a manual-only fallback.
 - CI does **not** own/maintain the CM-sourced metadata files (§3.2) — out of scope
   by design.
 
@@ -144,8 +145,10 @@ of #13), not missing core function.
   reference) rather than a bare urlopen.
 - **Backstop is opt-in and requires the laptop on** — so "always on time" (§2 #13)
   only holds when the machine is awake; otherwise it falls back to GH cron timing.
-- **S&P 500 list drift** between manual reconstitution refreshes — a name added
-  mid-quarter won't be in the broad net until the next `refresh_sp500.py` run.
+- **S&P 500 list lag** — CM writes weekly, and its snapshot is taken before its
+  own Wikipedia cache refreshes, so a reconstitution can take 1-2 weekly runs to
+  land here (CM refuses rather than revert a newer list). If CM's machine is off,
+  nothing here refreshes it; run `refresh-sp500.yml` by hand.
 - **`core_watchlist.json` is a deprecated back-compat path** still loaded as a
   fallback; cleanup is pending until CM stops pushing it.
 
@@ -160,7 +163,7 @@ of #13), not missing core function.
   credit/macro formatting is `_format_credit_line()` / `_format_macro_line()`.
 - **Other entry points:** `scripts/sync_watchlist.py` (merges `sources/*` →
   `watchlist.txt`), `scripts/weekly_skip_report.py` (Friday digest),
-  `scripts/refresh_sp500.py` (quarterly S&P 500 + name-map refresh),
+  `scripts/refresh_sp500.py` (manual-fallback S&P 500 + name-map refresh; CM owns the files),
   `scripts/post_overview.py` (pinned `#stock-price-alerts` reference card).
 - **Run a screen:** `python scripts/sigma_screener.py --mode {open|midday|close}`.
 - **Tests:** `python -m pytest tests/ -q` — **~111 tests** across
