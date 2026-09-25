@@ -1229,7 +1229,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": "Y"
+    "commercial": ""
   },
   "ASAN": {
     "name": "Asana Inc",
@@ -2573,7 +2573,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": "Y"
+    "commercial": ""
   },
   "CYTO": {
     "name": "Cytophage Technologies Ltd",

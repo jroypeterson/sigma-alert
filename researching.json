@@ -402,6 +402,19 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "TRUP": {
+    "position": "Researching",
+    "position_date": "2026-06-06",
+    "first_buy_date": "",
+    "average_cost": null,
+    "shares": null,
+    "notes": "",
+    "name": "Trupanion, Inc.",
+    "sector": "Consumer",
+    "subsector": "Animal Health",
+    "sub_subsector": "",
+    "core": ""
+  },
   "UBER": {
     "position": "Researching",
     "position_date": "2026-07-11",
