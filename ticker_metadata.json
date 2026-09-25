@@ -10831,6 +10831,14 @@
     "core": "",
     "commercial": ""
   },
+  "ETRA": {
+    "name": "Electra Therapeutics Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
