@@ -1778,7 +1778,14 @@ def mark_published(mode: str) -> None:
     digest was delivered. Warn-and-proceed: a failure here costs one false
     `error` on a later duplicate, never a lost alert."""
     try:
-        cache = load_cache() or {"date": today_et().isoformat(), "tickers": {}}
+        # Never fall back to an empty cache here: saving `{tickers: {}}` over an
+        # unreadable file would wipe every distribution and watermark, and the
+        # workflow would commit that (Fable post-build H1, 2026-09-29).
+        cache = load_cache()
+        if not cache or not cache.get("tickers"):
+            print("[WARN] Cache unreadable or empty; publication marker NOT "
+                  "recorded (a later duplicate run may report a false error)")
+            return
         cache["published"] = published_marker(mode)
         save_cache(cache)
         print(f"[INFO] Recorded today's {mode} digest as published")

@@ -228,3 +228,47 @@ M6 (watchdog UTC date), L2 (holiday-aware counters), L3 (multi-session catch-up)
   - The FMP half of fix 2, which should wait on the `recovered` counter.
   - A supplementary digest for H2.
   - Remove the "Likely transient Yahoo throttling" wording in `format_slack_message`'s DEGRADED banner. It is the same unmeasured guess the heartbeat line was.
+
+## Fable post-build review (2026-09-29)
+
+**Verdict: APPROVE — `85be1b7` stands as shipped. No Critical. One High (a latent cache-clobber in `mark_published`, one-line fix, not blocking tonight's runs). Both departures from the plan are correct, and departure 1 fixes a hole in the plan.** Line numbers are the HEAD file after `85be1b7`. No code was changed by this review. Verified by running, not by reading: `tests/test_duplicate_run.py` + `tests/test_weekly_skip_report_cap.py` 29/29 in 23 s, full suite 368/368 in 22 s, `git status` clean after both (the suite is not a pipeline run).
+
+### The two departures
+
+| Departure | Verdict | Why |
+|---|---|---|
+| **1. Duplicate := explicit `cache["published"] = {date, mode}` marker, written only after Slack accepts, AND `already_scored > 0`** — instead of the plan's `(screened + already_scored)/total >= floor`. | **Correct, and better than the plan.** | The plan's rule would have called two refused runs (79.9% + 20.1%, every `last_bar` at today, nothing ever posted) a duplicate and posted an `ok` "already published" card. Watermarks are written before the gate (`sigma_screener.py:3700` vs gate at `:3799`), so they can never say *delivered*. Codex R1 P1 was a real defect in my plan. Marker verified end to end: written only when `delivered` and close-only (`:3814-3815`); persisted through `save_cache` into `cache/distribution_cache.json` (`:1776-1786`), which the workflow's commit step adds (`sigma-close.yml:68`) — so the fetch/reset step at `:34-40` delivers it to the next run; carried through a duplicate's re-save (`:3684-3687`); dropped naturally the next day (marker date ≠ today → not copied); midday/open never write the cache (`:3626-3663`) so they cannot wipe it. Pinned at the transport by `test_a_failed_post_writes_no_marker`. Dropping the "≥ floor" clause is right: a day published at 85% followed by a zero-screen second run is `partial` / attempt 2, not `ok`. |
+| **2. H2 as the minimum — heartbeat names every unposted alert — instead of a supplement digest.** | **Acceptable as the minimum the plan allowed.** | The reasoning holds: `format_slack_message` only knows this run's `screened`, so a supplement would carry a "DEGRADED RUN 113/756" banner and an empty returns block. Every alert is listed, chunked under 3,000 chars (`:3308-3323`, `test_forty_alerts_are_all_listed`). The supplement stays a follow-up row. Gap noted at L1: 52w hi/lo hits from late names reach only the log (`:3413`), not the card. |
+
+### Checks asked for
+
+- **C1 as built.** `already_scored_today` = `last_bar >= today_et()` via `scored_watermarks` (`:1719-1762`) — the scored watermark only, never `last_seen`/`refused_bars`, never what the feed returned this run. `behind` = `stale_latest` minus already/screened, histogram by `Counter` (`:2197-2216`). Status on the combined numerator (`:3269-3276`). Correct. The plan's mutation check (`>=` → `>`) was not run (no edits tonight); by inspection `TestSeptember21Duplicate` fails under it (already_scored → 0 → not a duplicate → `error`).
+- **Concurrency + fetch/reset.** `sigma-close.yml:18-20` (`group: sigma-close`, `cancel-in-progress: false`) and `:34-40` (`git fetch --depth=1 origin master && git reset --hard FETCH_HEAD`) precede the screener step at `:50`. Watchdog dispatches are the same workflow, so the group covers them. `git push` from the reset branch is fast-forward. Correct. See L5 for the one case the group does not cover.
+- **Marker committed.** Yes — `git add cache/distribution_cache.json` at `sigma-close.yml:68`, and `mark_published` runs before that step. A duplicate that scored nothing makes no commit (`git diff --cached --quiet`), which is the intended L1 behaviour.
+- **Skip-log merge (M5).** Duplicate with an earlier entry → earlier minus names scored this run (`:1189-1203`), pinned by `test_skip_log_entry_shrinks_by_exactly_the_late_names`. See M3 for the no-earlier-entry fallback.
+- **New top-level cache key is safe.** Readers, from an `rg --no-ignore` of the whole fleet root: `sigma_screener.py` (`cache["date"]`, `cache["tickers"]`), `scripts/cache_utils.py`, and one external consumer, `focus_today/sources/sigma.py:30`, which reads `json.load(f).get("tickers", {})`. None iterates top-level keys, so `published` is invisible to all three. (An earlier draft of this line said "no other repo reads the file" — that came from a narrower search that had timed out; corrected.)
+
+### Findings
+
+**High**
+
+- **H1 — `mark_published` is load-with-fallback + save-everything (`sigma_screener.py:1781-1783`).** `load_cache()` returns `None` on `OSError` or `JSONDecodeError` (`:1080-1088`); the fallback `{"date": today, "tickers": {}}` then gets the marker and is written over the distribution cache — 756 distributions and every watermark gone, committed by the workflow, and the next morning's open run sees "not in cache" for the whole universe. The trigger is narrow in CI (the file was written by `save_cache` seconds earlier), which is why this is High and not Critical, but it is a data-destroying write on the publish path, the exact class in `feedback_load_with_fallback_then_save_destroys`, and one line removes it: pass `cache_data` in from `main()` and set the key on the dict already in memory, or return without saving when `load_cache()` is `None`. Recovery if it ever fires: `git checkout HEAD~1 -- cache/distribution_cache.json`.
+
+**Medium**
+
+- **M1 — A refused first run plus a completing second run loses the day, with a card that reads as a data problem.** `enforce_publish_gate` (`:3385-3386`) and the normal-path heartbeat (`:3859-3864`) judge on `screened` alone; `already_scored` enters the status only on the duplicate path. Run A at 79% is refused but advances 597 watermarks (`:3700`, save still before gate); run B scores the other 159 → not a duplicate (no marker — correct) → refused at 21% → `error`, "market data returned for only 159/756" — false; the `Data:` line's `already scored 597` is the only honest number. Not a regression, and the plan's rule was worse (a false `ok`). Follow-up row: persist each ticker's day z/return in its cache entry so a completing run can assemble the day's digest; at minimum, the warning line should say "N scored by a refused earlier run".
+- **M2 — `describe_unscreened` prints unmeasured zeros on the open-mode cached path (`:3221-3245`).** `screen_open_cached` never runs `_classify_unscreened`, so a sub-floor cached open run's card says `failed downloads 0 · already scored 0 · behind 0`. Absent data is not a finding; return `None` when `"already_scored" not in stats`.
+- **M3 — The M5 fallback re-inflates.** `update_skip_log` on a duplicate with no earlier entry writes the duplicate's own `skip_events` (`:1205`) — ~700 `stale_bar` rows for already-scored names, the inflation this commit exists to remove. Reachable when the first run's push failed (L5) so its skip-log entry never landed. My plan's M5 said "write normally" — that wording was mine and it was wrong; normal for a duplicate must exclude `already_scored` tickers.
+
+**Low**
+
+- **L1 — 52w hi/lo hits from late-scored names are counted in the log (`:3413`) but not named on the card.** Lesser loss than an alert; add to the `NOT POSTED` list when the supplement is built.
+- **L2 — Whole-batch-stale abort reports `behind 0` (`:2299-2306`)** because `_stale_latest` is empty before the per-ticker loop; the card says `whole batch stale (N not today)` instead of the newest-bar histogram. The re-fetch `attempted/recovered` line still appears. Cosmetic.
+- **L3 — Holidays now cost a 60 s sleep and one 756-symbol `period=5d` call before the abort (`:2133-2170`), twice (cron + watchdog).** Plan L2 accepted holiday `error`; noting the added cost until the market-calendar check lands.
+- **L4 — Normal-path cards still carry no `attempt:` line**; the contract lists it as required (`HEALTH_REPORTING.md:71`). Only the duplicate card has one now. Pre-existing.
+- **L5 — `git push` has no rebase-retry (`sigma-close.yml:82`).** The concurrency group covers close runs only; a push from `sync-watchlist.yml` / `refresh-sp500.yml` in the same minute makes the close push non-fast-forward, `if: failure()` posts a crash card for a run that published, and the marker never lands — the next run then re-publishes (accepted per JP) and hits M3. Pre-existing.
+- **L6 — The weekly backstop card (`sigma-weekly-skip-report.yml:53-54`) has no `cycle:`/`attempt:` line.** Cosmetic against the contract; the close workflow's backstop builds its payload with `ci_health_payload.py` and could be reused.
+
+### What to do before the next close run (2026-09-29 ~21:30 UTC)
+
+Nothing is required. H1 is a one-liner worth landing in the morning; M1-M3 and L1-L6 are rows. The follow-ups already listed in the build notes (M6, L2, L3, the evening probe, the FMP half, the supplement digest, the DEGRADED banner wording) stand.

@@ -486,3 +486,25 @@ class TestCloseWorkflowSerialisesAndRefreshes:
         reset = self.WF.index("git reset --hard FETCH_HEAD")
         assert self.WF.index("git fetch --depth=1 origin master") < reset
         assert reset < self.WF.index("python scripts/sigma_screener.py --mode close")
+
+
+class TestMarkerNeverWipesTheCache:
+    """Fable post-build H1: an unreadable cache must not be replaced by an empty
+    one carrying only the marker (the workflow would commit the wipe)."""
+
+    def test_unreadable_cache_is_left_untouched(self, monkeypatch, tmp_path):
+        path = tmp_path / "distribution_cache.json"
+        path.write_text("{not json", encoding="utf-8")
+        monkeypatch.setattr(ss, "CACHE_PATH", path)
+        ss.mark_published("close")
+        assert path.read_text(encoding="utf-8") == "{not json"
+
+    def test_readable_cache_keeps_its_tickers(self, monkeypatch, tmp_path):
+        path = tmp_path / "distribution_cache.json"
+        path.write_text(json.dumps({"date": "2026-09-28",
+                                    "tickers": {"AAA": {"last_bar": "2026-09-28"}}}),
+                        encoding="utf-8")
+        monkeypatch.setattr(ss, "CACHE_PATH", path)
+        ss.mark_published("close")
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        assert "AAA" in saved["tickers"] and "published" in saved
