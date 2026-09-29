@@ -46,6 +46,12 @@ SUPPRESS_PATH = ROOT / "sources" / "skip_report_suppress.txt"
 
 ET = ZoneInfo("America/New_York")
 WINDOW_DAYS = 7
+# Cap on names listed per section (M1, Fable review 2026-09-29). Every chronic /
+# unresolved chip used to go into ONE section with no cap; 755 chips exceeded
+# Slack's 3000-char section limit, Slack answered 400, and the report failed on
+# 2026-09-12, 09-19 and 09-26 - silently, on exactly the data it exists to
+# surface. 30 lines x ~70 chars stays well inside the limit.
+MAX_LISTED = 30
 
 
 def now_et() -> datetime:
@@ -337,13 +343,15 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
     chronic = stats["chronic"]
     if chronic:
         lines = [":red_circle: *Chronic skips* — skipped on most runs this week"]
-        for c in chronic:
+        for c in chronic[:MAX_LISTED]:
             reasons = ", ".join(c["reasons"])
             ratio = (
                 f" ({c['count']}/{c['run_count']} runs)"
                 if c.get("run_count") else ""
             )
             lines.append(f"• `{c['ticker']}` — {reasons}{ratio}")
+        if len(chronic) > MAX_LISTED:
+            lines.append(f"… and {len(chronic) - MAX_LISTED} more")
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "\n".join(lines)},
@@ -375,9 +383,11 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
             f":warning: *Unresolved at week's end* ({stats['window_end']}) — "
             f"{len(unresolved)} ticker(s) skipped in the most recent run"
         ]
-        for u in unresolved:
+        for u in unresolved[:MAX_LISTED]:
             label = REASON_LABELS.get(u["reason"], u["reason"])
             lines.append(f"• `{u['ticker']}` — {label}")
+        if len(unresolved) > MAX_LISTED:
+            lines.append(f"… and {len(unresolved) - MAX_LISTED} more")
         blocks.append({
             "type": "section",
             "text": {"type": "mrkdwn", "text": "\n".join(lines)},
@@ -395,7 +405,9 @@ def format_slack_payload(stats: dict, watchlist_size: int) -> dict:
     # compactly so the suppression is visible rather than silent.
     suppressed_hits = stats.get("suppressed_hits") or []
     if suppressed_hits:
-        chips = ", ".join(f"`{s['ticker']}`" for s in suppressed_hits)
+        chips = ", ".join(f"`{s['ticker']}`" for s in suppressed_hits[:MAX_LISTED])
+        if len(suppressed_hits) > MAX_LISTED:
+            chips += f" and {len(suppressed_hits) - MAX_LISTED} more"
         blocks.append({
             "type": "context",
             "elements": [

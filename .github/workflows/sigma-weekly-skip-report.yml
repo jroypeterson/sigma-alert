@@ -38,3 +38,20 @@ jobs:
         env:
           SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
         run: python scripts/weekly_skip_report.py
+
+      - name: Failure backstop
+        # The report failed 2026-09-12, 09-19 and 09-26 (Slack 400 on a 755-chip
+        # section) and nothing said so: the report IS the only post this
+        # workflow makes, so its failure was silent. Same backstop pattern as
+        # the cycle workflows. Plain text via jq so the message is JSON-safe.
+        if: failure()
+        env:
+          SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$SLACK_STATUS_REPORTS_WEBHOOK" ] || exit 0
+          msg=":x: *sigma-alert weekly skip report - error*  health/v1
+          The Friday skip report did not post. Run: $RUN_URL"
+          jq -n --arg t "$msg" '{blocks: [{type: "section", text: {type: "mrkdwn", text: $t}}], text: $t}' \
+            | curl -sS -X POST -H 'Content-Type: application/json' --data @- "$SLACK_STATUS_REPORTS_WEBHOOK" > /dev/null \
+            || echo "[WARN] backstop post failed"

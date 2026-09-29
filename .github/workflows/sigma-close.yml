@@ -8,6 +8,17 @@ on:
     - cron: '30 21 * * 1-5'
   workflow_dispatch:  # manual trigger for testing
 
+# Serialise close runs (H3, 2026-09-29). The watchdog dispatches a close when
+# the cron is late, and the late cron then fires anyway — two close runs a day
+# is the NORMAL case (Sept 2026: every weekday but one). The screener is
+# idempotent only if the second run reads the first run's committed watermark,
+# which needs BOTH halves: this group, so they cannot overlap, and the
+# fetch+reset step below, because a queued run still checks out the sha it was
+# QUEUED with — a concurrency group serialises runs, it does not refresh them.
+concurrency:
+  group: sigma-close
+  cancel-in-progress: false
+
 jobs:
   screen-close:
     runs-on: ubuntu-latest
@@ -19,6 +30,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+
+      - name: Refresh to latest master (read the previous close run's watermark)
+        # See the concurrency note above: without this, a run that waited in the
+        # queue behind another close run scores against the PRE-commit cache and
+        # posts the same session twice, then its push fails non-fast-forward.
+        run: |
+          git fetch --depth=1 origin master
+          git reset --hard FETCH_HEAD
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -51,7 +70,7 @@ jobs:
           # the screener found any gaps; -A picks up additions and deletions.
           git add -A cache/missing_metadata.json
           # skip_log.json is rewritten every close run (trimmed to 30-day window).
-          # Consumed by Coverage Manager's weekly report for skip-stats analysis.
+          # Consumed by scripts/weekly_skip_report.py (sigma-weekly-skip-report.yml).
           git add -A cache/skip_log.json
           # returns_snapshot.json — the day's index/sector/macro returns block,
           # persisted so scripts/return_map.py can rebuild the interactive

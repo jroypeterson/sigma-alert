@@ -21,6 +21,7 @@ import re
 import sys
 import time
 import random
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -110,6 +111,10 @@ THREE_SIGMA = 3.0
 # freshness monitor. Not writing is the correct behaviour, and it is why the
 # staleness of that file stays visible.
 MIN_SCREEN_COVERAGE = 0.80
+# --dry-run: no Slack post of any kind, and every write redirected to a state
+# dir (see `_enter_dry_run`). Module-level so send_slack/post_health_heartbeat
+# honour it without threading a flag through every caller.
+DRY_RUN = False
 DEGRADED_SCREEN_COVERAGE = 0.95
 
 
@@ -126,7 +131,7 @@ def coverage_is_publishable(screened, total):
     """True when this run may publish a digest and rewrite the return map."""
     return screen_coverage(screened, total) >= MIN_SCREEN_COVERAGE
 
-# Trailing window kept in cache/skip_log.json. Coverage Manager's weekly
+# Trailing window kept in cache/skip_log.json. sigma-alert's own weekly
 # report reads trailing 7 days; keep 30 days so there's headroom for a
 # longer-window view without growing the file unbounded.
 SKIP_LOG_RETENTION_DAYS = 30
@@ -1152,9 +1157,11 @@ def write_missing_metadata_flag(tickers: list[str], metadata: dict,
     return payload
 
 
-def update_skip_log(skip_events: list[dict], mode: str) -> dict:
+def update_skip_log(skip_events: list[dict], mode: str,
+                    merge_screened: set | None = None) -> dict:
     """Append today's skip events to cache/skip_log.json and trim to the
-    retention window. Consumed by Coverage Manager's weekly report.
+    retention window. Consumed by scripts/weekly_skip_report.py (this repo's
+    Friday digest) — NOT Coverage Manager, whatever older comments said.
 
     Schema:
         {
@@ -1180,7 +1187,23 @@ def update_skip_log(skip_events: list[dict], mode: str) -> dict:
         except (json.JSONDecodeError, OSError) as e:
             print(f"[WARN] Could not read skip_log.json, starting fresh: {e}")
 
-    # Drop any prior entry for today+mode so re-runs overwrite cleanly.
+    earlier = next((r for r in payload["runs"]
+                    if r.get("date") == today_str and r.get("mode") == mode), None)
+    if merge_screened is not None and earlier is not None:
+        # DUPLICATE run (M5). The day's entry belongs to the run that published
+        # it; "re-runs overwrite cleanly" used to hand it to the duplicate, whose
+        # skips are the ~750 names it found ALREADY SCORED — the file said
+        # 755-758 skips/day for 09-10..09-25 against real first-run counts of
+        # 5-25, and the Friday report died on it three weeks running (Slack 400).
+        # The only thing a duplicate learns is which skipped names it has now
+        # scored: remove those, add nothing (its own `behind` list — e.g. the
+        # ~22 late European names — was scored today with an older bar and is
+        # not a skip).
+        skipped = [e for e in (earlier.get("skipped") or [])
+                   if e.get("ticker") not in merge_screened]
+    else:
+        skipped = sorted(skip_events, key=lambda e: e.get("ticker", ""))
+    # Drop any prior entry for today+mode; the merged/new one replaces it.
     payload["runs"] = [
         r for r in payload["runs"]
         if not (r.get("date") == today_str and r.get("mode") == mode)
@@ -1188,7 +1211,7 @@ def update_skip_log(skip_events: list[dict], mode: str) -> dict:
     payload["runs"].append({
         "date": today_str,
         "mode": mode,
-        "skipped": sorted(skip_events, key=lambda e: e.get("ticker", "")),
+        "skipped": skipped,
     })
 
     # Trim to retention window.
@@ -1199,7 +1222,9 @@ def update_skip_log(skip_events: list[dict], mode: str) -> dict:
     SKIP_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(SKIP_LOG_PATH, "w") as f:
         json.dump(payload, f, indent=2)
-    print(f"[INFO] Skip log updated: {len(skip_events)} skip(s) recorded for {today_str} {mode}")
+    print(f"[INFO] Skip log updated: {len(skipped)} skip(s) recorded for {today_str} {mode}"
+          + (" (duplicate run: merged into the earlier entry)"
+             if merge_screened is not None and earlier is not None else ""))
     return payload
 
 
@@ -1691,6 +1716,96 @@ def prior_bars_from_cache(cache: dict | None) -> dict:
     return out
 
 
+def scored_watermarks(cache: dict | None) -> dict:
+    """`{ticker: date}` of the session each ticker was actually SCORED on.
+
+    Reads `tickers[*].last_bar` ONLY — never `last_seen`, never `refused_bars`.
+    Those two record bars we LOOKED AT and refused; they say nothing about
+    whether a session was scored. `prior_bars_from_cache()` merges all three on
+    purpose (it bounds what is new); this function must not, because the
+    question it answers is different: "did an earlier run already score today?"
+    (Fable C1, 2026-09-29.)
+    """
+    out: dict = {}
+    for tkr, entry in ((cache or {}).get("tickers") or {}).items():
+        raw = (entry or {}).get("last_bar")
+        if not raw:
+            continue
+        try:
+            out[tkr] = date.fromisoformat(raw)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def already_scored_today(cache: dict | None, tickers, screened=(), today=None) -> set:
+    """Tickers an EARLIER run already scored for today's session.
+
+    The rule is the watermark alone: `last_bar >= today_et()`. What the feed
+    returns THIS run is irrelevant — on the 2026-09-21 20:11 ET duplicate run
+    Yahoo had regressed 712 names to Friday's bar although the 18:55 run had
+    scored Monday; a rule that also required `latest == today` classified all
+    712 as missing data and the run posted `error` for a day that was fully
+    scored. Board #327 was opened on exactly those false errors.
+
+    `screened` (tickers this run scored) are excluded — they are not "already"
+    scored, this run scored them.
+    """
+    today = today or today_et()
+    wm = scored_watermarks(cache)
+    done = set(screened)
+    return {t for t in tickers if t not in done and wm.get(t) is not None
+            and wm[t] >= today}
+
+
+def published_marker(mode: str, today=None) -> dict:
+    return {"date": (today or today_et()).isoformat(), "mode": mode}
+
+
+def earlier_published_today(cache: dict | None, mode: str, today=None) -> bool:
+    """Did an earlier run of this MODE deliver today's digest?
+
+    Read from `cache["published"]`, which `mark_published` writes only after
+    Slack ACCEPTED the digest (Codex R1, P1). Watermarks cannot answer this:
+    they are written before the publish gate, so a run refused at 79.9% and a
+    second one refused at 20.1% leave every `last_bar` at today with nothing
+    ever posted; so does a full screen whose Slack POST failed."""
+    return (cache or {}).get("published") == published_marker(mode, today)
+
+
+def mark_published(mode: str) -> None:
+    """Record, in the cache the close workflow commits, that today's `mode`
+    digest was delivered. Warn-and-proceed: a failure here costs one false
+    `error` on a later duplicate, never a lost alert."""
+    try:
+        cache = load_cache() or {"date": today_et().isoformat(), "tickers": {}}
+        cache["published"] = published_marker(mode)
+        save_cache(cache)
+        print(f"[INFO] Recorded today's {mode} digest as published")
+    except Exception as e:  # noqa: BLE001
+        print(f"[WARN] Could not record the publication marker: {e}")
+
+
+def is_duplicate_run(stats: dict, total: int) -> bool:  # noqa: ARG001
+    """True when an earlier run already PUBLISHED today's session and this run
+    re-screens it.
+
+    Duplicate := an earlier run of the same mode delivered today's digest
+    (`stats["earlier_published"]`, from the explicit marker — see
+    `earlier_published_today`) AND some names were already scored today. A day
+    where every earlier run was refused at the gate (or whose POST failed) is
+    NOT a duplicate of anything, so it goes through the normal gate and reports
+    on its own coverage, truthfully.
+
+    Status is still judged on the combined numerator (screened + already
+    scored), per Fable C1. The partial-first-run case (earlier 85% published,
+    this run the missing 15%) is a duplicate, and the late names' alerts are
+    named in the heartbeat (H2).
+    """
+    already = stats.get("already_scored", 0) or 0
+    return already > 0 and bool(stats.get("earlier_published"))
+
+
 def is_unscored_bar(latest_bar, last_scored, today=None) -> bool:
     """Is this bar a session we have NOT already scored for this ticker?
 
@@ -1964,6 +2079,146 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     return alert, cache_entry, hi_lo, ticker_stats, None
 
 
+# Targeted re-fetch (Fable fix 2 / M3 / M4, 2026-09-29). Trigger when more than
+# this share of the watchlist is BEHIND — newest bar not new AND today not yet
+# scored. 20% sits far above the everyday population (~22 late European names,
+# ~3%, plus the occasional 17-name evening regression) and far below the one
+# real loss on record (2026-09-28 21:04 ET: 712 of 756 on Friday's bar).
+REFETCH_BEHIND_FRACTION = 0.20
+REFETCH_DELAY_S = 60
+
+
+def _newest_bar(series):
+    """Date of a series' last index entry, or None."""
+    try:
+        return series.index[-1].date()
+    except (AttributeError, IndexError, TypeError):
+        return None
+
+
+def _naive(series: pd.Series) -> pd.Series:
+    """Drop a tz from a DatetimeIndex so frames from two request shapes concat."""
+    idx = series.index
+    if getattr(idx, "tz", None) is not None:
+        series = series.copy()
+        series.index = idx.tz_localize(None)
+    return series
+
+
+def _series_from(frame, field: str, sym: str) -> pd.Series:
+    """One symbol's `field` column from a yf.download frame, NaNs dropped.
+
+    Handles both column shapes: MultiIndex (field, symbol) — yfinance's default
+    even for one symbol — and flat (single-symbol, multi_level_index=False)."""
+    try:
+        col = frame[field]
+    except (KeyError, TypeError):
+        return pd.Series(dtype=float)
+    if hasattr(col, "columns"):
+        if sym not in col.columns:
+            return pd.Series(dtype=float)
+        col = col[sym]
+    return col.dropna()
+
+
+def refetch_recent(symbols: list[str]):
+    """The re-fetch request itself: `period="5d"`, i.e. Yahoo's `range=5d`
+    URL rather than the `period1/period2` one the 400-day batch uses. Whether
+    Yahoo answers that shape differently on a bad evening is UNTESTED — which is
+    why `refetch_behind` counts `recovered / attempted` into the heartbeat.
+    Split out so tests (and the dry-run replay) can substitute it."""
+    return yf.download(symbols, period="5d", progress=False, threads=True)
+
+
+def refetch_behind(data, tickers, prior_cache, prior, stats, today,
+                   single: bool = False) -> dict:
+    """Re-fetch the BEHIND names once and return `{ticker: (close, open, high,
+    low)}` for every name the re-fetch recovered — the 400-day series with the
+    5-day frame merged on top (concat, last-wins on duplicate dates, sorted), so
+    `_process_ticker_full` runs normally and still writes the 52w range, the
+    prior-year-end close and the cache entry close mode exists to write (M3).
+
+    BEHIND (Fable C1 / M4) := today not scored by an earlier run (watermark
+    `last_bar < today`) AND the feed's newest bar is not newer than what we
+    have (`is_unscored_bar` false). NOT "latest < today": on a duplicate run the
+    already-scored names also have `latest < today` whenever Yahoo regressed
+    (the 09-21 shape) and would trigger a pointless 60 s wait and a 756-symbol
+    call. Always sets `refetch_attempted` / `refetch_recovered` in `stats`.
+    """
+    stats["refetch_attempted"] = 0
+    stats["refetch_recovered"] = 0
+    if single or data is None or not tickers:
+        return {}
+    scored = scored_watermarks(prior_cache)
+    behind = []
+    for t in tickers:
+        if scored.get(t) is not None and scored[t] >= today:
+            continue
+        s = _series_from(data, "Close", to_yf_symbol(t))
+        if not len(s):
+            continue          # no data at all is the fallback path's job
+        if not is_unscored_bar(_newest_bar(s), prior.get(t), today):
+            behind.append(t)
+    if len(behind) / len(tickers) <= REFETCH_BEHIND_FRACTION:
+        return {}
+
+    stats["refetch_attempted"] = len(behind)
+    print(f"[WARN] {len(behind)}/{len(tickers)} tickers are behind (newest bar "
+          f"not new, today not scored) — re-fetching them with period=5d in "
+          f"{REFETCH_DELAY_S}s")
+    time.sleep(REFETCH_DELAY_S)
+    try:
+        fresh = refetch_recent([to_yf_symbol(t) for t in behind])
+    except Exception as e:  # noqa: BLE001 — yfinance raises a variety of types
+        print(f"[WARN] Re-fetch failed: {e}")
+        return {}
+    if fresh is None or getattr(fresh, "empty", True):
+        print("[WARN] Re-fetch returned no data")
+        return {}
+
+    overrides: dict = {}
+    for t in behind:
+        sym = to_yf_symbol(t)
+        merged = []
+        for field in ("Close", "Open", "High", "Low"):
+            base = _naive(_series_from(data, field, sym))
+            new = _naive(_series_from(fresh, field, sym))
+            both = pd.concat([base, new]) if len(new) else base
+            both = both[~both.index.duplicated(keep="last")].sort_index()
+            merged.append(both)
+        if len(merged[0]) and is_unscored_bar(_newest_bar(merged[0]),
+                                              prior.get(t), today):
+            overrides[t] = tuple(merged)
+    stats["refetch_recovered"] = len(overrides)
+    print(f"[INFO] Re-fetch recovered {len(overrides)}/{len(behind)} behind tickers")
+    return overrides
+
+
+def _classify_unscreened(stats, tickers, prior_cache, screened_set,
+                         stale_latest, no_data, alerts, today) -> None:
+    """Split everything this run did not screen into what it IS (Fable C1).
+
+    * `already_scored` — an earlier run scored today (watermark only).
+    * `behind` — refused as not-new while today is NOT scored; `behind_dates`
+      is the histogram of the newest bar the feed returned for them, which is
+      the line that tells a reader "712 names' newest bar is 09-25" instead of
+      guessing at throttling.
+    * `no_data` — zero bars from any pull (dead symbols, a failed download).
+
+    Also records `screened_tickers` (for the skip-log merge, M5).
+    """
+    screened_set = set(screened_set)
+    already = already_scored_today(prior_cache, tickers, screened_set, today)
+    behind = {t: d for t, d in stale_latest.items()
+              if t not in already and t not in screened_set}
+    stats["already_scored"] = len(already)
+    stats["behind"] = len(behind)
+    stats["behind_dates"] = dict(Counter(
+        str(d) if d is not None else "none" for d in behind.values()).most_common())
+    stats["no_data"] = len(set(no_data) - screened_set)
+    stats["screened_tickers"] = sorted(screened_set)
+
+
 def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 metadata: dict | None = None,
                 portfolio_set: set[str] | None = None,
@@ -1981,7 +2236,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
 
     Returns (alerts, cache_data, run_stats, hi_lo_hits, etf_returns, skip_events).
 
-    skip_events is a list of {ticker, reason} dicts for Coverage Manager's
+    skip_events is a list of {ticker, reason} dicts for weekly_skip_report.py's
     weekly report. Reasons: insufficient_history, distribution_nan,
     stale_bar (this ticker had no today-bar in an otherwise-fresh batch),
     fallback_insufficient, fallback_exception. (Whole-batch stale aborts are
@@ -2004,6 +2259,11 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     _collisions = foreign_collision_bases(tickers)
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
+    # Per-run classification of what did NOT get screened (Fable C1/H2, board
+    # #327). Filled by `_classify_unscreened` at both return points.
+    _screened_set: set = set()
+    _stale_latest: dict = {}      # ticker -> newest bar the feed returned
+    _no_data: set = set()         # tickers with zero Close bars from any pull
 
     # Attempt batch download. Foreign coverage names are downloaded under
     # their yfinance symbol (GETIB.SS → GETI-B.ST) while everything downstream
@@ -2027,13 +2287,26 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     _prior: dict = prior_bars_from_cache(prior_cache)
 
     if data is not None:
+        # Targeted re-fetch of names whose newest bar is BEHIND (Fable fix 2,
+        # M3/M4). Only when the share is large — the 09-28 shape, 712 names on
+        # Friday's bar — never for the chronic ~22 late European names. It runs
+        # BEFORE the whole-batch staleness check (Codex R1): the strongest form
+        # of the 09-28 incident is a batch whose SHARED index ends on Friday,
+        # and returning here first would skip the one recovery path it has.
+        _overrides = refetch_behind(data, tickers, prior_cache, _prior, stats,
+                                    today, single=len(tickers) == 1)
+
         # Validate that the latest bar is from today's session
-        if not validate_bar_date(data.index, mode):
+        if not validate_bar_date(data.index, mode) and not any(
+                _newest_bar(v[0]) == today for v in _overrides.values()):
             stats["stale"] = len(tickers)
             print(f"[ERROR] Batch data is stale — latest bar is not from {today}. Aborting screen.")
+            _classify_unscreened(stats, tickers, prior_cache, _screened_set,
+                                 _stale_latest, _no_data, alerts, today)
             return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
-        stats["ref_date"] = str(data.index[-1].date())
+        stats["ref_date"] = (str(data.index[-1].date())
+                             if validate_bar_date(data.index, mode) else str(today))
 
         # What each ticker was last SCORED on, per the distribution cache the
         # previous close run wrote. This is our own record, not the feed's —
@@ -2048,7 +2321,9 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         for ticker in tickers:
             try:
                 yf_sym = to_yf_symbol(ticker)
-                if len(tickers) == 1:
+                if ticker in _overrides:
+                    close, open_prices, high_s, low_s = _overrides[ticker]
+                elif len(tickers) == 1:
                     close = data["Close"].dropna()
                     open_prices = data["Open"].dropna()
                     high_s = data["High"].dropna()
@@ -2058,6 +2333,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                     open_prices = data["Open"][yf_sym].dropna()
                     high_s = data["High"][yf_sym].dropna()
                     low_s = data["Low"][yf_sym].dropna()
+                if len(close) == 0:
+                    _no_data.add(ticker)
 
                 alert, cache_entry, hi_lo, ticker_stats, skip_reason = _process_ticker_full(
                     ticker, close, open_prices, high_s, low_s, mode, metadata,
@@ -2074,12 +2351,15 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 if cache_entry is None:
                     stats["skipped"] += 1
                     skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
+                    if skip_reason == "stale_bar":
+                        _stale_latest[ticker] = _newest_bar(close)
                     _carry_refused_bar(cache_data, _prior_entries, ticker,
                                        close, skip_reason)
                     continue
 
                 cache_data["tickers"][ticker] = cache_entry
                 stats["screened"] += 1
+                _screened_set.add(ticker)
                 if alert:
                     alerts.append(alert)
                 if hi_lo and track_52w:
@@ -2099,6 +2379,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         time.sleep(random.uniform(1, 2))
         single_data = fallback_download_single(to_yf_symbol(ticker), start_str, end_str)
         if single_data is None or len(single_data) < 32:
+            if single_data is None or len(single_data) == 0:
+                _no_data.add(ticker)
             print(f"[WARN] {ticker}: insufficient data in fallback, skipping")
             stats["skipped"] += 1
             skip_events.append({"ticker": ticker, "reason": "fallback_insufficient"})
@@ -2121,6 +2403,7 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             print(f"[WARN] {ticker}: fallback bar {_fb_bar} is not newer than "
                   f"{_prior.get(ticker) or today} — skipping")
             stats["stale"] += 1
+            _stale_latest[ticker] = _fb_bar
             # Counted as stale rather than skipped, but it drops out of the
             # replaced cache exactly the same way — so it keeps its watermark
             # exactly the same way. See `_carry_refused_bar`.
@@ -2152,12 +2435,15 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             if cache_entry is None:
                 stats["skipped"] += 1
                 skip_events.append({"ticker": ticker, "reason": skip_reason or "unknown"})
+                if skip_reason == "stale_bar":
+                    _stale_latest[ticker] = _newest_bar(close)
                 _carry_refused_bar(cache_data, _prior_entries, ticker,
                                    close, skip_reason)
                 continue
 
             cache_data["tickers"][ticker] = cache_entry
             stats["screened"] += 1
+            _screened_set.add(ticker)
             if alert:
                 alerts.append(alert)
             if hi_lo and track_52w:
@@ -2172,6 +2458,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
             _carry_refused_bar(cache_data, _prior_entries, ticker, None,
                                "fallback_exception")
 
+    _classify_unscreened(stats, tickers, prior_cache, _screened_set,
+                         _stale_latest, _no_data, alerts, today)
     return alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events
 
 
@@ -2858,6 +3146,9 @@ def send_slack(payload: dict) -> bool:
     about DELIVERY, and this function was the one place that knew whether
     delivery happened and threw it away.
     """
+    if DRY_RUN:
+        print(f"[DRY-RUN] digest NOT sent ({len(payload.get('blocks', []))} blocks)")
+        return True
     webhook_url = os.environ.get("SLACK_WEBHOOK")
     if not webhook_url:
         print("[ERROR] SLACK_WEBHOOK environment variable not set")
@@ -2927,8 +3218,36 @@ def _coverage_floor_reason(frac):
             f"missing one, and posting it would be worse than posting nothing.")
 
 
+def describe_unscreened(stats: dict) -> str | None:
+    """The MEASURED breakdown of what this run did not screen (fix 3).
+
+    Replaces the hardcoded "(Yahoo throttling?)" guess: across 70 run logs
+    (2026-08-06..09-28) that guess was never once the cause — 11 of 12 sub-floor
+    close runs were duplicates of an already-scored day, and the one real loss
+    was Yahoo serving history without the newest session. Counts are tickers.
+    """
+    if not stats:
+        return None
+    parts = [f"failed downloads {stats.get('no_data', 0)}",
+             f"already scored {stats.get('already_scored', 0)}"]
+    behind = stats.get("behind", 0) or 0
+    dates = stats.get("behind_dates") or {}
+    if behind:
+        hist = ", ".join(f"{d} ×{n}" for d, n in list(dates.items())[:3])
+        parts.append(f"behind {behind} (newest bar: {hist})")
+    else:
+        parts.append("behind 0")
+    if stats.get("refetch_attempted"):
+        parts.append(f"re-fetch recovered {stats.get('refetch_recovered', 0)}"
+                     f"/{stats['refetch_attempted']}")
+    if stats.get("stale") and not behind and not stats.get("screened"):
+        parts.append(f"whole batch stale ({stats['stale']} not today)")
+    return " · ".join(parts)
+
+
 def build_health_payload(mode, screened, total, n_alerts, skipped, published=None,
-                         reason=None):
+                         reason=None, already_scored=0, attempt=None,
+                         data_line=None, data_line_always=False, unposted=None):
     """(status, Block Kit payload) for the per-run health/v1 heartbeat.
 
     Status per HEALTH_REPORTING.md 4.2 (abnormal-counts): ok asserts the
@@ -2945,26 +3264,64 @@ def build_health_payload(mode, screened, total, n_alerts, skipped, published=Non
     POST failed at full coverage, and one hardcoded explanation cannot be
     honest about both. Default None = derive from coverage.
     """
-    frac = screen_coverage(screened, total)
+    # `already_scored` is non-zero only on a DUPLICATE run (see
+    # `is_duplicate_run`): names an earlier run scored today count toward the
+    # status numerator, because the day IS covered — the 09-21 20:11 ET second
+    # run is `ok`, not `error`. The thresholds themselves are unchanged.
+    covered = screened + (already_scored or 0)
+    frac = screen_coverage(covered, total)
     if published is None:
         published = coverage_is_publishable(screened, total)
-    if not coverage_is_publishable(screened, total):
+    if not coverage_is_publishable(covered, total):
         status = "error"
     elif frac < DEGRADED_SCREEN_COVERAGE:
         status = "partial"
     else:
         status = "ok"
     icon = {"ok": ":white_check_mark:", "partial": ":warning:", "error": ":x:"}[status]
-    today = datetime.now().strftime("%Y-%m-%d")
+    # ET, not the runner's clock (Fable H1). The runner is UTC, so every close
+    # heartbeat after 20:00 EDT was filed under TOMORROW's cycle — the 09-28
+    # 21:04 ET error card said `cycle: 2026-09-29 close`. HEALTH_REPORTING §4.3
+    # keys reruns on cycle + attempt, so the date must be the session's.
+    today = today_et().strftime("%Y-%m-%d")
     dot, dash = "·", "—"
     text = (f"{icon} *sigma-alert {dash} {status}*  {dot}  health/v1\n"
-            f"cycle: {today} {mode}\n"
-            f"*Counters:* {screened}/{total} tickers screened {dot} "
-            f"{n_alerts} alerts {dot} {skipped} skipped")
+            f"cycle: {today} {mode}\n")
+    if attempt:
+        text += f"attempt: {attempt}\n"
+    text += f"*Counters:* {screened}/{total} tickers screened {dot} "
+    if already_scored:
+        text += f"{already_scored} already scored today {dot} "
+    text += f"{n_alerts} alerts {dot} {skipped} skipped"
     if status != "ok":
-        text += (f"\n*Warnings:* market data returned for only {screened}/{total} "
-                 f"tickers ({frac:.0%}) {dash} alert tiers are incomplete "
-                 f"(Yahoo throttling?), not a quiet market")
+        text += (f"\n*Warnings:* market data returned for only {covered}/{total} "
+                 f"tickers ({frac:.0%}) {dash} alert tiers are incomplete, "
+                 f"not a quiet market")
+    if data_line and (status != "ok" or data_line_always):
+        text += f"\n*Data:* {data_line}"
+    if unposted:
+        # H2 (minimum form): a duplicate run that scored late names advances
+        # their watermark, so those sessions can never alert again. The loss
+        # must be visible even though no second digest is sent.
+        # EVERY name is listed (Codex R1): a truncated tail would be the only
+        # record of those sessions, and it would be lost. Chunked into extra
+        # section blocks under Slack's 3000-char limit instead.
+        text += (f"\n*NOT POSTED:* {len(unposted)} alert(s) from late-scored "
+                 f"names were NOT posted to #stock-price-alerts (this run "
+                 f"duplicates a digest already published today) — listed below")
+        chips = [f"`{a.get('ticker')}` z={a.get('z_score', 0):+.2f}" for a in unposted]
+        extra_blocks, cur = [], ""
+        for chip in chips:
+            nxt = f"{cur}, {chip}" if cur else chip
+            if len(nxt) > 2800:
+                extra_blocks.append(cur)
+                cur = chip
+            else:
+                cur = nxt
+        if cur:
+            extra_blocks.append(cur)
+    else:
+        extra_blocks = []
     if not published:
         # ⛑ The REASON is passed in, not assumed (Codex, Medium, 2026-09-07).
         # This line used to hardcode "coverage is below the 80% floor", which is
@@ -2973,12 +3330,16 @@ def build_health_payload(mode, screened, total, n_alerts, skipped, published=Non
         # My own test supplied 757/757 with published=False and asserted only on
         # the words NOT PUBLISHED, so it permitted exactly that contradiction.
         text += f"\n*NOT PUBLISHED:* {reason or _coverage_floor_reason(frac)}"
-    payload = {"blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
+    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": text}}]
+    blocks += [{"type": "section", "text": {"type": "mrkdwn", "text": chunk}}
+               for chunk in extra_blocks]
+    payload = {"blocks": blocks,
                "text": f"sigma-alert {status} {dot} {today} {mode} {dot} {screened}/{total}"}
     return status, payload
 
 
-def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=None):
+def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=None,
+                          already_scored=0, attempt=None, unposted=None):
     """Per-run heartbeat to #status-reports (never raises; absent webhook =
     print-and-skip, mirroring the weekly skip report's local behaviour).
     Env: SLACK_STATUS_REPORTS_WEBHOOK (same secret the weekly report uses).
@@ -2989,7 +3350,13 @@ def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=N
     running at all."""
     status, payload = build_health_payload(
         mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0),
-        published=published, reason=reason)
+        published=published, reason=reason, already_scored=already_scored,
+        attempt=attempt, data_line=describe_unscreened(stats),
+        data_line_always=bool(stats.get("refetch_attempted")), unposted=unposted)
+    if DRY_RUN:
+        print(f"[DRY-RUN] heartbeat NOT posted ({status}):\n"
+              + "\n".join(bl["text"]["text"] for bl in payload["blocks"]))
+        return
     webhook = os.environ.get("SLACK_STATUS_REPORTS_WEBHOOK")
     if not webhook:
         print(f"[INFO] SLACK_STATUS_REPORTS_WEBHOOK not set; heartbeat ({status}) not posted")
@@ -3028,10 +3395,85 @@ def enforce_publish_gate(mode, stats, total, n_alerts):
     return False
 
 
+DUPLICATE_ATTEMPT = "2 (duplicate — today already scored by an earlier run)"
+
+
+def handle_duplicate_run(mode, stats, total, alerts, hi_lo_hits=None):
+    """Heartbeat for a duplicate run; posts NO digest (Fable C1 + H2).
+
+    H2 resolution chosen: the minimum form — the heartbeat names every alert a
+    late-scored name produced, rather than a supplementary digest. The digest
+    path cannot render a supplement honestly as built: `format_slack_message`
+    would stamp a "DEGRADED RUN — 113/756" banner on it (it only knows this
+    run's screened count) and render a near-empty returns block, so a
+    supplement needs its own formatter. The loss is at least visible and
+    attributable here; a supplementary digest is a follow-up.
+    """
+    already = stats.get("already_scored", 0)
+    n_hl = len(hi_lo_hits or [])
+    print(f"[INFO] Duplicate run: {already} of {total} tickers already scored "
+          f"today by an earlier run; this run scored {stats.get('screened', 0)} "
+          f"late name(s) with {len(alerts)} alert(s) and {n_hl} 52w hit(s). "
+          f"No digest (the earlier run published today's).")
+    post_health_heartbeat(
+        mode, stats, total, len(alerts), published=False,
+        reason=("duplicate run — an earlier run already scored and published "
+                "today's session, so no second digest was sent and the return "
+                "map was left untouched"),
+        already_scored=already, attempt=DUPLICATE_ATTEMPT,
+        unposted=list(alerts) or None)
+
+
+def _enter_dry_run(state_dir=None) -> Path:
+    """Switch the module into dry-run: no Slack, every write redirected.
+
+    Covers EVERY side effect main() has (feedback: a test-mode guard must cover
+    every side effect): the digest + heartbeat POSTs (DRY_RUN checked in
+    send_slack / post_health_heartbeat), and the four files a run writes —
+    distribution cache, skip log, missing-metadata flag, and the return map's
+    snapshot + HTML (return_map.SNAPSHOT_PATH / HTML_PATH). The state dir is
+    seeded with copies of the repo's cache files so the run reads real
+    watermarks and a real skip log without touching them.
+    """
+    import shutil
+    import tempfile
+    global DRY_RUN, CACHE_PATH, SKIP_LOG_PATH, MISSING_METADATA_PATH
+    DRY_RUN = True
+    d = Path(state_dir) if state_dir else Path(tempfile.mkdtemp(prefix="sigma_dry_"))
+    d.mkdir(parents=True, exist_ok=True)
+    for name, src in (("distribution_cache.json", CACHE_PATH),
+                      ("skip_log.json", SKIP_LOG_PATH)):
+        dst = d / name
+        if not dst.exists() and Path(src).exists():
+            shutil.copyfile(src, dst)
+    CACHE_PATH = d / "distribution_cache.json"
+    SKIP_LOG_PATH = d / "skip_log.json"
+    MISSING_METADATA_PATH = d / "missing_metadata.json"
+    try:
+        import return_map
+        return_map.SNAPSHOT_PATH = d / "returns_snapshot.json"
+        return_map.HTML_PATH = d / "return_map.html"
+    except Exception as e:  # noqa: BLE001
+        print(f"[WARN] dry-run could not redirect return_map paths: {e}")
+    print(f"[DRY-RUN] Slack disabled; state redirected to {d}")
+    return d
+
+
 def main():
     parser = argparse.ArgumentParser(description="Stock sigma screener")
     parser.add_argument("--mode", choices=["open", "midday", "close"], required=True)
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Post nothing to Slack and redirect every write "
+                             "(cache, skip log, missing-metadata flag, return "
+                             "map) to --state-dir, seeded from the repo's copies")
+    parser.add_argument("--state-dir", default=None,
+                        help="With --dry-run: where the redirected state lives "
+                             "(default: a fresh temp dir)")
     args = parser.parse_args()
+    if args.dry_run:
+        _enter_dry_run(args.state_dir)
+    elif args.state_dir:
+        parser.error("--state-dir only makes sense with --dry-run")
 
     tickers = load_watchlist()
     if not tickers:
@@ -3185,6 +3627,9 @@ def main():
     # The session each ticker was last scored on, per the previous close run.
     # Every mode reads it; only close mode writes it back. See `is_unscored_bar`.
     _prior_cache = load_cache()
+    # Only CLOSE writes the marker, so open/midday are never duplicates (a
+    # delayed midday after today's close is not a re-run of any midday).
+    _earlier_published = earlier_published_today(_prior_cache, args.mode)
     _n_recorded = len(prior_bars_from_cache(_prior_cache))
     if _n_recorded:
         print(f"[INFO] last-scored bar on record for {_n_recorded} of "
@@ -3235,20 +3680,48 @@ def main():
             ready_to_short_set=ready_to_short_set,
             etf_set=etf_set,
         )
-        if _cache_has_tickers(cache_data):
-            save_cache(cache_data)
-            print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
+        stats["earlier_published"] = _earlier_published
+        _dup = is_duplicate_run(stats, len(tickers))
+        if _earlier_published:
+            # save_cache REPLACES the file; keep the marker so a third run of
+            # the day still recognises the publication.
+            cache_data["published"] = _prior_cache["published"]
+        if _dup and not stats.get("screened"):
+            # L1 + M5: a duplicate that scored nothing changes nothing. Saving
+            # would rewrite `last_seen` fields and the metadata flag's timestamp
+            # for a no-op commit every evening; the skip log's entry belongs to
+            # the run that published it.
+            print(f"[INFO] Duplicate {args.mode} run: {stats.get('already_scored', 0)} "
+                  f"of {len(tickers)} tickers were already scored today by an "
+                  f"earlier run and nothing new was scored — cache, skip log and "
+                  f"missing-metadata flag left untouched")
         else:
-            print("[WARN] Screen produced an empty cache (stale/failed batch) — "
-                  "keeping the previous distribution cache rather than "
-                  "overwriting it with an empty one")
-        # Use the pre-fallback metadata so Coverage Manager still sees true gaps.
-        # ETFs are exempt — their display names live in this repo
-        # (sources/etf_names.json), not in CM's universe.
-        write_missing_metadata_flag(tickers, metadata_raw, exempt=etf_set)
-        # Persist today's skip events so Coverage Manager's weekly report can
-        # surface chronic skips, reason breakdowns, and unresolved tickers.
-        update_skip_log(skip_events, mode="close")
+            if _cache_has_tickers(cache_data):
+                save_cache(cache_data)
+                print(f"[INFO] Cache saved with {len(cache_data['tickers'])} tickers")
+            else:
+                print("[WARN] Screen produced an empty cache (stale/failed batch) — "
+                      "keeping the previous distribution cache rather than "
+                      "overwriting it with an empty one")
+            # Use the pre-fallback metadata so Coverage Manager still sees true gaps.
+            # ETFs are exempt — their display names live in this repo
+            # (sources/etf_names.json), not in CM's universe.
+            write_missing_metadata_flag(tickers, metadata_raw, exempt=etf_set)
+            # Persist today's skip events so weekly_skip_report.py can
+            # surface chronic skips, reason breakdowns, and unresolved tickers.
+            # A duplicate that scored late names MERGES into the earlier entry.
+            update_skip_log(skip_events, mode="close",
+                            merge_screened=(set(stats.get("screened_tickers") or [])
+                                            if _dup else None))
+
+    # Duplicate run (Fable C1/H2, board #327): an earlier run already scored and
+    # published today's session. No second digest, no return-map rewrite; the
+    # heartbeat says so as attempt 2, judged on the combined numerator, and names
+    # any alert from a late-scored name that is therefore never posted.
+    stats.setdefault("earlier_published", _earlier_published)
+    if args.mode == "close" and is_duplicate_run(stats, len(tickers)):
+        handle_duplicate_run(args.mode, stats, len(tickers), alerts, hi_lo_hits)
+        return
 
     # Report results
     if alerts:
@@ -3333,6 +3806,8 @@ def main():
         etf_weighting=etf_weighting,
     )
     delivered = send_slack(payload)
+    if delivered and args.mode == "close":
+        mark_published(args.mode)
 
     # Persist the returns snapshot + rebuild the interactive return-map HTML
     # (BlackRock-style periodic table of returns). Reuses the returns already
@@ -3368,8 +3843,10 @@ def main():
             mode=args.mode,
             ref_date=stats.get("ref_date", ""),
         )
-        snap_path = return_map.write_snapshot(snapshot)
-        html_path = return_map.write_html(snapshot)
+        # Paths read at CALL time: return_map binds them as default args at
+        # import, so reassigning the module constants (dry-run) is not enough.
+        snap_path = return_map.write_snapshot(snapshot, path=return_map.SNAPSHOT_PATH)
+        html_path = return_map.write_html(snapshot, path=return_map.HTML_PATH)
         print(f"[INFO] Return map updated: {snap_path.name} + {html_path}")
     except Exception as e:  # noqa: BLE001 — non-fatal by design
         print(f"[WARN] Return-map generation failed (non-fatal): {e}")
