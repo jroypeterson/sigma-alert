@@ -51,6 +51,10 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
+          # FMP fallback (close mode only): names Yahoo still has behind after
+          # the 60 s re-fetch get one FMP stable/quote each. Unset = skipped
+          # loudly ("FMP fallback: no key" in the heartbeat), never a failure.
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
         shell: bash
         run: |
           # pipefail is LOAD-BEARING here: without it the pipeline's exit status

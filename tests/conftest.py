@@ -6,6 +6,12 @@ one stale, is 50%) would otherwise sleep 60 s and hit the network - which is
 exactly what happened the first time the suite ran after it landed (61 s run).
 Inert by default, so a new test cannot reach the network by accident; a test
 that exercises the re-fetch substitutes its own `refetch_recent`.
+
+The FMP fallback (`fmp_fallback`, close mode, after the re-fetch) is inert the
+same way: `FMP_API_KEY` is removed (a developer shell or CI may carry the real
+key) and all three network functions (`fmp_get_quote`, `fmp_get_eod_price`,
+`fmp_corporate_action_symbols`) are replaced by stubs that return nothing - so even a test that sets a key cannot
+reach FMP unless it substitutes its own quote function.
 """
 import sys
 from pathlib import Path
@@ -23,3 +29,14 @@ def _refetch_is_inert(monkeypatch):
         return None
     monkeypatch.setattr(_ss, "refetch_recent", _no_network)
     monkeypatch.setattr(_ss, "REFETCH_DELAY_S", 0)
+
+
+@pytest.fixture(autouse=True)
+def _fmp_is_inert(monkeypatch):
+    def _no_network(symbol, key):
+        return None
+    monkeypatch.delenv("FMP_API_KEY", raising=False)
+    monkeypatch.setattr(_ss, "fmp_get_quote", _no_network)
+    monkeypatch.setattr(_ss, "fmp_get_eod_price", lambda symbol, key, day: None)
+    monkeypatch.setattr(_ss, "fmp_corporate_action_symbols", lambda key, day: set())
+    monkeypatch.setattr(_ss, "FMP_MIN_INTERVAL_S", 0)

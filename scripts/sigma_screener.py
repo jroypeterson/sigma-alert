@@ -2138,7 +2138,7 @@ def refetch_recent(symbols: list[str]):
 
 
 def refetch_behind(data, tickers, prior_cache, prior, stats, today,
-                   single: bool = False) -> dict:
+                   single: bool = False, allow_fmp: bool = False) -> dict:
     """Re-fetch the BEHIND names once and return `{ticker: (close, open, high,
     low)}` for every name the re-fetch recovered — the 400-day series with the
     5-day frame merged on top (concat, last-wins on duplicate dates, sorted), so
@@ -2151,6 +2151,12 @@ def refetch_behind(data, tickers, prior_cache, prior, stats, today,
     already-scored names also have `latest < today` whenever Yahoo regressed
     (the 09-21 shape) and would trigger a pointless 60 s wait and a 756-symbol
     call. Always sets `refetch_attempted` / `refetch_recovered` in `stats`.
+
+    `allow_fmp` (passed True ONLY by main()'s `--mode close` branch — midday
+    also calls `screen_full(..., "close")`, so the pricing mode cannot gate
+    this; Codex R1): names STILL behind after the Yahoo re-fetch get one FMP
+    `stable/quote` each (`fmp_fallback`), accepted only when the quote is
+    provably today's session close. Same merge, same `is_unscored_bar` gate.
     """
     stats["refetch_attempted"] = 0
     stats["refetch_recovered"] = 0
@@ -2178,26 +2184,416 @@ def refetch_behind(data, tickers, prior_cache, prior, stats, today,
         fresh = refetch_recent([to_yf_symbol(t) for t in behind])
     except Exception as e:  # noqa: BLE001 — yfinance raises a variety of types
         print(f"[WARN] Re-fetch failed: {e}")
-        return {}
+        fresh = None
     if fresh is None or getattr(fresh, "empty", True):
         print("[WARN] Re-fetch returned no data")
-        return {}
+        fresh = None
 
     overrides: dict = {}
+    merged_by_t: dict = {}
     for t in behind:
         sym = to_yf_symbol(t)
         merged = []
         for field in ("Close", "Open", "High", "Low"):
             base = _naive(_series_from(data, field, sym))
-            new = _naive(_series_from(fresh, field, sym))
+            new = (_naive(_series_from(fresh, field, sym)) if fresh is not None
+                   else pd.Series(dtype=float))
             both = pd.concat([base, new]) if len(new) else base
             both = both[~both.index.duplicated(keep="last")].sort_index()
             merged.append(both)
+        merged_by_t[t] = tuple(merged)
         if len(merged[0]) and is_unscored_bar(_newest_bar(merged[0]),
                                               prior.get(t), today):
             overrides[t] = tuple(merged)
     stats["refetch_recovered"] = len(overrides)
     print(f"[INFO] Re-fetch recovered {len(overrides)}/{len(behind)} behind tickers")
+
+    still = [t for t in behind if t not in overrides]
+    if allow_fmp and still:
+        overrides.update(fmp_fallback(still, merged_by_t, prior, stats, today))
+    return overrides
+
+
+# --------------------------------------------------------------- FMP fallback
+# Second recovery stage (JP approved 2026-09-30): Yahoo still lacks today's bar
+# after the 60 s re-fetch — the 2026-09-28 21:04 ET shape, 712 US names on
+# Friday's bar. FMP Starter (paid): `stable/batch-quote` is RESTRICTED on this
+# tier (live-probed 2026-09-30), so it is per symbol.
+#
+# Two calls per accepted name, because neither source alone proves "today's
+# regular-session close":
+#   1. `stable/quote` — OHLC + a `timestamp`. The stamp must fall in the first
+#      minute after 16:00 ET today: before = intraday; later = possibly an
+#      after-hours print (whether FMP's `price` moves after hours is UNVERIFIED,
+#      so a late stamp is refused, not labelled a close — Codex R1).
+#   2. `stable/historical-price-eod/light` for today — its `price` must AGREE
+#      with the quote's. An EOD row dated today alone proves nothing: probed at
+#      11:20 ET it already carried a PARTIAL row. Agreement of two FMP surfaces
+#      stamped at the close is the proof; any disagreement stays behind.
+# Only quotes that pass (1) cost the second call.
+FMP_BASE = "https://financialmodelingprep.com/stable"
+FMP_MAX_CALLS = 1500           # hard ceiling per run (2 per recovered name); excess reported
+FMP_WORKERS = 4
+FMP_MIN_INTERVAL_S = 0.24      # 250 calls/min; the Starter limit is 300/min
+FMP_TIMEOUT_S = 10
+FMP_MAX_ERRORS = 20            # transport/HTTP errors before the stage gives up
+FMP_STAGE_BUDGET_S = 480       # wall-clock ceiling for the whole stage
+# Stamp window, ET, (h, m, s) inclusive start / exclusive end. A 13:00 half-day
+# is refused as intraday — it stays behind, loudly, the safe way to be wrong.
+FMP_CLOSE_WINDOW = ((16, 0, 0), (16, 1, 0))
+FMP_EOD_AGREE_TOL = 0.0005     # quote price vs EOD-row price, relative
+# `previousClose` vs the last close we hold. Price agreement is NOT evidence of
+# date adjacency (Codex R1) — that is checked separately against the NYSE
+# calendar; this only catches a split or a wrong-issuer symbol.
+FMP_PREV_CLOSE_TOL = 0.01
+
+
+class FMPAuthError(Exception):
+    """401/402/403 or an error payload: the key or plan is bad — stop spending."""
+
+
+def _nyse_holidays(year: int) -> set:
+    """NYSE full-day closures for `year`, from RULES (no hand list to rot).
+    New Year's on a Saturday is NOT observed on the Friday (NYSE rule), so it
+    uses sunday_to_monday. Unscheduled closures are not modelled: the calendar
+    then expects a session Yahoo has no bar for, and the name is refused —
+    the safe direction."""
+    from pandas.tseries.holiday import (
+        AbstractHolidayCalendar, GoodFriday, Holiday, USLaborDay,
+        USMartinLutherKingJr, USMemorialDay, USPresidentsDay, USThanksgivingDay,
+        nearest_workday, sunday_to_monday)
+
+    class _NYSE(AbstractHolidayCalendar):
+        rules = [
+            Holiday("NewYear", month=1, day=1, observance=sunday_to_monday),
+            USMartinLutherKingJr, USPresidentsDay, GoodFriday, USMemorialDay,
+            Holiday("Juneteenth", month=6, day=19, start_date="2022-01-01",
+                    observance=nearest_workday),
+            Holiday("July4", month=7, day=4, observance=nearest_workday),
+            USLaborDay, USThanksgivingDay,
+            Holiday("Christmas", month=12, day=25, observance=nearest_workday),
+        ]
+    return {d.date() for d in _NYSE().holidays(f"{year - 1}-12-01", f"{year}-12-31")}
+
+
+def prev_nyse_session(today):
+    """The NYSE session immediately before `today`."""
+    d = today - timedelta(days=1)
+    hols = _nyse_holidays(today.year) | _nyse_holidays(d.year)
+    while d.weekday() >= 5 or d in hols:
+        d -= timedelta(days=1)
+    return d
+
+
+def is_nyse_session(day) -> bool:
+    """True when `day` is an NYSE trading day (weekday, not a rules holiday)."""
+    return day.weekday() < 5 and day not in _nyse_holidays(day.year)
+
+
+def fmp_symbol(display: str) -> str | None:
+    """FMP symbol for a US listing, or None (v1 is US-only).
+
+    Uses the lane's own display -> yfinance identity rules first, so a bare
+    foreign name (`FRE` -> `FRE.DE`) is recognised as foreign. US yfinance
+    symbols are FMP symbols (`BRK-B`, `BF-B`). Indices (`^`), futures (`=`) and
+    any exchange-suffixed symbol are out of scope."""
+    sym = to_yf_symbol(display)
+    if not sym or any(c in sym for c in ".^="):
+        return None
+    return sym
+
+
+def _fmp_get(path: str, params: dict, key: str):
+    """One FMP GET -> parsed JSON list. Raises FMPAuthError on a key/plan
+    failure, RuntimeError otherwise. NEVER lets an exception text escape:
+    requests puts the URL — with the apikey in it — into its messages, and
+    this repo's Actions logs are public."""
+    try:
+        r = requests.get(f"{FMP_BASE}/{path}", params={**params, "apikey": key},
+                         timeout=FMP_TIMEOUT_S)
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(f"network {type(e).__name__}") from None
+    if r.status_code in (401, 402, 403):
+        raise FMPAuthError(f"HTTP {r.status_code}")
+    if r.status_code != 200:
+        raise RuntimeError(f"HTTP {r.status_code}")
+    # Fixed labels only — never the response body, which could echo the key
+    # into public logs and the status channel (Codex R3).
+    text = (r.text or "").lstrip()
+    for prefix, label in (("Restricted", "restricted endpoint"),
+                          ("Invalid API", "invalid key"),
+                          ("Limit Reach", "limit reached")):
+        if text.startswith(prefix):
+            raise FMPAuthError(label)
+    try:
+        body = r.json()
+    except ValueError:
+        raise RuntimeError("non-JSON body") from None
+    if isinstance(body, dict):
+        raise FMPAuthError("error payload")
+    if not isinstance(body, list):
+        raise RuntimeError("unexpected body")
+    return body
+
+
+def fmp_get_quote(symbol: str, key: str) -> dict | None:
+    """`stable/quote` -> the first row, or None."""
+    body = _fmp_get("quote", {"symbol": symbol}, key)
+    return body[0] if body and isinstance(body[0], dict) else None
+
+
+def fmp_get_eod_price(symbol: str, key: str, day) -> float | None:
+    """`stable/historical-price-eod/light` -> the `price` of the row dated
+    `day`, or None when there is no such row."""
+    body = _fmp_get("historical-price-eod/light",
+                    {"symbol": symbol, "from": day.isoformat(), "to": day.isoformat()},
+                    key)
+    for row in body or []:
+        if isinstance(row, dict) and str(row.get("date", ""))[:10] == day.isoformat():
+            try:
+                return float(row["price"])
+            except (KeyError, TypeError, ValueError):
+                return None
+    return None
+
+
+def fmp_corporate_action_symbols(key: str, day) -> set:
+    """Symbols with an ex-dividend or split date of `day`, from FMP's two
+    market-wide calendars (2 calls per run). Raises like `_fmp_get`.
+
+    Why (Codex R2): Yahoo's history is `auto_adjust=True` (dividends and splits
+    back-adjusted); an FMP quote is RAW. On an ex-date the stale Yahoo series
+    has not been adjusted yet and the quote's `previousClose` is the raw prior
+    close, so every other guard passes and a $2 dividend reads as a -2% move —
+    a 2:1 split as -50% — and the watermark then makes it permanent. A name
+    with a corporate action today is refused rather than adjusted."""
+    out: set = set()
+    for path in ("dividends-calendar", "splits-calendar"):
+        rows = _fmp_get(path, {"from": day.isoformat(), "to": day.isoformat()}, key)
+        for row in rows or []:
+            if (isinstance(row, dict) and str(row.get("date", ""))[:10] == day.isoformat()
+                    and row.get("symbol")):
+                out.add(str(row["symbol"]).upper())
+    return out
+
+
+def fmp_close_bar(quote: dict | None, today, prev_close,
+                  last_bar=None) -> tuple[dict | None, str]:
+    """The DATE GUARD, quote half. `(bar, "ok")` only when `quote` is stamped
+    at today's ET session close AND the series it will extend ends on the
+    NYSE session immediately before today; otherwise `(None, reason)`. Never
+    labels an intraday, after-hours or prior-day price as today's close. The
+    caller still requires the EOD row to agree (`fmp_eod_agrees`)."""
+    if not quote:
+        return None, "no_quote"
+    if last_bar is None or last_bar != prev_nyse_session(today):
+        return None, "gap_before_today"
+    ts = quote.get("timestamp")
+    try:
+        stamp = datetime.fromtimestamp(float(ts), tz=timezone.utc).astimezone(ET)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None, "no_timestamp"
+    if stamp.date() != today:
+        return None, "not_today"
+    hms = (stamp.hour, stamp.minute, stamp.second)
+    if hms < FMP_CLOSE_WINDOW[0]:
+        return None, "intraday"
+    if hms >= FMP_CLOSE_WINDOW[1]:
+        return None, "after_close_window"
+    try:
+        bar = {"Close": float(quote["price"]), "Open": float(quote["open"]),
+               "High": float(quote["dayHigh"]), "Low": float(quote["dayLow"])}
+        prev = float(quote["previousClose"])
+    except (KeyError, TypeError, ValueError):
+        return None, "missing_field"
+    vals = list(bar.values()) + [prev]
+    if not all(np.isfinite(v) and v > 0 for v in vals):
+        return None, "missing_field"
+    if not (bar["Low"] <= bar["Close"] <= bar["High"]
+            and bar["Low"] <= bar["Open"] <= bar["High"]):
+        return None, "price_outside_range"
+    try:
+        pc = float(prev_close)
+    except (TypeError, ValueError):
+        return None, "prev_close_mismatch"
+    if not (np.isfinite(pc) and pc > 0) or abs(prev / pc - 1) > FMP_PREV_CLOSE_TOL:
+        return None, "prev_close_mismatch"
+    return bar, "ok"
+
+
+def fmp_eod_agrees(bar: dict, eod_price) -> bool:
+    """The DATE GUARD, EOD half: today's EOD row exists and its price agrees
+    with the quote's close."""
+    try:
+        e = float(eod_price)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(e) and e > 0
+                and abs(bar["Close"] / e - 1) <= FMP_EOD_AGREE_TOL)
+
+
+def _merge_fmp_bar(series4: tuple, bar: dict, today) -> tuple:
+    """Merge a one-day bar onto (close, open, high, low) exactly like the
+    re-fetch: concat, last-wins on a duplicate date, sorted."""
+    idx = pd.DatetimeIndex([pd.Timestamp(today)])
+    out = []
+    for s, field in zip(series4, ("Close", "Open", "High", "Low")):
+        new = pd.Series([bar[field]], index=idx, dtype=float)
+        both = pd.concat([s, new]) if len(s) else new
+        both = both[~both.index.duplicated(keep="last")].sort_index()
+        out.append(both)
+    return tuple(out)
+
+
+class _RateGate:
+    """Spaces call STARTS at least `interval` s apart across threads."""
+
+    def __init__(self, interval: float):
+        import threading
+        self.interval = interval
+        self.lock = threading.Lock()
+        self.next_at = 0.0
+
+    def wait(self) -> None:
+        with self.lock:
+            now = time.monotonic()
+            at = max(now, self.next_at)
+            self.next_at = at + self.interval
+        if at > now:
+            time.sleep(at - now)
+
+
+def fmp_fallback(still_behind, merged_by_t, prior, stats, today) -> dict:
+    """FMP stage for names Yahoo still has behind. Returns overrides like
+    `refetch_behind`. Never raises and never fails the run; everything it did
+    (or why it did nothing) lands in `stats` for the heartbeat. Bounded three
+    ways: FMP_MAX_CALLS, FMP_MAX_ERRORS, FMP_STAGE_BUDGET_S."""
+    stats["fmp_stage"] = True
+    stats["fmp_attempted"] = 0
+    stats["fmp_recovered"] = 0
+    stats["fmp_calls"] = 0
+    stats["fmp_capped"] = 0
+    stats["fmp_rejects"] = {}
+    stats["fmp_status"] = "ok"
+    us = [(t, fmp_symbol(t)) for t in still_behind]
+    foreign = [t for t, s in us if s is None]
+    us = [(t, s) for t, s in us if s is not None]
+    stats["fmp_foreign"] = len(foreign)
+    stats["fmp_foreign_names"] = sorted(foreign)
+    if not is_nyse_session(today):
+        # A weekday market holiday: the close cron still fires and every name is
+        # legitimately "behind" — there is no close to recover (Codex R4).
+        stats["fmp_status"] = "not an NYSE session"
+        print(f"[INFO] FMP fallback: {today} is not an NYSE session — no calls")
+        return {}
+    key = (os.environ.get("FMP_API_KEY") or "").strip()
+    if not key:
+        stats["fmp_status"] = "no key"
+        print(f"[WARN] FMP fallback: no key (FMP_API_KEY unset) — {len(us)} US "
+              f"name(s) stay behind")
+        return {}
+    stats["fmp_attempted"] = len(us)
+    print(f"[INFO] FMP fallback: {len(us)} US name(s) still behind after the "
+          f"re-fetch; {len(foreign)} foreign name(s) out of scope")
+    stats["fmp_calls"] = 2
+    try:
+        actions = fmp_corporate_action_symbols(key, today)
+    except Exception as e:  # noqa: BLE001 — message is pre-sanitised
+        # Without the calendars a split cannot be told from a crash: recover
+        # nothing rather than guess.
+        stats["fmp_status"] = (f"auth error ({e})" if isinstance(e, FMPAuthError)
+                               else f"corporate-action calendar unavailable ({e})")
+        print(f"[WARN] FMP fallback: {stats['fmp_status']} — recovering nothing")
+        return {}
+
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    gate = _RateGate(FMP_MIN_INTERVAL_S)
+    abort = threading.Event()
+    lock = threading.Lock()
+    deadline = time.monotonic() + FMP_STAGE_BUDGET_S
+    errors = [0]
+
+    def _stop(status):
+        with lock:
+            if stats["fmp_status"] == "ok":
+                stats["fmp_status"] = status
+        abort.set()
+
+    def _call(fn, *args):
+        """One budgeted FMP call; None = stage stopped (no call made)."""
+        if abort.is_set():
+            return None, "aborted"
+        with lock:
+            if stats["fmp_calls"] >= FMP_MAX_CALLS:
+                return None, "capped"
+            stats["fmp_calls"] += 1
+        gate.wait()
+        if time.monotonic() > deadline:
+            _stop(f"stopped at the {FMP_STAGE_BUDGET_S}s budget")
+            return None, "aborted"
+        try:
+            return fn(*args), None
+        except FMPAuthError as e:
+            _stop(f"auth error ({e})")
+            return None, "auth_error"
+        except Exception as e:  # noqa: BLE001 — message is pre-sanitised
+            with lock:
+                errors[0] += 1
+                n = errors[0]
+            if n >= FMP_MAX_ERRORS:
+                _stop(f"stopped after {n} errors (last: {e})")
+            return None, "error"
+
+    expected_prev = prev_nyse_session(today)
+
+    def _one(pair):
+        t, sym = pair
+        series4 = merged_by_t.get(t)
+        has = series4 is not None and len(series4[0])
+        if not has or _newest_bar(series4[0]) != expected_prev:
+            return t, None, "gap_before_today"     # no call spent
+        if sym.upper() in actions:
+            return t, None, "corporate_action"     # no call spent
+        q, err = _call(fmp_get_quote, sym, key)
+        if err:
+            return t, None, err
+        bar, why = fmp_close_bar(q, today,
+                                 series4[0].iloc[-1] if has else None,
+                                 _newest_bar(series4[0]) if has else None)
+        if bar is None:
+            return t, None, why
+        eod, err = _call(fmp_get_eod_price, sym, key, today)
+        if err:
+            return t, None, err
+        if not fmp_eod_agrees(bar, eod):
+            return t, None, "eod_disagrees"
+        return t, bar, "ok"
+
+    with ThreadPoolExecutor(max_workers=FMP_WORKERS) as ex:
+        results = list(ex.map(_one, us))
+    rejects: Counter = Counter()
+    overrides: dict = {}
+    for t, bar, why in results:
+        if why == "capped":
+            stats["fmp_capped"] += 1
+            continue
+        if bar is None:
+            rejects[why] += 1
+            continue
+        merged = _merge_fmp_bar(merged_by_t[t], bar, today)
+        if is_unscored_bar(_newest_bar(merged[0]), prior.get(t), today):
+            overrides[t] = merged
+        else:
+            rejects["not_new"] += 1
+    stats["fmp_recovered"] = len(overrides)
+    stats["fmp_rejects"] = dict(rejects.most_common())
+    if stats["fmp_capped"]:
+        print(f"[WARN] FMP fallback hit the {FMP_MAX_CALLS}-call cap — "
+              f"{stats['fmp_capped']} US name(s) not tried")
+    print(f"[INFO] FMP fallback recovered {len(overrides)}/{len(us)} "
+          f"({stats['fmp_calls']} calls; status {stats['fmp_status']}; "
+          f"rejected {stats['fmp_rejects'] or 'none'})")
     return overrides
 
 
@@ -2234,7 +2630,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
                 ready_to_buy_set: set[str] | None = None,
                 ready_to_short_set: set[str] | None = None,
                 etf_set: set[str] | None = None,
-                prior_cache: dict | None = None) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
+                prior_cache: dict | None = None,
+                allow_fmp: bool = False) -> tuple[list[dict], dict, dict, list[dict], list[dict], list[dict]]:
     """Full screening: downloads history, computes distributions.
 
     `etf_set` is the union of index + sector ETFs whose per-ticker stats
@@ -2301,7 +2698,8 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         # of the 09-28 incident is a batch whose SHARED index ends on Friday,
         # and returning here first would skip the one recovery path it has.
         _overrides = refetch_behind(data, tickers, prior_cache, _prior, stats,
-                                    today, single=len(tickers) == 1)
+                                    today, single=len(tickers) == 1,
+                                    allow_fmp=allow_fmp)
 
         # Validate that the latest bar is from today's session
         if not validate_bar_date(data.index, mode) and not any(
@@ -3225,6 +3623,29 @@ def _coverage_floor_reason(frac):
             f"missing one, and posting it would be worse than posting nothing.")
 
 
+def describe_fmp(stats: dict) -> str:
+    """Heartbeat fragment for the FMP fallback stage (close mode only)."""
+    status = stats.get("fmp_status", "ok")
+    if status == "no key":
+        text = "FMP fallback: no key"
+    else:
+        text = (f"fmp recovered {stats.get('fmp_recovered', 0)}"
+                f"/{stats.get('fmp_attempted', 0)}"
+                f" ({stats.get('fmp_calls', 0)} calls)")
+        if status != "ok":
+            text += f" — FMP {status}"
+        rej = stats.get("fmp_rejects") or {}
+        if rej:
+            text += " rejected: " + ", ".join(f"{k} ×{n}" for k, n in rej.items())
+    if stats.get("fmp_capped"):
+        text += f" · CAPPED: {stats['fmp_capped']} not tried"
+    if stats.get("fmp_foreign"):
+        names = stats.get("fmp_foreign_names") or []
+        shown = ", ".join(names[:8]) + (" …" if len(names) > 8 else "")
+        text += f" · foreign still behind {stats['fmp_foreign']} ({shown})"
+    return text
+
+
 def describe_unscreened(stats: dict) -> str | None:
     """The MEASURED breakdown of what this run did not screen (fix 3).
 
@@ -3247,6 +3668,8 @@ def describe_unscreened(stats: dict) -> str | None:
     if stats.get("refetch_attempted"):
         parts.append(f"re-fetch recovered {stats.get('refetch_recovered', 0)}"
                      f"/{stats['refetch_attempted']}")
+    if stats.get("fmp_stage"):
+        parts.append(describe_fmp(stats))
     if stats.get("stale") and not behind and not stats.get("screened"):
         parts.append(f"whole batch stale ({stats['stale']} not today)")
     return " · ".join(parts)
@@ -3680,7 +4103,7 @@ def main():
         # Close mode: full download, update cache, and check 52-week highs/lows
         alerts, cache_data, stats, hi_lo_hits, etf_returns, skip_events = screen_full(
             tickers, "close", track_52w=True, metadata=metadata,
-            prior_cache=_prior_cache,
+            prior_cache=_prior_cache, allow_fmp=True,
             portfolio_set=portfolio_set, researching_set=researching_set,
             following_set=following_set,
             ready_to_buy_set=ready_to_buy_set,
