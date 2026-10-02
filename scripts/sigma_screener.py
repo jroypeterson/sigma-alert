@@ -3798,6 +3798,64 @@ def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=N
         print(f"[WARN] health heartbeat failed (non-fatal): {e}")
 
 
+def gate_exit_kind(kind: str, mode: str = "") -> str:
+    """The cycle-stamp exit for a run a gate stopped (board #445).
+
+    On a weekday NYSE holiday the scheduled cycles still fire and every gate
+    refuses, because there is no session to screen. That is the cycle doing its
+    job, so it is stamped `market-closed` (an OK exit) rather than as a gate
+    failure - otherwise every holiday would read as three dead cycles.
+    """
+    try:
+        today = today_et()
+        # A WEEKDAY only (Codex R1, P1): `is_nyse_session` is False on weekends
+        # too, and a Friday cycle missed while the machine was off runs on
+        # Saturday under StartWhenAvailable. Calling that `market-closed` would
+        # bless the missed Friday cycle; it is a gate refusal like any other.
+        if today.weekday() < 5 and not is_nyse_session(today):
+            # Only when this mode's map already covers the PREVIOUS session
+            # (Codex R2, P1): a holiday after a missed Friday must not bless
+            # Friday by advancing ok_at past it.
+            if _mode_ok_date(mode) >= prev_nyse_session(today):
+                return "market-closed"
+    except Exception:  # noqa: BLE001 - an unknown calendar is not a holiday
+        pass
+    return kind
+
+
+def _mode_ok_date(mode: str):
+    """The latest SESSION this mode's map is known to cover, or date.min.
+
+    The persisted `ref_date` (the data's newest bar) when present, never later
+    than the ok_at write date - a map written on day D from day D-1's bars
+    covers D-1, not D (Codex R3).
+    """
+    from datetime import date as _date
+    try:
+        import return_map
+        entry = json.loads(Path(return_map.CYCLES_PATH).read_text(encoding="utf-8"))[mode]
+        covered = datetime.fromisoformat(entry["ok_at"]).astimezone(ET).date()
+        if entry.get("ref_date"):
+            covered = min(covered, _date.fromisoformat(str(entry["ref_date"])[:10]))
+        return covered
+    except Exception:  # noqa: BLE001 - no evidence is not evidence of coverage
+        return _date.min
+
+
+def stamp_cycle(mode: str, exit_kind: str, ref_date: str = "") -> None:
+    """Record this cycle's outcome in `return_map.CYCLES_PATH` (board #445).
+
+    The path is read at CALL time so `--dry-run` (which reassigns it) and tests
+    redirect it. Warn-and-proceed: never raises.
+    """
+    try:
+        import return_map
+        return_map.record_cycle(mode, exit_kind, path=return_map.CYCLES_PATH,
+                                now=now_et(), ref_date=ref_date)
+    except Exception as e:  # noqa: BLE001
+        print(f"[WARN] could not stamp the {mode} cycle: {e}")
+
+
 def enforce_publish_gate(mode, stats, total, n_alerts):
     """Decide whether this run may publish, and handle the refusal (board #327).
 
@@ -3883,6 +3941,7 @@ def _enter_dry_run(state_dir=None) -> Path:
         import return_map
         return_map.SNAPSHOT_PATH = d / "returns_snapshot.json"
         return_map.HTML_PATH = d / "return_map.html"
+        return_map.CYCLES_PATH = d / "return_map.cycles.json"
     except Exception as e:  # noqa: BLE001
         print(f"[WARN] dry-run could not redirect return_map paths: {e}")
     print(f"[DRY-RUN] Slack disabled; state redirected to {d}")
@@ -3904,6 +3963,10 @@ def main():
         _enter_dry_run(args.state_dir)
     elif args.state_dir:
         parser.error("--state-dir only makes sense with --dry-run")
+    # Board #445 (Fable H2): stamp the START, so a run that crashes or is killed
+    # before any terminal exit reads as `started` in the freshness report rather
+    # than quoting yesterday's `written`. Never advances ok_at.
+    stamp_cycle(args.mode, "started")
 
     tickers = load_watchlist()
     if not tickers:
@@ -4151,6 +4214,7 @@ def main():
     stats.setdefault("earlier_published", _earlier_published)
     if args.mode == "close" and is_duplicate_run(stats, len(tickers)):
         handle_duplicate_run(args.mode, stats, len(tickers), alerts, hi_lo_hits)
+        stamp_cycle(args.mode, "duplicate")
         return
 
     # Report results
@@ -4218,6 +4282,7 @@ def main():
     # snapshot + HTML that overwrite their predecessors. A run that screened only
     # a sliver of the watchlist must do neither.
     if not enforce_publish_gate(args.mode, stats, len(tickers), len(alerts)):
+        stamp_cycle(args.mode, gate_exit_kind("publish-gate", args.mode))
         return
 
     # Send to Slack
@@ -4255,6 +4320,7 @@ def main():
         post_health_heartbeat(
             args.mode, stats, len(tickers), len(alerts), published=delivered,
             reason=None if delivered else "the Slack POST did not succeed")
+        stamp_cycle(args.mode, gate_exit_kind("coverage-floor", args.mode))
         return
 
     try:
@@ -4278,8 +4344,12 @@ def main():
         snap_path = return_map.write_snapshot(snapshot, path=return_map.SNAPSHOT_PATH)
         html_path = return_map.write_html(snapshot, path=return_map.HTML_PATH)
         print(f"[INFO] Return map updated: {snap_path.name} + {html_path}")
+        # AFTER both writes: a crash between them leaves the stamp un-advanced,
+        # so the freshness check reads this cycle as stale - the safe direction.
+        stamp_cycle(args.mode, "written", ref_date=stats.get("ref_date", ""))
     except Exception as e:  # noqa: BLE001 — non-fatal by design
         print(f"[WARN] Return-map generation failed (non-fatal): {e}")
+        stamp_cycle(args.mode, "write-failed")
 
     # Per-run health/v1 heartbeat to #status-reports (added 2026-07-23 per
     # the fleet heartbeat audit: sigma-alert was the highest-frequency

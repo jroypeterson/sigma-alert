@@ -103,7 +103,8 @@ class _Run:
 
 def _run_close(monkeypatch, tmp_path, *, now_et: datetime, tickers, frame,
                prior_cache, skip_log=None, refetch_frame=None, mode="close",
-               digest_fails=False) -> _Run:
+               digest_fails=False, index_etfs=None, period_returns=None,
+               html_path=None) -> _Run:
     run = _Run()
     monkeypatch.setattr(ss, "now_et", lambda: now_et)
     monkeypatch.setattr(ss, "CACHE_PATH", tmp_path / "distribution_cache.json")
@@ -126,7 +127,13 @@ def _run_close(monkeypatch, tmp_path, *, now_et: datetime, tickers, frame,
         monkeypatch.setattr(ss, name, lambda: set())
     monkeypatch.setattr(ss, "batch_download", lambda *a, **k: frame)
     monkeypatch.setattr(ss, "fallback_download_single", lambda *a, **k: None)
-    monkeypatch.setattr(ss, "fetch_etf_period_returns", lambda *a, **k: {})
+    monkeypatch.setattr(ss, "fetch_etf_period_returns",
+                        lambda *a, **k: dict(period_returns or {}))
+    if index_etfs:
+        monkeypatch.setattr(ss, "load_index_etfs", lambda: set(index_etfs))
+    import return_map
+    monkeypatch.setattr(return_map, "SNAPSHOT_PATH", tmp_path / "returns_snapshot.json")
+    monkeypatch.setattr(return_map, "HTML_PATH", html_path or tmp_path / "return_map.html")
     for name in ("fetch_credit_indices", "fetch_treasury_curve", "fetch_mortgage_rate"):
         monkeypatch.setattr(ss, name, lambda: {})
 
@@ -219,6 +226,13 @@ class TestSeptember21Duplicate:
     def test_skip_log_entry_is_untouched(self, run):
         assert run.skip_log_after == self.skip_log
 
+    def test_cycle_stamp_says_duplicate_and_does_NOT_bless_the_map(self, run):
+        # Board #445, Codex R1: the publication marker says the DIGEST went out,
+        # not that the map was written. A duplicate is attributed, never ok.
+        import return_map
+        e = json.loads(return_map.CYCLES_PATH.read_text())["close"]
+        assert e["last_exit"] == "duplicate" and "ok_at" not in e
+
 
 # ------------------------------------------------ 2026-09-28 21:04 ET shape
 MON_0928, FRI_0925 = date(2026, 9, 28), date(2026, 9, 25)
@@ -264,6 +278,11 @@ class TestSeptember28GenuineLoss:
         assert "re-fetch recovered 0/712" in hb
         assert "Yahoo throttling" not in hb
         assert "attempt: 2" not in hb          # not a duplicate: nothing scored Monday
+        # Board #445: refused at the publish gate on a session day -> a failure
+        # stamp that names the gate, and NO ok_at (the close did not deliver).
+        import return_map
+        e = json.loads(return_map.CYCLES_PATH.read_text())["close"]
+        assert e["last_exit"] == "publish-gate" and "ok_at" not in e
 
     def test_re_fetch_is_attempted_for_exactly_the_behind_names(self, monkeypatch, tmp_path):
         run = self._go(monkeypatch, tmp_path, n_recovered=0)
@@ -280,6 +299,33 @@ class TestSeptember28GenuineLoss:
         assert saved["U0"]["last_bar"] == "2026-09-28"      # merged frame scored
         assert saved["U0"]["high_52w"] is not None          # 400-day history kept (M3)
         assert saved["U711"]["last_bar"] == "2026-09-25"    # unrecovered: not advanced
+        # Board #445: published, but this harness has no return-map universe, so
+        # the map gate refuses and the stamp says so rather than "written".
+        import return_map
+        e = json.loads(return_map.CYCLES_PATH.read_text())["close"]
+        assert e["last_exit"] == "coverage-floor" and "ok_at" not in e
+
+
+class TestWrittenMapStampsWritten:
+    """Board #445: the one exit that rewrites return_map.html stamps `written`,
+    AFTER the HTML exists, with this session's ref_date."""
+
+    def test_written(self, monkeypatch, tmp_path):
+        spec = {f"U{i}": MON_0928 for i in range(20)}
+        spec["SPY"] = MON_0928
+        wm = {t: FRI_0925 for t in spec}
+        _run_close(monkeypatch, tmp_path,
+                   now_et=datetime(2026, 9, 28, 16, 49, tzinfo=ET),
+                   tickers=list(spec), frame=_frame(_bdays_ending(MON_0928), spec),
+                   prior_cache=_cache(wm, FRI_0925), index_etfs={"SPY"},
+                   period_returns={"SPY": {"ytd_return_pct": 10.0,
+                                           "prior_year_return_pct": 20.0,
+                                           "prior_year_label": "2025"}})
+        import return_map
+        assert (tmp_path / "return_map.html").exists()
+        e = json.loads(return_map.CYCLES_PATH.read_text())["close"]
+        assert e["last_exit"] == "written", e
+        assert e["ok_at"].startswith("2026-09-28T16:49")
 
 
 # -------------------------------------------------- partial-first-run shape

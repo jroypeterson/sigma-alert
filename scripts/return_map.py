@@ -195,6 +195,114 @@ def load_snapshot(path=SNAPSHOT_PATH):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+# --------------------------------------------------------------------------- #
+# Per-cycle stamp (board #445).
+#
+# ⛑ WHY A SIDECAR AND NOT THE HTML'S MTIME. Three cycles (open 09:40, midday
+# 12:35, close 16:25 ET) overwrite the SAME return_map.html, so its mtime says
+# only that SOMEONE wrote it. The fleet's artifact-freshness check declared it
+# for the close cycle alone: an open-cycle write could make a no-op close look
+# fresh, and declaring it for open/midday would have let the close run vouch for
+# two dead cycles. A stamp INSIDE the HTML has the same one-slot problem (it
+# carries only the last writer). So each mode records its own key here, and no
+# cycle can ever vouch for another.
+#
+# `ok_at` advances only when this cycle did what it owed: wrote the map, or had
+# nothing to write for a legitimate reason (see OK_EXITS). Every exit also
+# records `last_exit` + `last_exit_at`, so a stale cycle says WHY it wrote
+# nothing instead of just being old.
+# --------------------------------------------------------------------------- #
+CYCLES_PATH = ROOT / "readable" / "return_map.cycles.json"
+
+#: Exits that mean "this cycle did its job". `market-closed`: a weekday NYSE
+#: holiday, where the gates refuse because there is no session.
+#:
+#: ⛑ `duplicate` is deliberately NOT here (Codex R1, P1). The duplicate test reads
+#: only the Slack publication marker, which is written BEFORE the return-map gate
+#: and write; an earlier run can publish the digest and still fail the map. If an
+#: earlier run of this mode wrote the map today, its own `written` stamp already
+#: made ok_at current, so blessing the duplicate adds nothing true - it could only
+#: make a stale map look fresh.
+OK_EXITS = ("written", "market-closed")
+
+
+def record_cycle(mode, exit_kind, path=None, *, now=None, ref_date="") -> bool:
+    """Record this cycle's terminal outcome in the per-mode sidecar.
+
+    Warn-and-proceed: returns False (never raises) on any failure, because a
+    stamp must never break the alert pipeline. Written via a temp file +
+    os.replace so a crash mid-write cannot leave a truncated JSON; an
+    unreadable existing file is replaced (other modes' keys are lost, which the
+    checker reports as `missing` - the safe direction).
+    """
+    import os
+    try:
+        path = Path(path) if path is not None else CYCLES_PATH
+        ts = (now or datetime.now(ET)).astimezone(ET).isoformat(timespec="seconds")
+        data = None
+        for attempt in range(3):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                break
+            except FileNotFoundError:
+                data = {}
+                break
+            except ValueError:
+                data = {}       # corrupt: replace it (siblings read `missing`)
+                break
+            except OSError:
+                # A transient sharing violation (AV scanner, sync client) must
+                # NOT be read as an empty file: rewriting from {} would erase
+                # every mode's ok_at, including this one (Fable R2). Retry, then
+                # give up WITHOUT writing.
+                if attempt < 2:
+                    import time
+                    time.sleep(0.2)
+        if data is None:
+            print(f"[WARN] return_map: {path.name} unreadable; {mode} stamp NOT written")
+            return False
+        if not isinstance(data, dict):
+            data = {}
+        entry = data.get(mode) if isinstance(data.get(mode), dict) else {}
+        entry = dict(entry)
+        entry["last_exit"] = exit_kind
+        entry["last_exit_at"] = ts
+        if exit_kind in OK_EXITS:
+            entry["ok_at"] = ts
+            if ref_date:
+                entry["ref_date"] = ref_date
+        if exit_kind == "written":
+            # The artifact this stamp vouches for, relative to the sidecar, so
+            # the freshness check can refuse a fresh stamp whose HTML was
+            # deleted (Codex R2, P1).
+            entry["artifact"] = HTML_PATH.name if path.parent == Path(HTML_PATH).parent                 else str(Path(HTML_PATH))
+        data[mode] = entry
+        path.parent.mkdir(parents=True, exist_ok=True)
+        body = json.dumps(data, indent=2, sort_keys=True)
+        # A per-process temp name: a catch-up burst can start the open and
+        # midday tasks in the same second, and a shared temp file would let
+        # their writes interleave. (The read-modify-write itself can still lose
+        # one key if two terminal stamps land in the same millisecond; the next
+        # run of that mode restores it, and the checker reads the loss as
+        # stale/missing - the safe direction.)
+        tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(body, encoding="utf-8")
+            os.replace(tmp, path)
+        except PermissionError:
+            # A locked target (sync client, AV scanner) defeats os.replace on
+            # Windows; an in-place write is still better than no stamp.
+            path.write_text(body, encoding="utf-8")
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        return True
+    except Exception as e:  # noqa: BLE001 - never break the alert pipeline
+        print(f"[WARN] return_map: could not record {mode} cycle stamp: {e}")
+        return False
+
+
 def _fmt_pct(v):
     if v is None:
         return "&mdash;"

@@ -40,3 +40,13 @@ def _fmp_is_inert(monkeypatch):
     monkeypatch.setattr(_ss, "fmp_get_eod_price", lambda symbol, key, day: None)
     monkeypatch.setattr(_ss, "fmp_corporate_action_symbols", lambda key, day: set())
     monkeypatch.setattr(_ss, "FMP_MIN_INTERVAL_S", 0)
+
+
+@pytest.fixture(autouse=True)
+def _cycle_stamp_is_redirected(monkeypatch, tmp_path_factory):
+    """Every test that drives `main()` reaches a cycle-stamp exit (board #445).
+    Without this the suite would rewrite the real `readable/return_map.cycles.json`
+    on every run - the 'test suite is a pipeline run' failure."""
+    import return_map
+    monkeypatch.setattr(return_map, "CYCLES_PATH",
+                        tmp_path_factory.mktemp("cycles") / "return_map.cycles.json")
