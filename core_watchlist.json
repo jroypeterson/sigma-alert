@@ -63,6 +63,14 @@
     "subsector": "Aerospace & Defense Components",
     "sub_subsector": ""
   },
+  "ATEC": {
+    "date_added": "2026-09-26",
+    "notes": "auto-added by sync-held 2026-09-26: held at IBKR, no positions row existed",
+    "name": "Alphatec Holdings, Inc.",
+    "sector": "MedTech",
+    "subsector": "Orthopedics",
+    "sub_subsector": ""
+  },
   "BE": {
     "date_added": "2026-04-11",
     "notes": "",
@@ -213,6 +221,14 @@
     "name": "Fresenius Medical Care AG",
     "sector": "Healthcare Services",
     "subsector": "Dialysis",
+    "sub_subsector": ""
+  },
+  "GRAL": {
+    "date_added": "2026-09-26",
+    "notes": "auto-added by sync-held 2026-09-26: held at IBKR, no positions row existed",
+    "name": "GRAIL, Inc.",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
     "sub_subsector": ""
   },
   "HOOD": {
@@ -511,6 +527,14 @@
     "subsector": "",
     "sub_subsector": ""
   },
+  "VTR": {
+    "date_added": "2026-09-02",
+    "notes": "",
+    "name": "Ventas Inc",
+    "sector": "Real Estate",
+    "subsector": "Healthcare Real Estate",
+    "sub_subsector": ""
+  },
   "WAY": {
     "date_added": "2026-04-11",
     "notes": "",
@@ -519,12 +543,36 @@
     "subsector": "HIT",
     "sub_subsector": ""
   },
+  "WELL": {
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "Welltower Inc",
+    "sector": "Real Estate",
+    "subsector": "Healthcare Real Estate",
+    "sub_subsector": ""
+  },
+  "WST": {
+    "date_added": "2026-04-11",
+    "notes": "",
+    "name": "West Pharmaceutical Services Inc",
+    "sector": "MedTech",
+    "subsector": "Packaging",
+    "sub_subsector": ""
+  },
   "XE": {
     "date_added": "2026-05-03",
     "notes": "",
     "name": "X-Energy, Inc.",
     "sector": "Energy",
     "subsector": "Clean Energy / Nuclear SMR",
+    "sub_subsector": ""
+  },
+  "ZTS": {
+    "date_added": "2026-09-26",
+    "notes": "auto-added by sync-held 2026-09-26: held at IBKR, no positions row existed",
+    "name": "Zoetis Inc.",
+    "sector": "Healthcare Services",
+    "subsector": "Animal Health",
     "sub_subsector": ""
   }
 }

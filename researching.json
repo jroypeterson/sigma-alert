@@ -363,19 +363,6 @@
     "sub_subsector": "",
     "core": "Y"
   },
-  "SGRY": {
-    "position": "Researching",
-    "position_date": "2026-07-14",
-    "first_buy_date": "",
-    "average_cost": null,
-    "shares": null,
-    "notes": "Is that FCF Yield a good stock price anchor at 10% or is something weird happening there?",
-    "name": "Surgery Partners Inc",
-    "sector": "Healthcare Services",
-    "subsector": "Outpatient",
-    "sub_subsector": "",
-    "core": "Y"
-  },
   "SPGI": {
     "position": "Researching",
     "position_date": "2026-05-03",
