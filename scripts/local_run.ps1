@@ -55,9 +55,35 @@ if (-not $env:SLACK_STATUS_REPORTS_WEBHOOK) {
 # is never edited by hand, so a hard reset is safe and avoids merge conflicts.
 # It also pulls in the freshest Coverage-Manager / CI pushes (portfolio.json,
 # ticker_metadata.json, distribution_cache.json, etc.) before screening.
-git fetch --quiet origin master
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "git fetch failed; running against the current checkout."
+#
+# The fetch RETRIES with backoff (board #534, 2026-10-03). These tasks run with
+# StartWhenAvailable and the laptop uses Modern Standby: on 2026-10-02 the open
+# task fired at 09:40:00 while the machine left standby at 09:40:09 (Kernel-Power
+# 507), DNS was not up, the single bare fetch failed, and the open cycle ran on
+# the PREVIOUS day's checkout -- one without the #445 cycle stamp, so the fleet
+# freshness check found no 'open' stamp at all. The runner reflog shows the same
+# missing 09:40 fetch on 09-30 too. A stale checkout also means stale portfolio /
+# watchlist files, so this is not only about the stamp. DNS-on-wake clears in
+# 10-30s; 5/15/30s rides through it (fleet reference: CONVENTIONS.md section 3).
+# SIGMA_FETCH_BACKOFF (comma-separated seconds) exists for the test only; the
+# scheduler never sets it, so the defaults apply there.
+$Backoff = @(5, 15, 30)
+if ($env:SIGMA_FETCH_BACKOFF) {
+    $Backoff = @($env:SIGMA_FETCH_BACKOFF.Split(',') | ForEach-Object { [int]$_.Trim() })
+}
+$Attempts = $Backoff.Count + 1
+$Fetched = $false
+for ($i = 1; $i -le $Attempts; $i++) {
+    git fetch --quiet origin master
+    if ($LASTEXITCODE -eq 0) { $Fetched = $true; break }
+    if ($i -lt $Attempts) {
+        $wait = $Backoff[$i - 1]
+        Write-Warning "git fetch failed (attempt $i of $Attempts); retrying in ${wait}s."
+        Start-Sleep -Seconds $wait
+    }
+}
+if (-not $Fetched) {
+    Write-Warning "git fetch failed after $Attempts attempts; running against the current (possibly stale) checkout."
 } else {
     git reset --hard origin/master
     if ($LASTEXITCODE -ne 0) {
