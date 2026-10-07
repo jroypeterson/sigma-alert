@@ -273,6 +273,7 @@ REASON_LABELS = {
     "insufficient_history": "Insufficient history (<32 bars)",
     "distribution_nan": "Degenerate distribution",
     "stale_bar": "Stale bar (no today-bar in batch)",
+    "gap_before_today": "Gap before today (prior session's bar missing)",
     "fallback_insufficient": "Fallback retry: insufficient data",
     "fallback_exception": "Fallback retry: exception raised",
     "unknown": "Unknown",

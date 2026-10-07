@@ -1402,6 +1402,10 @@ def download_todays_prices(tickers: list[str]) -> dict:
                 print(f"[WARN] Stale data for {ticker}, skipping")
                 return prices
             if len(data) >= 2:
+                if spans_more_than_one_session(data.index[-1].date(),
+                                               data.index[-2].date()):
+                    print(f"[WARN] {ticker}: prior session's bar missing, skipping (gap before today)")
+                    return prices
                 prev_close = float(data["Close"].iloc[-2])
                 today_open = float(data["Open"].iloc[-1])
                 prices[ticker] = {"prev_close": prev_close, "today_open": today_open}
@@ -1428,6 +1432,16 @@ def download_todays_prices(tickers: list[str]) -> dict:
                         # prev_close = last close strictly before today, so a
                         # missing today-close can't push us to two-days-ago.
                         before_today = close_col[close_col.index.date < today]
+                        base_day = (before_today.index[-1].date() if len(before_today)
+                                    else close_col.index[-2].date())
+                        # #551: the cached-open path scores from these scalars
+                        # and never reaches `_baseline_gap`, so the same rule
+                        # is applied here. Codex flagged this as the path the
+                        # next open run actually takes.
+                        if spans_more_than_one_session(today, base_day):
+                            print(f"[WARN] {ticker}: baseline close {base_day} is more than "
+                                  f"one session before {today}, skipping (gap before today)")
+                            continue
                         prev_close = (float(before_today.iloc[-1])
                                       if len(before_today) else float(close_col.iloc[-2]))
                         prices[ticker] = {"prev_close": prev_close, "today_open": today_open}
@@ -1439,7 +1453,9 @@ def download_todays_prices(tickers: list[str]) -> dict:
             time.sleep(random.uniform(1, 2))
             try:
                 d = yf.download(to_yf_symbol(ticker), period="5d", progress=False)
-                if len(d) >= 2 and validate_bar_date(d.index, "open"):
+                if (len(d) >= 2 and validate_bar_date(d.index, "open")
+                        and not spans_more_than_one_session(d.index[-1].date(),
+                                                            d.index[-2].date())):
                     prev_close = float(d["Close"].iloc[-2])
                     today_open = float(d["Open"].iloc[-1])
                     prices[ticker] = {"prev_close": prev_close, "today_open": today_open}
@@ -2000,6 +2016,25 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     else:
         today_price = float(close.iloc[-1])
 
+    # The baseline must be the session immediately before the scored one
+    # (board #551, 2026-10-07). Yahoo left NO 2026-10-06 bar for any European
+    # single stock (indices fine) and had backfilled three such gaps in
+    # September only later. dropna() then makes iloc[-2] two sessions back,
+    # and a 2-day move scored as 1 day manufactures a 2-sigma. The FMP path
+    # already refuses this (`gap_before_today`); the Yahoo path did not.
+    # Adjacent = no earlier than the prior NYSE session OR the prior weekday,
+    # whichever is earlier, so a US name after an NYSE holiday and a foreign
+    # name on an NYSE-only holiday both pass. A venue-only weekday holiday
+    # (e.g. Whit Monday) is refused, which costs that venue one session's
+    # alert the day after; it never invents a move. The watermark is not
+    # advanced, so a late backfill scores normally on the next run.
+    baseline_gap = _baseline_gap(close, open_prices, mode)
+    if baseline_gap is not None:
+        session, baseline = baseline_gap
+        print(f"[WARN] {ticker}: {mode} bar {session} would be scored against "
+              f"{baseline}, more than one session back — skipping (gap before today)")
+        return None, None, None, None, "gap_before_today"
+
     today_return = (today_price - prev_close) / prev_close
     z = compute_z_score(today_return, mu, sigma)
 
@@ -2274,6 +2309,43 @@ def _nyse_holidays(year: int) -> set:
             Holiday("Christmas", month=12, day=25, observance=nearest_workday),
         ]
     return {d.date() for d in _NYSE().holidays(f"{year - 1}-12-01", f"{year}-12-31")}
+
+
+def _baseline_gap(close, open_prices, mode):
+    """`(session, baseline)` dates when the return about to be scored would
+    span more than one session, else None (board #551).
+
+    `session` is the scored bar's date; `baseline` the close it is measured
+    against (open mode: the last close strictly before the open's session,
+    matching `_process_ticker_full`). Adjacent means `baseline` is no earlier
+    than min(prior NYSE session, prior weekday). Plain-index fixtures (no
+    dates) return None — they carry no calendar to check."""
+    try:
+        if mode == "open":
+            session = open_prices.index[-1].date()
+            before = close[close.index.date < session]
+            if not len(before):
+                return None
+            baseline = before.index[-1].date()
+        else:
+            session = close.index[-1].date()
+            baseline = close.index[-2].date()
+    except (AttributeError, TypeError, IndexError):
+        return None
+    if spans_more_than_one_session(session, baseline):
+        return session, baseline
+    return None
+
+
+def spans_more_than_one_session(session, baseline) -> bool:
+    """True when a return from `baseline`'s close to `session`'s bar skips a
+    session (board #551). Adjacent = baseline no earlier than min(prior NYSE
+    session, prior weekday). Shared by the full screen and the cached-open
+    path, which scores from scalars and never reaches `_baseline_gap`."""
+    prev_weekday = session - timedelta(days=1)
+    while prev_weekday.weekday() >= 5:
+        prev_weekday -= timedelta(days=1)
+    return baseline < min(prev_nyse_session(session), prev_weekday)
 
 
 def prev_nyse_session(today):
