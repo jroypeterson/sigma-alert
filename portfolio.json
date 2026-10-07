@@ -120,8 +120,8 @@
     "position": "Portfolio",
     "position_date": "2026-04-11",
     "first_buy_date": "",
-    "average_cost": 271.829,
-    "shares": 40.532,
+    "average_cost": 270.445,
+    "shares": 40.762,
     "notes": "",
     "name": "Cigna Group",
     "sector": "Healthcare Services",
@@ -464,19 +464,6 @@
     "name": "West Pharmaceutical Services Inc",
     "sector": "MedTech",
     "subsector": "Packaging",
-    "sub_subsector": "",
-    "core": "Y"
-  },
-  "ZTS": {
-    "position": "Portfolio",
-    "position_date": "2026-09-26",
-    "first_buy_date": "",
-    "average_cost": 72.7205,
-    "shares": 13.7512,
-    "notes": "auto-added by sync-held 2026-09-26: held at IBKR, no positions row existed",
-    "name": "Zoetis Inc.",
-    "sector": "Healthcare Services",
-    "subsector": "Animal Health",
     "sub_subsector": "",
     "core": "Y"
   }
