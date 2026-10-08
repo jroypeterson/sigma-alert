@@ -226,7 +226,8 @@ CYCLES_PATH = ROOT / "readable" / "return_map.cycles.json"
 OK_EXITS = ("written", "market-closed")
 
 
-def record_cycle(mode, exit_kind, path=None, *, now=None, ref_date="") -> bool:
+def record_cycle(mode, exit_kind, path=None, *, now=None, ref_date="",
+                 detail="") -> bool:
     """Record this cycle's terminal outcome in the per-mode sidecar.
 
     Warn-and-proceed: returns False (never raises) on any failure, because a
@@ -267,6 +268,13 @@ def record_cycle(mode, exit_kind, path=None, *, now=None, ref_date="") -> bool:
         entry = dict(entry)
         entry["last_exit"] = exit_kind
         entry["last_exit_at"] = ts
+        # `last_detail` describes THIS exit only (board #561): set when the
+        # caller says why, removed otherwise so a stale reason never sits
+        # beside a newer exit.
+        if detail:
+            entry["last_detail"] = str(detail)
+        else:
+            entry.pop("last_detail", None)
         if exit_kind in OK_EXITS:
             entry["ok_at"] = ts
             if ref_date:

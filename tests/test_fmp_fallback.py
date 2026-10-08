@@ -70,9 +70,11 @@ class TestDateGuard:
     def test_prior_day_close_is_refused(self):
         assert _bar(_quote(ts=_stamp(FRI_0925, 16, 0, 1))) == (None, "not_today")
 
-    @pytest.mark.parametrize("hms", [(16, 1, 0), (16, 15, 0), (19, 45, 0)])
+    @pytest.mark.parametrize("hms", [(16, 10, 0), (16, 15, 0), (19, 45, 0)])
     def test_after_hours_stamp_is_refused(self, hms):
         # Codex R1: 16:15 with a plausible price was accepted by a 30-min window.
+        # Board #558 moved the end from 16:01 to 16:10 on measured NYSE auction
+        # stamps (16:01:11-16:02:57); see tests/test_fmp_close_auction.py.
         assert _bar(_quote(ts=_stamp(TODAY, *hms))) == (None, "after_close_window")
 
     def test_utc_date_rollover_is_judged_in_et(self):

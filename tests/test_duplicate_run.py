@@ -303,7 +303,11 @@ class TestSeptember28GenuineLoss:
         # the map gate refuses and the stamp says so rather than "written".
         import return_map
         e = json.loads(return_map.CYCLES_PATH.read_text())["close"]
-        assert e["last_exit"] == "coverage-floor" and "ok_at" not in e
+        assert e["last_exit"] == "return-map-floor" and "ok_at" not in e
+        # Board #561: the stamp says WHICH input fell short and that the digest
+        # DID go out, so a stale-artifact alert is answerable without a log.
+        assert e["last_detail"].startswith("return map: 0/0 in the screen pull"), e
+        assert e["last_detail"].endswith("digest posted"), e
 
 
 class TestWrittenMapStampsWritten:

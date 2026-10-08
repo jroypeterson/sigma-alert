@@ -2275,7 +2275,35 @@ FMP_MAX_ERRORS = 20            # transport/HTTP errors before the stage gives up
 FMP_STAGE_BUDGET_S = 480       # wall-clock ceiling for the whole stage
 # Stamp window, ET, (h, m, s) inclusive start / exclusive end. A 13:00 half-day
 # is refused as intraday — it stays behind, loudly, the safe way to be wrong.
-FMP_CLOSE_WINDOW = ((16, 0, 0), (16, 1, 0))
+FMP_CLOSE_WINDOW = ((16, 0, 0), (16, 10, 0))
+# Board #558 (2026-10-07 close, 75 of 78 US names refused, ALL NYSE-listed):
+# the NYSE closing-auction print reaches FMP's quote either LATE (stamps
+# 16:01:11-16:02:57; quote == EOD row == Yahoo's close, to the cent, 43/43) or
+# NEVER (quote frozen at the last continuous trade, stamped 15:59:57-15:59:59,
+# 0-4 bp off the official close; the EOD row == Yahoo's close, 9/9 checked).
+# One observation (one quiet October evening), not a law: re-probed at 00:00 ET
+# every quote stamp was still <= 16:02:57, i.e. the quote did not move after
+# hours that night. The window END is therefore 16:10 (3x the measured lag);
+# a later after-hours print that moved the price is still refused by the EOD
+# agreement check.
+#
+# Once the run is at/after FMP_EOD_SETTLED_AT (ET, same day) the EOD row is
+# taken as the official close for EVERY accepted name, and a PRE-AUCTION stamp
+# in [FMP_PRE_AUCTION_FROM, 16:00:00) is accepted too. Before it, behaviour is
+# the pre-#558 one (quote price, pre-auction refused `intraday`): the EOD row
+# can still be the partial intraday row (seen 11:20 ET 2026-09-30), and for a
+# pre-auction stamp a partial row agrees with the quote BY CONSTRUCTION.
+# 16:30 is the CI close cron in EST (`30 21 * * 1-5` = 16:30 EST / 17:30 EDT;
+# test-pinned). That the EOD row is final by 16:30 is UNMEASURED; the
+# next-day reconciliation (`reconcile_fmp_closes`) is the detector for it.
+FMP_PRE_AUCTION_FROM = (15, 59, 0)
+# Before settle the window is the pre-#558 one, END included (Codex R1): a
+# 16:05 quote read at 16:20 could be an after-hours print that still agrees
+# with a not-yet-final EOD row within 5 bp.
+FMP_CLOSE_WINDOW_END_UNSETTLED = (16, 1, 0)
+FMP_EOD_SETTLED_AT = (16, 30, 0)
+FMP_RECONCILE_NAMES_SHOWN = 25
+FMP_RECONCILE_MAX_AGE_DAYS = 5   # pending FMP closes Yahoo never backfilled
 FMP_EOD_AGREE_TOL = 0.0005     # quote price vs EOD-row price, relative
 # `previousClose` vs the last close we hold. Price agreement is NOT evidence of
 # date adjacency (Codex R1) — that is checked separately against the NYSE
@@ -2450,7 +2478,7 @@ def fmp_corporate_action_symbols(key: str, day) -> set:
 
 
 def fmp_close_bar(quote: dict | None, today, prev_close,
-                  last_bar=None) -> tuple[dict | None, str]:
+                  last_bar=None, now=None) -> tuple[dict | None, str]:
     """The DATE GUARD, quote half. `(bar, "ok")` only when `quote` is stamped
     at today's ET session close AND the series it will extend ends on the
     NYSE session immediately before today; otherwise `(None, reason)`. Never
@@ -2468,9 +2496,12 @@ def fmp_close_bar(quote: dict | None, today, prev_close,
     if stamp.date() != today:
         return None, "not_today"
     hms = (stamp.hour, stamp.minute, stamp.second)
-    if hms < FMP_CLOSE_WINDOW[0]:
+    if hms < FMP_CLOSE_WINDOW[0] and not (
+            hms >= FMP_PRE_AUCTION_FROM and eod_is_settled(now, today)):
         return None, "intraday"
-    if hms >= FMP_CLOSE_WINDOW[1]:
+    end = (FMP_CLOSE_WINDOW[1] if eod_is_settled(now, today)
+           else FMP_CLOSE_WINDOW_END_UNSETTLED)
+    if hms >= end:
         return None, "after_close_window"
     try:
         bar = {"Close": float(quote["price"]), "Open": float(quote["open"]),
@@ -2493,6 +2524,43 @@ def fmp_close_bar(quote: dict | None, today, prev_close,
     return bar, "ok"
 
 
+def eod_is_settled(now, today) -> bool:
+    """True when `now` (tz-aware) is at/after FMP_EOD_SETTLED_AT ET on `today`
+    and still on `today` in ET. A run that slipped past midnight, a naive or
+    missing `now`, or anything unparseable is NOT settled (the safe direction:
+    pre-#558 behaviour)."""
+    try:
+        if now is None or now.tzinfo is None:
+            return False
+        n = now.astimezone(ET)
+        h, m, sec = FMP_EOD_SETTLED_AT
+        settle = datetime(today.year, today.month, today.day, h, m, sec, tzinfo=ET)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return n >= settle and n.date() == today
+
+
+def fmp_with_eod_close(bar: dict, eod_price) -> dict:
+    """The accepted bar with the EOD row's price as its Close (board #558).
+    The EOD row is FMP's official close and equalled Yahoo's close on every
+    name checked; the quote's price can be the pre-auction last trade. High/Low
+    widen to include it (an auction can print outside the continuous range).
+    Call only after `fmp_eod_agrees` — the price is within FMP_EOD_AGREE_TOL."""
+    e = float(eod_price)
+    return {**bar, "Close": e, "High": max(bar["High"], e), "Low": min(bar["Low"], e)}
+
+
+def _rel_gap_bp(a, b):
+    """|a/b - 1| in basis points, or None when either is unusable."""
+    try:
+        a, b = float(a), float(b)
+    except (TypeError, ValueError):
+        return None
+    if not (np.isfinite(a) and np.isfinite(b) and a > 0 and b > 0):
+        return None
+    return abs(a / b - 1) * 1e4
+
+
 def fmp_eod_agrees(bar: dict, eod_price) -> bool:
     """The DATE GUARD, EOD half: today's EOD row exists and its price agrees
     with the quote's close."""
@@ -2502,6 +2570,85 @@ def fmp_eod_agrees(bar: dict, eod_price) -> bool:
         return False
     return bool(np.isfinite(e) and e > 0
                 and abs(bar["Close"] / e - 1) <= FMP_EOD_AGREE_TOL)
+
+
+def reconcile_fmp_closes(pending: dict, data, today,
+                         overrides: dict | None = None) -> tuple[dict, dict]:
+    """Check yesterday's FMP-recovered returns against Yahoo's backfill
+    (board #558, Fable R1 H2). Returns `(still_pending, report)`.
+
+    `pending` is `{ticker: {"date", "ret", "src"}}` from the cache. An entry is
+    CHECKED when Yahoo's series (this run's raw download) has a bar on `date`
+    whose previous bar is the NYSE session before it; the two one-day returns
+    must agree within FMP_EOD_AGREE_TOL or the ticker is reported in
+    `disagree` with the gap in bp. A watermark cannot be rewound, so this is a
+    DETECTOR, not a repair: it is the measurement of the unmeasured premise
+    that FMP's EOD row is final by FMP_EOD_SETTLED_AT. Entries Yahoo has not
+    backfilled stay pending; older than FMP_RECONCILE_MAX_AGE_DAYS they are
+    dropped and counted `expired`. Never raises."""
+    report = {"checked": 0, "disagree": {}, "pending": 0, "expired": 0,
+              "by_src": {}}
+    keep: dict = {}
+    if not isinstance(pending, dict):           # corrupt cache key (Fable R3)
+        report["expired"] = 1 if pending else 0
+        return keep, report
+    overrides = overrides or {}
+    for t, e in pending.items():
+        try:
+            d = date.fromisoformat(str(e["date"]))
+            r = float(e["ret"])
+            src = str(e.get("src", "?"))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            report["expired"] += 1
+            continue
+        if d > today + timedelta(days=1):
+            report["expired"] += 1     # future-dated: clock regression / hand edit
+            continue
+        if d >= today:
+            keep[t] = e            # not yet reconcilable (same-day re-run)
+            continue
+        # EVERYTHING that touches the Yahoo series is inside this try (Fable
+        # R2 High: a 0.0 prior close divided outside it and crashed the close
+        # run before anything published - a detector must never be the outage).
+        status, signed = "pending", None
+        try:
+            # The re-fetch-merged series when this run has one (Codex R1: a
+            # fresher 5-day answer is what screening uses; last-wins).
+            if t in overrides:
+                c = _naive(overrides[t][0]).dropna()
+            else:
+                c = (_naive(_series_from(data, "Close", to_yf_symbol(t))).dropna()
+                     if data is not None else pd.Series(dtype=float))
+            c = c[~c.index.duplicated(keep="last")]
+            days = [x.date() for x in c.index]
+            i = days.index(d) if d in days else -1
+            if i > 0 and days[i - 1] == prev_nyse_session(d):
+                status = "bad"          # comparable; stays "bad" if the math fails
+                y_ret = float(c.iloc[i]) / float(c.iloc[i - 1])
+                signed = ((1 + r) / y_ret - 1) * 1e4
+                if np.isfinite(signed):
+                    status = "ok"
+        except Exception:  # noqa: BLE001
+            pass
+        if status == "bad":
+            report["checked"] += 1
+            report["disagree"][t] = None        # unusable Yahoo bar: named
+            continue
+        if status == "ok":
+            report["checked"] += 1
+            g = report["by_src"].setdefault(src, {"n": 0, "sum_bp": 0.0, "max_bp": 0.0})
+            g["n"] += 1
+            g["sum_bp"] += signed
+            g["max_bp"] = max(g["max_bp"], abs(signed))
+            if abs(signed) > FMP_EOD_AGREE_TOL * 1e4:
+                report["disagree"][t] = round(abs(signed), 1)
+            continue
+        if (today - d).days > FMP_RECONCILE_MAX_AGE_DAYS:
+            report["expired"] += 1
+            continue
+        keep[t] = e
+    report["pending"] = len(keep)
+    return keep, report
 
 
 def _merge_fmp_bar(series4: tuple, bar: dict, today) -> tuple:
@@ -2618,8 +2765,20 @@ def fmp_fallback(still_behind, merged_by_t, prior, stats, today) -> dict:
             return None, "error"
 
     expected_prev = prev_nyse_session(today)
+    run_now = now_et()
+    settled = eod_is_settled(run_now, today)
+    stats["fmp_eod_settled"] = settled
+    spreads: list = []
 
     def _one(pair):
+        # Any unexpected exception is one name's `error`, never the stage's
+        # crash out of ex.map (Fable R3).
+        try:
+            return _one_inner(pair)
+        except Exception:  # noqa: BLE001
+            return pair[0], None, "error"
+
+    def _one_inner(pair):
         t, sym = pair
         series4 = merged_by_t.get(t)
         has = series4 is not None and len(series4[0])
@@ -2632,14 +2791,21 @@ def fmp_fallback(still_behind, merged_by_t, prior, stats, today) -> dict:
             return t, None, err
         bar, why = fmp_close_bar(q, today,
                                  series4[0].iloc[-1] if has else None,
-                                 _newest_bar(series4[0]) if has else None)
+                                 _newest_bar(series4[0]) if has else None,
+                                 now=run_now)
         if bar is None:
             return t, None, why
         eod, err = _call(fmp_get_eod_price, sym, key, today)
         if err:
             return t, None, err
+        spread = _rel_gap_bp(bar["Close"], eod)
+        if spread is not None:
+            with lock:
+                spreads.append(spread)
         if not fmp_eod_agrees(bar, eod):
             return t, None, "eod_disagrees"
+        if settled:
+            return t, fmp_with_eod_close(bar, eod), "ok"
         return t, bar, "ok"
 
     with ThreadPoolExecutor(max_workers=FMP_WORKERS) as ex:
@@ -2656,10 +2822,26 @@ def fmp_fallback(still_behind, merged_by_t, prior, stats, today) -> dict:
         merged = _merge_fmp_bar(merged_by_t[t], bar, today)
         if is_unscored_bar(_newest_bar(merged[0]), prior.get(t), today):
             overrides[t] = merged
+            # Board #558: recorded so the NEXT close can reconcile this return
+            # against Yahoo's backfilled bar (`reconcile_fmp_closes`). A return,
+            # not a level: Yahoo is auto-adjusted, and a later ex-date rescales
+            # every earlier close but leaves the one-day return unchanged.
+            try:
+                base = float(merged_by_t[t][0].iloc[-1])
+                stats.setdefault("fmp_accepted", {})[t] = {
+                    "date": today.isoformat(), "ret": bar["Close"] / base - 1,
+                    "src": "eod" if settled else "quote"}
+            except (TypeError, ValueError, ZeroDivisionError, IndexError):
+                pass
         else:
             rejects["not_new"] += 1
     stats["fmp_recovered"] = len(overrides)
     stats["fmp_rejects"] = dict(rejects.most_common())
+    if spreads:
+        # Quote vs EOD-row gap over every name that got both calls (finding:
+        # the 5 bp tolerance bites hardest on volatile evenings, and a wave of
+        # `eod_disagrees` must not read like a vendor outage).
+        stats["fmp_spread_bp_max"] = round(max(spreads), 1)
     if stats["fmp_capped"]:
         print(f"[WARN] FMP fallback hit the {FMP_MAX_CALLS}-call cap — "
               f"{stats['fmp_capped']} US name(s) not tried")
@@ -2734,6 +2916,13 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
     _etfs = etf_set or set()
     _collisions = foreign_collision_bases(tickers)
     cache_data = {"date": today.strftime("%Y-%m-%d"), "tickers": {}}
+    # Carried by default (save_cache REPLACES the file): a run that never
+    # reaches the reconcile step must not drop the pending FMP closes.
+    # Shape-checked (Codex R2): a corrupt non-dict value must not kill the run.
+    for _k in ("fmp_closes", "fmp_reconcile_last"):
+        _v = (prior_cache or {}).get(_k)
+        if isinstance(_v, dict) and _v:
+            cache_data[_k] = dict(_v)
     stats = {"screened": 0, "skipped": 0, "stale": 0, "ref_date": None}
     # Per-run classification of what did NOT get screened (Fable C1/H2, board
     # #327). Filled by `_classify_unscreened` at both return points.
@@ -2769,9 +2958,32 @@ def screen_full(tickers: list[str], mode: str, track_52w: bool = False,
         # BEFORE the whole-batch staleness check (Codex R1): the strongest form
         # of the 09-28 incident is a batch whose SHARED index ends on Friday,
         # and returning here first would skip the one recovery path it has.
+        # Reconcile the PREVIOUS close's FMP-recovered returns against Yahoo's
+        # raw download BEFORE this run's own FMP stage (board #558).
+        # Close route only (`allow_fmp`): open-full/midday also reach here and
+        # would post the same finding again (Fable R2 L5); they never save.
         _overrides = refetch_behind(data, tickers, prior_cache, _prior, stats,
                                     today, single=len(tickers) == 1,
                                     allow_fmp=allow_fmp)
+        _fmp_pending = (prior_cache or {}).get("fmp_closes") or {}
+        if _fmp_pending and allow_fmp and len(tickers) > 1:
+            # Pending entries are the PRIOR run's; this run's FMP bars are dated
+            # today and never compared (d >= today is kept), so reconciling
+            # after the re-fetch reads the freshest series without
+            # contamination. `single`: a flat 1-ticker frame cannot be keyed.
+            _fmp_pending, _rec = reconcile_fmp_closes(
+                _fmp_pending, data, today, overrides=_overrides)
+            stats["fmp_reconcile"] = _rec
+            cache_data["fmp_closes"] = dict(_fmp_pending)
+            # Durable copies (Codex R1): the run log (public Actions log) and
+            # the committed cache, so a failed status POST cannot erase them.
+            cache_data["fmp_reconcile_last"] = {"date": today.isoformat(), **_rec}
+            if _rec.get("disagree"):
+                print(f"[WARN] FMP close reconciliation: {len(_rec['disagree'])} "
+                      f"disagree with Yahoo: "
+                      + ", ".join(f"{k} {v}bp" for k, v in sorted(_rec['disagree'].items())))
+        for _t, _e in (stats.get("fmp_accepted") or {}).items():
+            cache_data.setdefault("fmp_closes", {})[_t] = _e
 
         # Validate that the latest bar is from today's session
         if not validate_bar_date(data.index, mode) and not any(
@@ -3688,6 +3900,28 @@ def return_map_is_publishable(etf_returns, etf_set, period_returns=None):
     return (len(have_period) / len(expected)) >= MIN_SCREEN_COVERAGE
 
 
+def return_map_gate_detail(etf_returns, etf_set, period_returns, delivered):
+    """One line saying WHY the return-map gate refused, for the cycle stamp
+    (board #561). The 2026-10-06 local midday stamped only `coverage-floor`;
+    the local runner keeps no log and has no status webhook, so which of the
+    gate's two inputs fell short was unrecoverable, and the bare word was read
+    as the SCREEN floor (it is not: that gate stamps `publish-gate`). Counts use
+    the gate's own denominator. Never raises."""
+    try:
+        expected = set(etf_set or ())
+        returned = {r.get("ticker") for r in (etf_returns or []) if r.get("ticker")}
+        if period_returns is None:
+            period = "not supplied"
+        else:
+            period = f"{len({t for t in period_returns if t in expected})}/{len(expected)}"
+        return (f"return map: {len(returned & expected)}/{len(expected)} in the "
+                f"screen pull, {period} in the period-returns pull (floor "
+                f"{MIN_SCREEN_COVERAGE:.0%}); digest "
+                f"{'posted' if delivered else 'NOT posted'}")
+    except Exception as e:  # noqa: BLE001 - a stamp detail must never break a run
+        return f"return map: detail unavailable ({type(e).__name__})"
+
+
 def _coverage_floor_reason(frac):
     return (f"screen coverage {frac:.0%} is below the {MIN_SCREEN_COVERAGE:.0%} "
             f"floor, so no digest was posted and the return map was left "
@@ -3711,10 +3945,45 @@ def describe_fmp(stats: dict) -> str:
             text += " rejected: " + ", ".join(f"{k} ×{n}" for k, n in rej.items())
     if stats.get("fmp_capped"):
         text += f" · CAPPED: {stats['fmp_capped']} not tried"
+    if stats.get("fmp_spread_bp_max") is not None:
+        text += f" · max quote/EOD gap {stats['fmp_spread_bp_max']}bp"
+    if stats.get("fmp_stage") and not stats.get("fmp_eod_settled", True):
+        text += " · before EOD settle: quote closes, pre-auction refused"
     if stats.get("fmp_foreign"):
         names = stats.get("fmp_foreign_names") or []
         shown = ", ".join(names[:8]) + (" …" if len(names) > 8 else "")
         text += f" · foreign still behind {stats['fmp_foreign']} ({shown})"
+    return text
+
+
+def describe_fmp_reconcile(rec: dict) -> str:
+    """Heartbeat fragment for `reconcile_fmp_closes` — names EVERY disagreeing
+    ticker (a count is not a finding)."""
+    text = (f"prior FMP closes vs Yahoo: {rec.get('checked', 0)} checked, "
+            f"{len(rec.get('disagree') or {})} disagree")
+    dis = rec.get("disagree") or {}
+    if dis:
+        # Capped (Codex R1): ~300 names would overflow Slack's 3000-char
+        # section and 400 the WHOLE heartbeat. The full list is in the run log
+        # and in the committed cache's `fmp_reconcile_last`.
+        items = [f"{t} {g}bp" if g is not None else f"{t} ?"
+                 for t, g in sorted(dis.items(), key=lambda kv: str(kv[0]))]
+        shown = items[:FMP_RECONCILE_NAMES_SHOWN]
+        more = len(items) - len(shown)
+        text += " (" + ", ".join(shown) + (
+            f", +{more} more: full list in the run log and cache "
+            f"fmp_reconcile_last" if more else "") + ")"
+    for src, g in sorted((rec.get("by_src") or {}).items()):
+        # Mean SIGNED gap per source (Fable R2): an unsettled EOD row shows up
+        # as a same-sign 1-4 bp bias across the `eod` names long before any
+        # single name crosses the 5 bp disagreement line.
+        if g.get("n"):
+            text += (f"; {src} n={g['n']} mean {g['sum_bp'] / g['n']:+.1f}bp"
+                     f" max {g['max_bp']:.1f}bp")
+    if rec.get("pending"):
+        text += f", {rec['pending']} pending"
+    if rec.get("expired"):
+        text += f", {rec['expired']} expired unreconciled"
     return text
 
 
@@ -3742,6 +4011,9 @@ def describe_unscreened(stats: dict) -> str | None:
                      f"/{stats['refetch_attempted']}")
     if stats.get("fmp_stage"):
         parts.append(describe_fmp(stats))
+    rec = stats.get("fmp_reconcile")
+    if rec:
+        parts.append(describe_fmp_reconcile(rec))
     if stats.get("stale") and not behind and not stats.get("screened"):
         parts.append(f"whole batch stale ({stats['stale']} not today)")
     return " · ".join(parts)
@@ -3854,7 +4126,9 @@ def post_health_heartbeat(mode, stats, total, n_alerts, published=None, reason=N
         mode, stats.get("screened", 0), total, n_alerts, stats.get("skipped", 0),
         published=published, reason=reason, already_scored=already_scored,
         attempt=attempt, data_line=describe_unscreened(stats),
-        data_line_always=bool(stats.get("refetch_attempted")), unposted=unposted)
+        data_line_always=bool(stats.get("refetch_attempted")
+                              or (stats.get("fmp_reconcile") or {}).get("checked")),
+        unposted=unposted)
     if DRY_RUN:
         print(f"[DRY-RUN] heartbeat NOT posted ({status}):\n"
               + "\n".join(bl["text"]["text"] for bl in payload["blocks"]))
@@ -3914,7 +4188,8 @@ def _mode_ok_date(mode: str):
         return _date.min
 
 
-def stamp_cycle(mode: str, exit_kind: str, ref_date: str = "") -> None:
+def stamp_cycle(mode: str, exit_kind: str, ref_date: str = "",
+                detail: str = "") -> None:
     """Record this cycle's outcome in `return_map.CYCLES_PATH` (board #445).
 
     The path is read at CALL time so `--dry-run` (which reassigns it) and tests
@@ -3923,7 +4198,7 @@ def stamp_cycle(mode: str, exit_kind: str, ref_date: str = "") -> None:
     try:
         import return_map
         return_map.record_cycle(mode, exit_kind, path=return_map.CYCLES_PATH,
-                                now=now_et(), ref_date=ref_date)
+                                now=now_et(), ref_date=ref_date, detail=detail)
     except Exception as e:  # noqa: BLE001
         print(f"[WARN] could not stamp the {mode} cycle: {e}")
 
@@ -4392,7 +4667,12 @@ def main():
         post_health_heartbeat(
             args.mode, stats, len(tickers), len(alerts), published=delivered,
             reason=None if delivered else "the Slack POST did not succeed")
-        stamp_cycle(args.mode, gate_exit_kind("coverage-floor", args.mode))
+        # `return-map-floor`, not `coverage-floor` (board #561): the screen
+        # floor stamps `publish-gate`; this is the return map's own gate, and
+        # the old word sent a reader to the wrong one.
+        stamp_cycle(args.mode, gate_exit_kind("return-map-floor", args.mode),
+                    detail=return_map_gate_detail(etf_returns, etf_set,
+                                                  etf_period_returns, delivered))
         return
 
     try:

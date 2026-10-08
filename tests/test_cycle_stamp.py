@@ -59,12 +59,22 @@ class TestRecordCycle:
         rm.record_cycle("close", "market-closed", p, now=T2)
         assert _read(p)["close"]["ok_at"] == T2.isoformat(timespec="seconds")
 
-    @pytest.mark.parametrize("kind", ["publish-gate", "coverage-floor", "write-failed",
+    @pytest.mark.parametrize("kind", ["publish-gate", "return-map-floor", "write-failed",
                                       "duplicate", "started"])
     def test_failure_exits_never_set_ok_at(self, tmp_path, kind):
         p = tmp_path / "c.json"
         rm.record_cycle("midday", kind, p, now=T2)
         assert "ok_at" not in _read(p)["midday"]
+
+    def test_detail_is_kept_for_its_exit_and_cleared_by_the_next(self, tmp_path):
+        # Board #561: `last_detail` explains THIS exit; a later stamp without one
+        # must remove it, or a stale reason sits beside a newer exit.
+        p = tmp_path / "c.json"
+        rm.record_cycle("midday", "return-map-floor", p, now=T1,
+                        detail="return map: 10/43 in the screen pull")
+        assert _read(p)["midday"]["last_detail"] == "return map: 10/43 in the screen pull"
+        rm.record_cycle("midday", "written", p, now=T2)
+        assert "last_detail" not in _read(p)["midday"]
 
     def test_corrupt_file_is_replaced_not_raised(self, tmp_path):
         p = tmp_path / "c.json"
