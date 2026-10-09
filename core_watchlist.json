@@ -566,13 +566,5 @@
     "sector": "Energy",
     "subsector": "Clean Energy / Nuclear SMR",
     "sub_subsector": ""
-  },
-  "ZTS": {
-    "date_added": "2026-09-26",
-    "notes": "auto-added by sync-held 2026-09-26: held at IBKR, no positions row existed",
-    "name": "Zoetis Inc.",
-    "sector": "Healthcare Services",
-    "subsector": "Animal Health",
-    "sub_subsector": ""
   }
 }

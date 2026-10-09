@@ -1,7 +1,7 @@
 # S&P 500 Constituents
-# Last updated: 2026-09-18
+# Last updated: 2026-10-07
 # Check for reconstitution updates quarterly (March, June, September, December)
-# Source: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
+# Source: Coverage Manager index membership (S&P 500; fund holdings disclosure)
 A
 AAPL
 ABBV
@@ -123,7 +123,6 @@ CSGP
 CSX
 CTAS
 CTSH
-CTVA
 CVNA
 CVS
 CVX
@@ -381,7 +380,6 @@ PPG
 PPL
 PRU
 PSA
-PSKY
 PSX
 PTC
 PWR
@@ -408,6 +406,7 @@ SBUX
 SCHW
 SHW
 SJM
+SKYD
 SLB
 SMCI
 SNA
@@ -452,6 +451,7 @@ TSLA
 TSN
 TT
 TTWO
+TWLO
 TXN
 TXT
 TYL
@@ -479,10 +479,10 @@ VRTX
 VST
 VTR
 VTRS
+VYLR
 VZ
 WAB
 WAT
-WBD
 WDAY
 WDC
 WEC
