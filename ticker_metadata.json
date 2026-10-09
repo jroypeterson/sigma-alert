@@ -10855,6 +10855,22 @@
     "core": "",
     "commercial": ""
   },
+  "TRXB": {
+    "name": "TRex Bio, Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "RTSN": {
+    "name": "Retension Pharmaceuticals, Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
