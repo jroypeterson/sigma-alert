@@ -92,7 +92,6 @@
     "CTAS": "not_in_metadata",
     "CTEC.LN": "not_in_metadata",
     "CTSH": "not_in_metadata",
-    "CTVA": "not_in_metadata",
     "CVX": "not_in_metadata",
     "D": "not_in_metadata",
     "DAL": "not_in_metadata",
@@ -299,7 +298,6 @@
     "PPL": "not_in_metadata",
     "PRU": "not_in_metadata",
     "PSA": "not_in_metadata",
-    "PSKY": "not_in_metadata",
     "PSX": "not_in_metadata",
     "PWR": "not_in_metadata",
     "PYPL": "not_in_metadata",
@@ -324,6 +322,7 @@
     "SHL.GY": "not_in_metadata",
     "SHW": "not_in_metadata",
     "SJM": "not_in_metadata",
+    "SKYD": "not_in_metadata",
     "SLB": "not_in_metadata",
     "SMCI": "not_in_metadata",
     "SNA": "not_in_metadata",
@@ -376,7 +375,6 @@
     "VST": "not_in_metadata",
     "VZ": "not_in_metadata",
     "WAB": "not_in_metadata",
-    "WBD": "not_in_metadata",
     "WEC": "not_in_metadata",
     "WFC": "not_in_metadata",
     "WM": "not_in_metadata",
@@ -393,5 +391,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-10-08T21:25:37.823833-04:00"
+  "updated": "2026-10-09T21:10:21.467379-04:00"
 }

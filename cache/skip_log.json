@@ -1,36 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-09-08",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "AMBUB.DC",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "CSU",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "FI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SECTB.SS",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "TALK",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "^W5000",
-          "reason": "stale_bar"
-        }
-      ]
-    },
-    {
       "date": "2026-09-09",
       "mode": "close",
       "skipped": [
@@ -4306,6 +4276,64 @@
         },
         {
           "ticker": "WBD",
+          "reason": "stale_bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GD",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "MA",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "MRVL",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "NTAP",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "STLD",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "STMN.SW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "VYLR",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "VZ",
           "reason": "stale_bar"
         }
       ]
