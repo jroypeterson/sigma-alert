@@ -1373,6 +1373,32 @@ def compute_distribution(close_series: pd.Series) -> tuple[float, float, int]:
     return (mu, sigma, len(trailing))
 
 
+def week_baseline(close: pd.Series) -> dict:
+    """`{last_close, week_base_close, week_base_date, week_sessions}` for the
+    week that contains `close`'s latest bar, or `{}` when it cannot be located.
+
+    The baseline is the last close STRICTLY before that week's Monday (the
+    prior Friday, or Thursday after a Friday holiday). `week_sessions` counts
+    the bars after it, so the weekly z-score scales by sqrt(sessions actually
+    traded), not a fixed 5. Needs a DatetimeIndex; a plain-index fixture has no
+    calendar week, so it returns `{}` and the weekly digest skips the name.
+    """
+    try:
+        last_day = close.index[-1].date()
+        monday = last_day - timedelta(days=last_day.weekday())
+        before = close[close.index.date < monday]
+        if before.empty:
+            return {}
+        return {
+            "last_close": float(close.iloc[-1]),
+            "week_base_close": float(before.iloc[-1]),
+            "week_base_date": before.index[-1].date().isoformat(),
+            "week_sessions": int((close.index.date >= monday).sum()),
+        }
+    except (AttributeError, IndexError, TypeError):
+        return {}
+
+
 def compute_z_score(today_return: float, mu: float, sigma: float) -> float:
     """Calculate z-score of today's return vs trailing distribution."""
     if sigma == 0 or np.isnan(sigma):
@@ -1990,6 +2016,12 @@ def _process_ticker_full(ticker: str, close: pd.Series, open_prices: pd.Series,
     if prior_year_end_close is not None:
         cache_entry["prior_year_end_close"] = prior_year_end_close
         cache_entry["prior_year_end_year"] = prior_year
+    # Week-to-date baseline for scripts/weekly_summary.py (the Friday weekly
+    # digest), read from the close history already in memory so the weekly
+    # summary needs NO second market-data pull. Close mode only: it is the only
+    # mode that saves this cache.
+    if mode == "close":
+        cache_entry.update(week_baseline(close))
 
     # Compute today's return based on mode
     prev_close = float(close.iloc[-2])

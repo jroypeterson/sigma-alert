@@ -50,3 +50,18 @@ def _cycle_stamp_is_redirected(monkeypatch, tmp_path_factory):
     import return_map
     monkeypatch.setattr(return_map, "CYCLES_PATH",
                         tmp_path_factory.mktemp("cycles") / "return_map.cycles.json")
+
+
+@pytest.fixture(autouse=True)
+def _weekly_summary_is_redirected(monkeypatch, tmp_path_factory):
+    """`weekly_summary` writes a committed snapshot + the page HTML and fetches
+    FRED. Redirected and inert suite-wide, so no test can rewrite the real
+    `cache/weekly_snapshot.json` or reach the network by accident."""
+    import weekly_summary
+    d = tmp_path_factory.mktemp("weekly")
+    monkeypatch.setattr(weekly_summary, "SNAPSHOT_PATH", d / "weekly_snapshot.json")
+    monkeypatch.setattr(weekly_summary, "HTML_PATH", d / "weekly_summary.html")
+    monkeypatch.setattr(weekly_summary, "fetch_fred_block",
+                        lambda monday: {"curve": [], "credit": [], "mortgage": None})
+    monkeypatch.delenv("SLACK_WEBHOOK", raising=False)
+    monkeypatch.delenv("SLACK_STATUS_REPORTS_WEBHOOK", raising=False)

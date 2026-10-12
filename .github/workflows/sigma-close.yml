@@ -85,6 +85,26 @@ jobs:
           git diff --cached --quiet || git commit -m "Update distribution cache [skip ci]"
           git push
 
+      - name: Weekly price summary (last session of the week only)
+        # The week's last #stock-price-alerts message. Gated INSIDE the script:
+        # runs only on the week's final NYSE session, only once this day's close
+        # digest was delivered (cache "published" marker), and only once per week
+        # (cache/weekly_snapshot.json "posted"), so the routine duplicate close run
+        # is a no-op. Reads the cache just committed above - no market-data pull.
+        # Runs AFTER the cache commit so a crash here can never cost the cache.
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_STATUS_REPORTS_WEBHOOK: ${{ secrets.SLACK_STATUS_REPORTS_WEBHOOK }}
+        shell: bash
+        run: |
+          # pipefail: same reason as the screener step. Appends to the same log
+          # so the health fallback below names a crash here too.
+          set -eo pipefail
+          python scripts/weekly_summary.py 2>&1 | tee -a /tmp/sigma_run.log
+          git add -A cache/weekly_snapshot.json
+          git diff --cached --quiet || git commit -m "Weekly price summary snapshot [skip ci]"
+          git push
+
       - name: Health fallback on failure
         if: failure()
         env:
