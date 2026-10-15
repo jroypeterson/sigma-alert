@@ -4379,6 +4379,52 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-10-14",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "PLD",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "PNC",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SKYD",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "VYLR",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
