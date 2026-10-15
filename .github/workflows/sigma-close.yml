@@ -101,9 +101,28 @@ jobs:
           # so the health fallback below names a crash here too.
           set -eo pipefail
           python scripts/weekly_summary.py 2>&1 | tee -a /tmp/sigma_run.log
-          git add -A cache/weekly_snapshot.json
-          git diff --cached --quiet || git commit -m "Weekly price summary snapshot [skip ci]"
-          git push
+          # The snapshot does not exist until the first summary is built, and
+          # is not written on any session that is not the week's last. An
+          # unguarded `git add` of a missing path is `fatal: pathspec` (exit
+          # 128): that failed every close run 2026-10-12..14 and the fallback
+          # named the INFO line above as the cause, because git's stderr never
+          # reached the log. Guard the add, and tee git into the same log so
+          # the next real failure here is named correctly. The `|| exit 1` on each
+          # git call is belt-and-braces: the piped group runs in a subshell that
+          # inherits `set -e` (measured on bash 5, 2026-10-15), but a failed
+          # `git add` followed by a no-op push that succeeds must never exit 0,
+          # whatever happens to the `set` line above.
+          {
+            if [ -f cache/weekly_snapshot.json ]; then
+              git add cache/weekly_snapshot.json || exit 1
+              if ! git diff --cached --quiet; then
+                git commit -m "Weekly price summary snapshot [skip ci]" || exit 1
+              fi
+              git push || exit 1
+            else
+              echo "[INFO] no cache/weekly_snapshot.json written this run - nothing to commit"
+            fi
+          } 2>&1 | tee -a /tmp/sigma_run.log
 
       - name: Health fallback on failure
         if: failure()
