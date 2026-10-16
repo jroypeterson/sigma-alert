@@ -1,32 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-09-15",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "AMBUB.DC",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "CSU",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "FI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SECTB.SS",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "TALK",
-          "reason": "insufficient_history"
-        }
-      ]
-    },
-    {
       "date": "2026-09-16",
       "mode": "close",
       "skipped": [
@@ -4414,6 +4388,44 @@
         },
         {
           "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "TALK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "VYLR",
+          "reason": "insufficient_history"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ACVA",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SKYD-WS",
           "reason": "insufficient_history"
         },
         {
