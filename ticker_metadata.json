@@ -1087,14 +1087,6 @@
     "core": "Y",
     "commercial": ""
   },
-  "APGE": {
-    "name": "Apogee Therapeutics Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": "Y",
-    "commercial": "Y"
-  },
   "APLLTD.NS": {
     "name": "Alembic Pharmaceuticals Limited",
     "sector": "Biopharma",
@@ -1679,14 +1671,6 @@
     "core": "",
     "commercial": "Y"
   },
-  "BIOR": {
-    "name": "Biora Therapeutics, Inc.",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": "",
-    "commercial": ""
-  },
   "BKD": {
     "name": "Brookdale Senior Living Inc",
     "sector": "Healthcare Services",
@@ -1937,8 +1921,8 @@
   },
   "CARA": {
     "name": "Carasent AB (publ)",
-    "sector": "Biopharma",
-    "subsector": "",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
     "sub_subsector": "",
     "core": "",
     "commercial": ""
@@ -4599,14 +4583,6 @@
     "core": "",
     "commercial": ""
   },
-  "LPSN": {
-    "name": "LivePerson Inc",
-    "sector": "SaaS",
-    "subsector": "",
-    "sub_subsector": "",
-    "core": "",
-    "commercial": ""
-  },
   "LQDA": {
     "name": "Liquidia Corp",
     "sector": "Biopharma",
@@ -4927,14 +4903,6 @@
     "core": "",
     "commercial": ""
   },
-  "MNMD": {
-    "name": "Mind Medicine (MindMed) Inc.",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": "",
-    "commercial": ""
-  },
   "MNOV": {
     "name": "Medicinova Inc",
     "sector": "Biopharma",
@@ -5213,14 +5181,6 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
-  },
-  "NGEN.V": {
-    "name": "NervGen Pharma Corp.",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": "",
     "commercial": ""
   },
   "NGNE": {
@@ -6360,7 +6320,7 @@
     "commercial": ""
   },
   "RLF.SW": {
-    "name": "Relief Therapeutics Holding SA",
+    "name": "MindMaze Therapeutics Holding SA",
     "sector": "Biopharma",
     "subsector": "",
     "sub_subsector": "",
@@ -9960,7 +9920,7 @@
     "commercial": ""
   },
   "NGEN": {
-    "name": "NervGen Pharma Corp. Common stock",
+    "name": "NervGen Pharma Corp.",
     "sector": "Biopharma",
     "subsector": "Biotech",
     "sub_subsector": "",
