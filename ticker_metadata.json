@@ -572,7 +572,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "ADAG": {
@@ -1940,7 +1940,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "CATX": {
@@ -2372,7 +2372,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "CTEC LN": {
@@ -2484,7 +2484,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "CVS": {
@@ -3156,7 +3156,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "FER": {
@@ -3164,7 +3164,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "KYNB": {
@@ -4300,7 +4300,7 @@
     "sector": "Financials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "JSPR": {
@@ -6412,7 +6412,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "RPGLIFE.NS": {
@@ -7548,7 +7548,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "UCB": {
@@ -7924,7 +7924,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y",
+    "core": "",
     "commercial": ""
   },
   "WST": {

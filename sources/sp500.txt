@@ -1,5 +1,5 @@
 # S&P 500 Constituents
-# Last updated: 2026-10-14
+# Last updated: 2026-10-16
 # Check for reconstitution updates quarterly (March, June, September, December)
 # Source: Coverage Manager index membership (S&P 500; fund holdings disclosure)
 A
@@ -407,7 +407,6 @@ SCHW
 SHW
 SJM
 SKYD
-SKYD-WS
 SLB
 SMCI
 SNA

@@ -10,7 +10,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "AHR": {
     "position": "Following for Interest",
@@ -49,7 +49,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "CENTA": {
     "position": "Following for Interest",
@@ -88,7 +88,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "CVNA": {
     "position": "Following for Interest",
@@ -101,7 +101,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "DOC": {
     "position": "Following for Interest",
@@ -127,7 +127,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "FER": {
     "position": "Following for Interest",
@@ -140,7 +140,7 @@
     "sector": "Industrials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "FRPT": {
     "position": "Following for Interest",
@@ -179,7 +179,7 @@
     "sector": "Financials",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "LULU": {
     "position": "Following for Interest",
@@ -231,7 +231,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "TSM": {
     "position": "Following for Interest",
@@ -257,7 +257,7 @@
     "sector": "Tech",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "WMT": {
     "position": "Following for Interest",
@@ -270,7 +270,7 @@
     "sector": "Consumer",
     "subsector": "",
     "sub_subsector": "",
-    "core": "Y"
+    "core": ""
   },
   "WOOF": {
     "position": "Following for Interest",
