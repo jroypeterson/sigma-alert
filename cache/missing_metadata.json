@@ -323,7 +323,6 @@
     "SHW": "not_in_metadata",
     "SJM": "not_in_metadata",
     "SKYD": "not_in_metadata",
-    "SKYD-WS": "not_in_metadata",
     "SLB": "not_in_metadata",
     "SMCI": "not_in_metadata",
     "SNA": "not_in_metadata",
@@ -392,5 +391,5 @@
     "YUM": "not_in_metadata",
     "ZBRA": "not_in_metadata"
   },
-  "updated": "2026-10-16T17:51:03.515403-04:00"
+  "updated": "2026-10-19T20:36:29.953679-04:00"
 }
