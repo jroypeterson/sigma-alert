@@ -6,6 +6,7 @@
 > well; section 2 status, and every count, version, path and line number here, is a
 > **hypothesis** until checked against the code -- and a disagreement between this file and
 > the repo is a defect worth reporting, not a documentation nit.
+> Last reconciled against the code 2026-10-20 (board #319), through `2a6b001`.
 
 This file exists so a reviewer can (1) judge how close the project is to its
 intended goal and (2) understand the key design decisions **before** giving
@@ -50,9 +51,9 @@ so the alerts land against a same-message read of the cross-asset backdrop.
 | # | Criterion | Status | Evidence |
 |---|---|---|---|
 | 1 | Per-ticker statistical scoring (not flat % thresholds) | ✅ Done | `z = (today_return − μ)/σ` from trailing ~251 daily returns; covered in `tests/test_screener.py` |
-| 2 | Two-tier net: 2σ broad + 1σ for covered names only | ✅ Done | 2σ fires whole watchlist; 1σ gated by `_is_one_sigma_eligible()` (CM `Core=="Y"` OR membership in any of the five Position lists) |
+| 2 | Two-tier net: 2σ broad + 1σ for covered names only | ✅ Done | 2σ fires whole watchlist; 1σ gated by `_is_one_sigma_eligible()` (CM `Core=="Y"` OR membership in any of the five Position lists). Ownership ("Portfolio") is read from CM's pushed `portfolio.json`, **not** portfolio_daily's `held.json` (board #549 has not reached this repo; see §5) |
 | 3 | Three runs/day (open / midday / close), automated | ✅ Done | `sigma-open/midday/close.yml` cron-fired Mon–Fri; EST-aligned UTC offsets so they never fire early |
-| 4 | Don't alert on stale/holiday data | ✅ Done | Session-validation aborts the run with a warning if the latest bar isn't today's session (README "Data and timing") |
+| 4 | Don't alert on stale/holiday data | ✅ Done | Session-validation aborts the run with a warning if the latest bar isn't today's session (README "Data and timing"); since 2026-10-07 (`def4f13`) a return spanning two sessions (`gap_before_today`) is refused in both the full screen and the cached-open path. Close mode: names Yahoo still has behind after a 60 s re-fetch get one FMP `stable/quote` each (`8f7400c`), and the FMP close guard accepts NYSE auction closes with next-day reconciliation (`9714781`, #558/#561) |
 | 5 | Don't fire spurious alerts on splits/dividends | ✅ Done | yfinance `auto_adjust=True`; documented rationale in `CLAUDE.md` |
 | 6 | Keep Yahoo API load low | ✅ Done | EOD writes `cache/distribution_cache.json`; morning open reuses μ/σ/52w/prior-year-close instead of re-downloading history |
 | 7 | Company names + sector tags in alerts | ✅ Done | Loads CM `ticker_metadata.json`; S&P 500 gaps filled from Wikipedia `sources/sp500_names.json` |
@@ -60,12 +61,13 @@ so the alerts land against a same-message read of the cross-asset backdrop.
 | 9 | Cross-asset context block in every digest | ✅ Done | Macro (`^TNX`/DXY/WTI) + Credit (FRED HY/IG yields+OAS, no key) + Indices/Global/Sectors/Healthcare/Tech/Commodities; download-list union so it renders even if a watchlist sync drops the ETFs |
 | 10 | Never silently corrupt CM-owned metadata | ✅ Done | CI never regenerates `ticker_metadata.json` (no access to CM's CSV); reads only. Wikipedia fallback merged into a deep copy so true CM gaps still surface |
 | 11 | Reverse-channel metadata gaps back to CM | ✅ Done | EOD writes `cache/missing_metadata.json`; CM's `sigma_export` reads it from the sibling clone and surfaces gaps |
-| 12 | Data-quality visibility | 🟡 Partial | Weekly skip report (`weekly_skip_report.py`, Fri 22:30 UTC) posts a trailing-7-day Block Kit digest to `#status-reports`. But there is **no per-run `health/v1` ok/partial/error heartbeat** like the rest of the fleet — see §5 |
-| 13 | On-time delivery even when GH cron lags | 🟡 Partial | Optional Windows local backstop (`setup_local_runner.ps1`, read-only clone) fires open/midday/close locally; opt-in, requires the laptop to be on, and intentionally un-deduped (see §4) |
+| 12 | Data-quality visibility | ✅ Done | **Per-run `health/v1` ok/partial/error heartbeat to `#status-reports` since 2026-07-23** (`f6ecd16`, `post_health_heartbeat` in `sigma_screener.py`) — this brief previously said it did not exist. A workflow `if: failure()` backstop posts the crash's last exception line (`scripts/ci_health_payload.py`, `e89ba57`). Plus the weekly skip report (`weekly_skip_report.py`, Fri 22:30 UTC). Duplicate close runs are recognised as duplicates, not missing data (`85be1b7`) |
+| 13 | On-time delivery even when GH cron lags | 🟡 Partial | Optional Windows local backstop (`setup_local_runner.ps1`, read-only clone) fires open/midday/close locally; opt-in, requires the laptop to be on, and intentionally un-deduped (see §4). Its `git fetch` retries with backoff since 2026-10-03 (`ed9fb1e`, #534) so a wake-time DNS race cannot run a stale checkout |
+| 14 | Weekly price summary | ✅ Live (2026-10-12) | `scripts/weekly_summary.py` runs after the week's last close digest (Friday, or Thursday before a Friday holiday): weekly sigma alerts (`(r_week − nμ)/(σ√n)`) in the daily tiers + the week's index/macro/rates/credit/sector moves, from the cache (no market-data pull). Writes `cache/weekly_snapshot.json` (also the posted-this-week marker) and `readable/weekly_summary.html`, republished to a claude.ai artifact bookmarked in `#stock-price-alerts` (`454ab04`). Since `08bc6a0` (#596) the step no longer fails every non-Friday close run |
 
-**Overall: the v1 goal is met and the screener is live.** Open items are
-hardening/observability (the missing health heartbeat in #12, the opt-in nature
-of #13), not missing core function.
+**Overall: the v1 goal is met and the screener is live.** Open items are the
+opt-in nature of the local backstop (#13) and ownership still read from CM's
+lagging copy (#2), not missing core function.
 
 ## 3. Key design decisions (and why)
 
@@ -131,18 +133,17 @@ of #13), not missing core function.
 
 ## 5. Known gaps / candidate next steps (feedback welcome here)
 
-- **No `health/v1` heartbeat.** Unlike the rest of the fleet (per
-  `HEALTH_REPORTING.md`), the open/midday/close runs don't post an
-  ok/partial/error heartbeat to `#status-reports`. The watchdog only speaks up
-  when it *recovers* a run, and the weekly skip report only covers data-quality
-  skips — so a run that fails outright on a normal day (and isn't a dropped-cron
-  case the watchdog catches) could be silently absent. This is the gap most worth
-  closing first.
-- **Local backstop wake-time network race.** The Scheduled Tasks use
-  `StartWhenAvailable`, so a catch-up fire on wake can hit Slack before DNS is up.
-  Per the workspace convention, the Slack POST path would benefit from a
-  retry-with-backoff wrapper (`scheduled_jobs_monitor`'s `_urlopen_retry` is the
-  reference) rather than a bare urlopen.
+- ~~No `health/v1` heartbeat~~ — wrong when written: it has existed since
+  2026-07-23 (§2 #12).
+- **1σ ownership lags the brokers.** "Portfolio" comes from CM's `portfolio.json`,
+  which can trail a sale or buy by days; the fleet's canonical source is
+  portfolio_daily's `held.json` via `held_feed.join_ownership` (board #549), not yet
+  adopted here.
+- **Local backstop wake-time network race — half fixed.** The `git fetch` now
+  retries (`ed9fb1e`), but the Slack POSTs are still single-shot
+  `requests.post(..., timeout=10)` with no retry/backoff, and the Scheduled Tasks
+  use `StartWhenAvailable`, so a catch-up fire on wake can still hit Slack before
+  DNS is up.
 - **Backstop is opt-in and requires the laptop on** — so "always on time" (§2 #13)
   only holds when the machine is awake; otherwise it falls back to GH cron timing.
 - **S&P 500 list lag** — CM writes weekly, and its snapshot is taken before its
@@ -164,12 +165,15 @@ of #13), not missing core function.
 - **Other entry points:** `scripts/sync_watchlist.py` (merges `sources/*` →
   `watchlist.txt`), `scripts/weekly_skip_report.py` (Friday digest),
   `scripts/refresh_sp500.py` (manual-fallback S&P 500 + name-map refresh; CM owns the files),
-  `scripts/post_overview.py` (pinned `#stock-price-alerts` reference card).
+  `scripts/post_overview.py` (pinned `#stock-price-alerts` reference card),
+  `scripts/weekly_summary.py` (Friday weekly summary), `scripts/return_map.py`
+  (return-map chart, per-cycle stamp since `a1055cd`).
 - **Run a screen:** `python scripts/sigma_screener.py --mode {open|midday|close}`.
-- **Tests:** `python -m pytest tests/ -q` — **~111 tests** across
-  `tests/test_screener.py` (100) and `tests/test_refresh_sp500.py` (11); they
-  cover date/session validation, cache freshness, distribution math, z-score,
-  watchlist dedup, and alert thresholds, and do **not** require network/Slack.
+- **Tests:** `python -m pytest tests/ -q` — ~490 test functions across 17 files
+  (grep count, 2026-10-20); beyond the screener core they cover the FMP fallback and
+  auction-close guard, two-session gaps, duplicate runs, the weekly summary and its
+  workflow step, and the local runner's fetch retry. They do **not** require
+  network/Slack.
 - **Most useful feedback:** (a) is the 2σ/1σ split (and the narrow 1σ universe)
   the right noise/signal tradeoff, or should the covered tier be broader/tighter;
   (b) the observability gap in §5 — is a `health/v1` heartbeat the right fix and
