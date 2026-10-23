@@ -1,5 +1,5 @@
 # Healthcare Services — Coverage Manager
-# Last updated: 2026-10-20
+# Last updated: 2026-10-23
 ACH
 ACHC
 ADUS
@@ -14,7 +14,6 @@ AVAH
 BKD
 BTSG
 CAH
-CARA
 CERT
 CHE
 CI
