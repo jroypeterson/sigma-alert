@@ -10831,6 +10831,14 @@
     "core": "",
     "commercial": ""
   },
+  "DAVI": {
+    "name": "Davion Healthcare Plc",
+    "sector": "MedTech",
+    "subsector": "Diagnostics",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
