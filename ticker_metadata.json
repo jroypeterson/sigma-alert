@@ -1661,7 +1661,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "BION.SW": {
     "name": "BB Biotech AG",
@@ -2301,14 +2301,6 @@
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
-  },
-  "CRNX": {
-    "name": "Crinetics Pharmaceuticals Inc",
-    "sector": "Biopharma",
-    "subsector": "Biotech",
-    "sub_subsector": "",
-    "core": "Y",
     "commercial": ""
   },
   "CROX": {
@@ -4413,7 +4405,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "KURA": {
     "name": "Kura Oncology Inc",
@@ -5741,7 +5733,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "PD": {
     "name": "Pagerduty Inc",
@@ -7118,14 +7110,6 @@
     "sub_subsector": "",
     "core": "Y",
     "commercial": "Y"
-  },
-  "TALK": {
-    "name": "Talkspace Inc",
-    "sector": "Healthcare Services",
-    "subsector": "HIT",
-    "sub_subsector": "",
-    "core": "Y",
-    "commercial": ""
   },
   "TARA": {
     "name": "Protara Therapeutics Inc",
@@ -8645,7 +8629,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "ACB": {
     "name": "Aurora Cannabis Inc.",
@@ -8837,7 +8821,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "BBLG": {
     "name": "Bone Biologics Corporation",
