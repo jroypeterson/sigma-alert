@@ -4491,6 +4491,84 @@
           "reason": "insufficient_history"
         }
       ]
+    },
+    {
+      "date": "2026-10-28",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ABBV",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "ACVA",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CLX",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CMG",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CYH",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "F",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FAST",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "GLW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "HWM",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "KIM",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "MRK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SFZN.SW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "T",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "VYLR",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
