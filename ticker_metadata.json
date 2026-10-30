@@ -10839,6 +10839,22 @@
     "core": "",
     "commercial": ""
   },
+  "JPL.NS": {
+    "name": "Jio Platforms Limited",
+    "sector": "Tech",
+    "subsector": "Telecom & Digital Services",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "LYCA": {
+    "name": "Lycia Therapeutics Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
