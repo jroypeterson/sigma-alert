@@ -5733,7 +5733,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": "Y"
+    "commercial": ""
   },
   "PD": {
     "name": "Pagerduty Inc",
