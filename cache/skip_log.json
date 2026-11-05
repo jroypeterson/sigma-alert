@@ -1971,6 +1971,108 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-11-04",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "4543.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "6869.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "7701.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "7733.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "7741.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "8086.T",
+          "reason": "gap_before_today"
+        },
+        {
+          "ticker": "ACVA",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ATO",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "BRO",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "DTE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "EQT",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FDXF",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "IRM",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "KVUE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "MCK",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "MSI",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "NVST",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "RDDT",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "USPH",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "VYLR",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
