@@ -413,7 +413,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "A": {
     "name": "Agilent Technologies, Inc.",
@@ -1885,7 +1885,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "CALA": {
     "name": "Calithera Biosciences Inc",
@@ -2229,7 +2229,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "COYA": {
     "name": "Coya Therapeutics Inc",
@@ -4429,7 +4429,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "KYTX": {
     "name": "Kyverna Therapeutics Inc",
@@ -5925,7 +5925,7 @@
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "PRAX": {
     "name": "Praxis Precision Medicines Inc",
