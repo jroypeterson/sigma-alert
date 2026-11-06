@@ -10855,6 +10855,30 @@
     "core": "",
     "commercial": ""
   },
+  "BBTX": {
+    "name": "Bambusa Therapeutics Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "ASPE": {
+    "name": "Aspen Neuroscience Inc.",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "NORD": {
+    "name": "Nordicus Partners Corporation",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
