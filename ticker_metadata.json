@@ -413,7 +413,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "A": {
     "name": "Agilent Technologies, Inc.",
@@ -1029,7 +1029,7 @@
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "ANIX": {
     "name": "Anixa Biosciences Inc",
@@ -7029,7 +7029,7 @@
     "subsector": "Specialty & Generic Pharma",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "SVE.WA": {
     "name": "Synthaverse S.A.",
@@ -10875,6 +10875,22 @@
     "name": "Nordicus Partners Corporation",
     "sector": "Biopharma",
     "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "RHC.AX": {
+    "name": "Ramsay Health Care Limited",
+    "sector": "Healthcare Services",
+    "subsector": "Ex-US Facilities",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "CRW.L": {
+    "name": "Craneware plc",
+    "sector": "Healthcare Services",
+    "subsector": "HIT",
     "sub_subsector": "",
     "core": "",
     "commercial": ""
