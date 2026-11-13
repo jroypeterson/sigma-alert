@@ -285,6 +285,19 @@
     "sub_subsector": "",
     "core": "Y"
   },
+  "NVDA": {
+    "position": "Portfolio",
+    "position_date": "2026-05-03",
+    "first_buy_date": "",
+    "average_cost": 164.29,
+    "shares": 24.0,
+    "notes": "",
+    "name": "NVIDIA Corporation",
+    "sector": "Tech",
+    "subsector": "",
+    "sub_subsector": "",
+    "core": "Y"
+  },
   "OPCH": {
     "position": "Portfolio",
     "position_date": "2026-04-11",
