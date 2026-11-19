@@ -1541,6 +1541,52 @@
           "reason": "stale_bar"
         }
       ]
+    },
+    {
+      "date": "2026-11-18",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ACH",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ACVA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "HUBB",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "INTC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ITGR",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "KVUE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        }
+      ]
     }
   ]
 }
