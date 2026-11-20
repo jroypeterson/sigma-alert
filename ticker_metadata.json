@@ -10895,6 +10895,38 @@
     "core": "",
     "commercial": ""
   },
+  "ANT": {
+    "name": "Anthropic PBC",
+    "sector": "Tech",
+    "subsector": "AI Models & Platforms",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "ZOAR": {
+    "name": "Zoar Limited",
+    "sector": "Biopharma",
+    "subsector": "Specialty & Generic Pharma",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "WWB": {
+    "name": "Windward Bio Group AG",
+    "sector": "Biopharma",
+    "subsector": "Biotech",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
+  "VVVV": {
+    "name": "vVARDIS HOLDING AG Class A",
+    "sector": "MedTech",
+    "subsector": "Dental",
+    "sub_subsector": "",
+    "core": "",
+    "commercial": ""
+  },
   "XLE": {
     "name": "Energy Select Sector SPDR",
     "sector": "ETF",
