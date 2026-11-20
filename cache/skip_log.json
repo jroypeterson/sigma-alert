@@ -1,168 +1,6 @@
 {
   "runs": [
     {
-      "date": "2026-10-19",
-      "mode": "close",
-      "skipped": [
-        {
-          "ticker": "1SXP.DE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "2715.HK",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "ACH",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "AFX.DE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "AMBUB.DC",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "AMP.IM",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "BIM",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "CAT",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "COLOB.DC",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "CSU",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "CTEC.LN",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "CVSG.L",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "DAE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "DIA.MI",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "DOC",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "ERF.FP",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "FI",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "FRE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "GETIB.SS",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "GLW",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "GN.DC",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "GXI",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "HPE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "HUM",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "LOW",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "MSCI",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "ONT.L",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "SECARE.SS",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "SECTB.SS",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "SFZN.SW",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "SHL.GY",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "SOON",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "SRT.DE",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "STMN.SW",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "TALK",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "UDR",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "VYLR",
-          "reason": "insufficient_history"
-        },
-        {
-          "ticker": "XHS",
-          "reason": "stale_bar"
-        },
-        {
-          "ticker": "YPSN",
-          "reason": "stale_bar"
-        }
-      ]
-    },
-    {
       "date": "2026-10-20",
       "mode": "close",
       "skipped": [
@@ -1585,6 +1423,72 @@
         {
           "ticker": "SECTB.SS",
           "reason": "insufficient_history"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-19",
+      "mode": "close",
+      "skipped": [
+        {
+          "ticker": "ACH",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ACVA",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "AMBUB.DC",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "CON",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "CSU",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "DAE",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "FI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "ITGR",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "KVUE",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "NXPI",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "P",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SECTB.SS",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "SFZN.SW",
+          "reason": "stale_bar"
+        },
+        {
+          "ticker": "SNDK",
+          "reason": "insufficient_history"
+        },
+        {
+          "ticker": "YPSN",
+          "reason": "stale_bar"
         }
       ]
     }
