@@ -77,7 +77,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "1SXP.DE": {
     "name": "SCHOTT Pharma AG & Co. KGaA",
@@ -413,7 +413,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "",
-    "commercial": "Y"
+    "commercial": ""
   },
   "A": {
     "name": "Agilent Technologies, Inc.",
@@ -5733,7 +5733,7 @@
     "subsector": "Biotech",
     "sub_subsector": "",
     "core": "Y",
-    "commercial": ""
+    "commercial": "Y"
   },
   "PD": {
     "name": "Pagerduty Inc",
@@ -7453,7 +7453,7 @@
     "subsector": "",
     "sub_subsector": "",
     "core": "",
-    "commercial": ""
+    "commercial": "Y"
   },
   "TVGN": {
     "name": "Tevogen Bio Holdings Inc",
