@@ -1395,16 +1395,8 @@
           "reason": "insufficient_history"
         },
         {
-          "ticker": "BTC-USD",
-          "reason": "gap_before_today"
-        },
-        {
           "ticker": "CSU",
           "reason": "insufficient_history"
-        },
-        {
-          "ticker": "DAE",
-          "reason": "stale_bar"
         },
         {
           "ticker": "FI",
